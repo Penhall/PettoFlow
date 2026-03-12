@@ -1017,6 +1017,106 @@ body {
 /* =============================================
    MEDIA QUERIES
    ============================================= */
+/* Search clear button ... existng ... */
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.delete-task-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.task-card:hover .delete-task-btn {
+  opacity: 1;
+}
+
+.delete-task-btn:hover {
+  color: var(--danger);
+  background: #FEF2F2;
+}
+
+.task-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-cycle-btn {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.status-cycle-btn:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateX(2px);
+}
+
+.list-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-icon-btn.sm {
+  padding: 6px;
+  height: 28px;
+  width: 28px;
+}
+
+.action-icon-btn.sm.danger:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  gap: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+
+.loading-screen::after {
+  content: "";
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--primary-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 1024px) {
   .dashboard-grid    { grid-template-columns: 1fr; }
   .overview-details  { grid-template-columns: 1fr; }

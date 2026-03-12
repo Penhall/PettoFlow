@@ -83,6 +83,16 @@ const AddTaskModal = ({ onAdd, onClose, defaultStatus }) => {
           </div>
 
           <div className="form-group">
+            <label>Tags (separadas por vírgula)</label>
+            <input
+              type="text"
+              value={form.tags.join(', ')}
+              onChange={e => change('tags', e.target.value.split(',').map(t => t.trim().startsWith('#') ? t.trim() : '#' + t.trim()))}
+              placeholder="ex: Design, UX, Pesquisa"
+            />
+          </div>
+
+          <div className="form-group">
             <label>Progresso: {form.progress}%</label>
             <input
               type="range"

@@ -1,7 +1,15 @@
+import { Trash2, ArrowRight } from 'lucide-react'
+
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
+const STATUSES = ['A Fazer', 'Em Progresso', 'Concluído']
 
-const ListView = ({ tasks }) => {
+const ListView = ({ tasks, onUpdateTask, onDeleteTask }) => {
+  const getNextStatus = (current) => {
+    const idx = STATUSES.indexOf(current)
+    return STATUSES[(idx + 1) % STATUSES.length]
+  }
+
   if (tasks.length === 0) {
     return <p className="no-results">Nenhuma tarefa encontrada.</p>
   }
@@ -16,6 +24,7 @@ const ListView = ({ tasks }) => {
             <th>Prioridade</th>
             <th>Responsável</th>
             <th>Progresso</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -39,6 +48,24 @@ const ListView = ({ tasks }) => {
                     <div className="progress-fill" style={{ width: `${task.progress}%` }} />
                   </div>
                   <span>{task.progress}%</span>
+                </div>
+              </td>
+              <td>
+                <div className="list-actions">
+                  <button 
+                    className="action-icon-btn sm" 
+                    onClick={() => onUpdateTask(task.id, { status: getNextStatus(task.status) })}
+                    title="Próximo Status"
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                  <button 
+                    className="action-icon-btn sm danger" 
+                    onClick={() => onDeleteTask(task.id)}
+                    title="Excluir"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </td>
             </tr>

@@ -2,12 +2,12 @@ import { Mail, Phone } from 'lucide-react'
 
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 
-const TimeView = ({ tasks }) => {
-  const members = [...new Set(tasks.map(t => t.owner).filter(Boolean))].map(name => {
-    const memberTasks = tasks.filter(t => t.owner === name)
+const TimeView = ({ tasks, team }) => {
+  const members = (team || []).map(member => {
+    const memberTasks = tasks.filter(t => t.owner === member.name)
     const done = memberTasks.filter(t => t.status === 'Concluído').length
-    const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2)
-    return { name, initials, memberTasks, done }
+    const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+    return { ...member, initials, memberTasks, done }
   })
 
   return (

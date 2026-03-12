@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
@@ -10,20 +10,17 @@ import Dashboard from './components/Dashboard/Dashboard'
 import TimeView from './components/Team/TimeView'
 import ClientesView from './components/Clients/ClientesView'
 import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder } from 'lucide-react'
+import { supabase } from './lib/supabaseClient'
 
 const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
-
-const initialTasks = [
-  { id: 1, title: 'Método de pagamento via e-commerce', status: 'A Fazer', priority: 'Alta', owner: 'James Walker', tags: ['#Pesquisa', '#UX'], progress: 60 },
-  { id: 2, title: 'Componente de botão web', status: 'A Fazer', priority: 'Baixa', owner: 'Ana Silva', tags: ['#Urgent', '#System'], progress: 30 },
-  { id: 3, title: 'Sistema de design', status: 'Em Progresso', priority: 'Média', owner: 'James Walker', tags: ['#Design', '#UX'], progress: 45 },
-  { id: 4, title: 'Wireframe Home', status: 'Concluído', priority: 'Alta', owner: 'Ana Silva', tags: ['#UX'], progress: 100 },
-]
 
 function App() {
   const [activeTab, setActiveTab] = useState('tarefas')
   const [viewType, setViewType] = useState('kanban')
-  const [tasks, setTasks] = useState(initialTasks)
+  const [tasks, setTasks] = useState([])
+  const [team, setTeam] = useState([])
+  const [clients, setClients] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState(null)
   const [filterTag, setFilterTag] = useState(null)
@@ -32,12 +29,46 @@ function App() {
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
 
-  const allTags = useMemo(() => [...new Set(tasks.flatMap(t => t.tags))], [tasks])
+  // Fetch tasks from Supabase
+  const fetchTasks = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching tasks:', error)
+    } else {
+      setTasks(data || [])
+    }
+    setLoading(false)
+  }
+
+  const fetchTeam = async () => {
+    const { data, error } = await supabase.from('team').select('*')
+    if (error) console.error('Error fetching team:', error)
+    else setTeam(data || [])
+  }
+
+  const fetchClients = async () => {
+    const { data, error } = await supabase.from('clients').select('*')
+    if (error) console.error('Error fetching clients:', error)
+    else setClients(data || [])
+  }
+
+  useEffect(() => {
+    fetchTasks()
+    fetchTeam()
+    fetchClients()
+  }, [])
+
+  const allTags = useMemo(() => [...new Set(tasks.flatMap(t => t.tags || []))], [tasks])
 
   const filteredTasks = useMemo(() => {
     let result = tasks
     if (searchQuery) result = result.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    if (filterTag) result = result.filter(t => t.tags.includes(filterTag))
+    if (filterTag) result = result.filter(t => t.tags && t.tags.includes(filterTag))
     if (sortBy === 'priority') result = [...result].sort((a, b) => PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority])
     if (sortBy === 'title') result = [...result].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     if (sortBy === 'progress') result = [...result].sort((a, b) => b.progress - a.progress)
@@ -51,9 +82,46 @@ function App() {
     setShowSortMenu(false)
   }
 
-  const addTask = (task) => {
-    setTasks(prev => [...prev, { ...task, id: Date.now() }])
-    setShowAddModal(false)
+  const addTask = async (task) => {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([{ ...task, created_at: new Date() }])
+      .select()
+
+    if (error) {
+      console.error('Error adding task:', error)
+      alert('Erro ao adicionar tarefa.')
+    } else {
+      setTasks(prev => [data[0], ...prev])
+      setShowAddModal(false)
+    }
+  }
+
+  const updateTask = async (id, updates) => {
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      console.error('Error updating task:', error)
+    } else {
+      setTasks(prev => prev.map(t => t.id === id ? data[0] : t))
+    }
+  }
+
+  const deleteTask = async (id) => {
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting task:', error)
+    } else {
+      setTasks(prev => prev.filter(t => t.id !== id))
+    }
   }
 
   const openAddModal = (status = 'A Fazer') => {
@@ -173,8 +241,21 @@ function App() {
             </section>
 
             <div className="board-container">
-              {viewType === 'kanban' && <KanbanView tasks={filteredTasks} onAddTask={openAddModal} />}
-              {viewType === 'list' && <ListView tasks={filteredTasks} />}
+              {viewType === 'kanban' && (
+                <KanbanView 
+                  tasks={filteredTasks} 
+                  onAddTask={openAddModal} 
+                  onUpdateTask={updateTask}
+                  onDeleteTask={deleteTask}
+                />
+              )}
+              {viewType === 'list' && (
+                <ListView 
+                  tasks={filteredTasks} 
+                  onUpdateTask={updateTask}
+                  onDeleteTask={deleteTask}
+                />
+              )}
               {viewType === 'overview' && <OverviewView tasks={tasks} />}
               {viewType === 'files' && (
                 <div className="empty-state">
@@ -186,13 +267,15 @@ function App() {
           </>
         )
       case 'time':
-        return <TimeView tasks={tasks} />
+        return <TimeView tasks={tasks} team={team} />
       case 'clientes':
-        return <ClientesView />
+        return <ClientesView clients={clients} />
       default:
         return null
     }
   }
+
+  if (loading) return <div className="loading-screen">Carregando PettoFlow...</div>
 
   return (
     <div className="app-container" onClick={closeMenus}>

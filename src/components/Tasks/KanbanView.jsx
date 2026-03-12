@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2, ArrowRight } from 'lucide-react'
 
 const STATUSES = ['A Fazer', 'Em Progresso', 'Concluído']
 
@@ -15,7 +15,12 @@ const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
 
 const getTagClass = (tag) => TAG_CLASS[tag.toLowerCase()] ?? 'default-tag'
 
-const KanbanView = ({ tasks, onAddTask }) => {
+const KanbanView = ({ tasks, onAddTask, onUpdateTask, onDeleteTask }) => {
+  const getNextStatus = (current) => {
+    const idx = STATUSES.indexOf(current)
+    return STATUSES[(idx + 1) % STATUSES.length]
+  }
+
   return (
     <div className="kanban-board">
       {STATUSES.map((status) => {
@@ -40,17 +45,31 @@ const KanbanView = ({ tasks, onAddTask }) => {
                 layout
                 transition={{ duration: 0.2 }}
               >
-                <div className="tags">
-                  {task.tags.map(tag => (
-                    <span key={tag} className={`tag ${getTagClass(tag)}`}>{tag}</span>
-                  ))}
+                <div className="card-top">
+                  <div className="tags">
+                    {task.tags && task.tags.map(tag => (
+                      <span key={tag} className={`tag ${getTagClass(tag)}`}>{tag}</span>
+                    ))}
+                  </div>
+                  <button className="delete-task-btn" onClick={() => onDeleteTask(task.id)}>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
                 <h4>{task.title}</h4>
                 <div className="task-meta">
                   <span className="task-owner">{task.owner}</span>
-                  <span className={`priority-badge priority-${PRIORITY_CLASS[task.priority]}`}>
-                    {task.priority}
-                  </span>
+                  <div className="task-actions-row">
+                    <span className={`priority-badge priority-${PRIORITY_CLASS[task.priority]}`}>
+                      {task.priority}
+                    </span>
+                    <button 
+                      className="status-cycle-btn" 
+                      onClick={() => onUpdateTask(task.id, { status: getNextStatus(task.status) })}
+                      title="Mudar Status"
+                    >
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
                 </div>
                 <div className="card-footer">
                   <div className="progress-bar">
