@@ -20,8 +20,10 @@ const Dashboard = ({ tasks }) => {
     : 0
 
   // Group tasks by tag for pie-like display
-  const tagCounts = tasks.flatMap(t => t.tags).reduce((acc, tag) => {
-    acc[tag] = (acc[tag] || 0) + 1
+  const tagCounts = (tasks || []).flatMap(t => t.tags || []).reduce((acc, tag) => {
+    if (tag) {
+      acc[tag] = (acc[tag] || 0) + 1
+    }
     return acc
   }, {})
 
@@ -92,11 +94,15 @@ const Dashboard = ({ tasks }) => {
       <div className="dashboard-section">
         <h3>Tarefas Recentes</h3>
         <div className="recent-tasks">
-          {tasks.map(task => (
+          {(tasks || []).slice(0, 5).map(task => (
             <div key={task.id} className="recent-task-row">
-              <div className="activity-avatar">{task.owner ? task.owner.split(' ').map(n => n[0]).join('') : '?'}</div>
-              <span className="recent-task-title">{task.title}</span>
-              <span className={`status-badge ${STATUS_CLASS[task.status]}`}>{task.status}</span>
+              <div className="activity-avatar">
+                {task.owner ? task.owner.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
+              </div>
+              <span className="recent-task-title">{task.title || 'Sem título'}</span>
+              <span className={`status-badge ${STATUS_CLASS[task.status] || 'todo'}`}>
+                {task.status || 'A Fazer'}
+              </span>
             </div>
           ))}
         </div>

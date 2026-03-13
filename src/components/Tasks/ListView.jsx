@@ -30,24 +30,24 @@ const ListView = ({ tasks, onUpdateTask, onDeleteTask }) => {
         <tbody>
           {tasks.map(task => (
             <tr key={task.id}>
-              <td>{task.title}</td>
+              <td>{task.title || 'Sem título'}</td>
               <td>
-                <span className={`status-badge ${STATUS_CLASS[task.status]}`}>
-                  {task.status}
+                <span className={`status-badge ${STATUS_CLASS[task.status] || 'todo'}`}>
+                  {task.status || 'A Fazer'}
                 </span>
               </td>
               <td>
-                <span className={`priority-badge priority-${PRIORITY_CLASS[task.priority]}`}>
-                  {task.priority}
+                <span className={`priority-badge priority-${PRIORITY_CLASS[task.priority] || 'media'}`}>
+                  {task.priority || 'Média'}
                 </span>
               </td>
-              <td>{task.owner}</td>
+              <td>{task.owner || '-'}</td>
               <td>
                 <div className="progress-bar-inline">
                   <div className="progress-track">
-                    <div className="progress-fill" style={{ width: `${task.progress}%` }} />
+                    <div className="progress-fill" style={{ width: `${task.progress || 0}%` }} />
                   </div>
-                  <span>{task.progress}%</span>
+                  <span>{task.progress || 0}%</span>
                 </div>
               </td>
               <td>

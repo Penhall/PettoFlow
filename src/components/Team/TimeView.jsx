@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Phone, Plus, Trash2, X } from 'lucide-react'
+import { Mail, Plus, Trash2, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 
 const MemberModal = ({ member, onSave, onClose }) => {
@@ -69,7 +69,7 @@ const TimeView = ({ tasks, team, onRefresh }) => {
   })
 
   const handleSave = async (form) => {
-    const { id, initials, memberTasks, done, ...payload } = form
+    const { id, initials: _i, memberTasks: _m, done: _d, ...payload } = form
     let error
     if (id) {
       ({ error } = await supabase.from('team').update(payload).eq('id', id))

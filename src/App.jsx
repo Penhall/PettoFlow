@@ -73,15 +73,25 @@ function App() {
     fetchColumns()
   }, [])
 
-  const allTags = useMemo(() => [...new Set(tasks.flatMap(t => t.tags || []))], [tasks])
+  const allTags = useMemo(() => [...new Set((tasks || []).flatMap(t => t.tags || []))], [tasks])
 
   const filteredTasks = useMemo(() => {
-    let result = tasks
-    if (searchQuery) result = result.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    if (filterTag) result = result.filter(t => t.tags && t.tags.includes(filterTag))
-    if (sortBy === 'priority') result = [...result].sort((a, b) => PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority])
-    if (sortBy === 'title') result = [...result].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
-    if (sortBy === 'progress') result = [...result].sort((a, b) => b.progress - a.progress)
+    let result = tasks || []
+    if (searchQuery) {
+      result = result.filter(t => (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()))
+    }
+    if (filterTag) {
+      result = result.filter(t => t.tags && Array.isArray(t.tags) && t.tags.includes(filterTag))
+    }
+    if (sortBy === 'priority') {
+      result = [...result].sort((a, b) => (PRIORITY_ORDER[b.priority] || 0) - (PRIORITY_ORDER[a.priority] || 0))
+    }
+    if (sortBy === 'title') {
+      result = [...result].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'pt-BR'))
+    }
+    if (sortBy === 'progress') {
+      result = [...result].sort((a, b) => (b.progress || 0) - (a.progress || 0))
+    }
     return result
   }, [tasks, searchQuery, filterTag, sortBy])
 
