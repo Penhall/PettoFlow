@@ -5,7 +5,7 @@ import Header from './components/Header'
 import KanbanView from './components/Tasks/KanbanView'
 import ListView from './components/Tasks/ListView'
 import OverviewView from './components/Tasks/OverviewView'
-import AddTaskModal from './components/Tasks/AddTaskModal'
+import TaskModal from './components/Tasks/TaskModal'
 import Dashboard from './components/Dashboard/Dashboard'
 import TimeView from './components/Team/TimeView'
 import ClientesView from './components/Clients/ClientesView'
@@ -20,11 +20,14 @@ function App() {
   const [tasks, setTasks] = useState([])
   const [team, setTeam] = useState([])
   const [clients, setClients] = useState([])
+  const [columns, setColumns] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState(null)
   const [filterTag, setFilterTag] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedTask, setSelectedTask] = useState(null)
   const [addModalStatus, setAddModalStatus] = useState('A Fazer')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
@@ -52,15 +55,22 @@ function App() {
   }
 
   const fetchClients = async () => {
-    const { data, error } = await supabase.from('clients').select('*')
+    const { data, error } = await supabase.from('clients').select('*').order('name')
     if (error) console.error('Error fetching clients:', error)
     else setClients(data || [])
+  }
+
+  const fetchColumns = async () => {
+    const { data, error } = await supabase.from('kanban_columns').select('*').order('order_index')
+    if (error) console.error('Error fetching columns:', error)
+    else setColumns(data || [])
   }
 
   useEffect(() => {
     fetchTasks()
     fetchTeam()
     fetchClients()
+    fetchColumns()
   }, [])
 
   const allTags = useMemo(() => [...new Set(tasks.flatMap(t => t.tags || []))], [tasks])
@@ -122,6 +132,27 @@ function App() {
     } else {
       setTasks(prev => prev.filter(t => t.id !== id))
     }
+  }
+
+  const addColumn = async (name) => {
+    const order_index = columns.length > 0 ? Math.max(...columns.map(c => c.order_index)) + 1 : 1
+    const { data, error } = await supabase
+      .from('kanban_columns')
+      .insert([{ name, order_index }])
+      .select()
+    
+    if (error) console.error('Error adding column:', error)
+    else setColumns(prev => [...prev, data[0]])
+  }
+
+  const deleteColumn = async (id) => {
+    const { error } = await supabase
+      .from('kanban_columns')
+      .delete()
+      .eq('id', id)
+    
+    if (error) console.error('Error deleting column:', error)
+    else setColumns(prev => prev.filter(c => c.id !== id))
   }
 
   const openAddModal = (status = 'A Fazer') => {
@@ -244,9 +275,13 @@ function App() {
               {viewType === 'kanban' && (
                 <KanbanView 
                   tasks={filteredTasks} 
+                  columns={columns}
                   onAddTask={openAddModal} 
                   onUpdateTask={updateTask}
                   onDeleteTask={deleteTask}
+                  onEditTask={(task) => { setSelectedTask(task); setShowEditModal(true) }}
+                  onAddColumn={addColumn}
+                  onDeleteColumn={deleteColumn}
                 />
               )}
               {viewType === 'list' && (
@@ -267,9 +302,9 @@ function App() {
           </>
         )
       case 'time':
-        return <TimeView tasks={tasks} team={team} />
+        return <TimeView tasks={tasks} team={team} onRefresh={fetchTeam} />
       case 'clientes':
-        return <ClientesView clients={clients} />
+        return <ClientesView clients={clients} onRefresh={fetchClients} />
       default:
         return null
     }
@@ -304,11 +339,28 @@ function App() {
       </main>
 
       <AnimatePresence>
-        {showAddModal && (
-          <AddTaskModal
-            onAdd={addTask}
-            onClose={() => setShowAddModal(false)}
+        {(showAddModal || showEditModal) && (
+          <TaskModal
+            task={selectedTask}
+            onSave={(entry) => {
+              if (selectedTask) {
+                const { id, ...updates } = entry
+                updateTask(id, updates)
+                setShowEditModal(false)
+              } else {
+                addTask(entry)
+                setShowAddModal(false)
+              }
+              setSelectedTask(null)
+            }}
+            onClose={() => {
+              setShowAddModal(false)
+              setShowEditModal(false)
+              setSelectedTask(null)
+            }}
             defaultStatus={addModalStatus}
+            team={team}
+            clients={clients}
           />
         )}
       </AnimatePresence>
