@@ -312,12 +312,24 @@ function App() {
           </>
         )
       case 'time':
-        return <TimeView tasks={tasks} team={team} onRefresh={fetchTeam} />
+        return <TimeView tasks={tasks} team={team} onRefresh={fetchTeam} searchQuery={searchQuery} />
       case 'clientes':
-        return <ClientesView clients={clients} onRefresh={fetchClients} />
+        return <ClientesView clients={clients} tasks={tasks} onRefresh={fetchClients} searchQuery={searchQuery} />
       default:
         return null
     }
+  }
+
+  if (!supabase) {
+    return (
+      <div className="loading-screen" style={{ color: '#ef4444' }}>
+        <h2>Configuração Necessária</h2>
+        <p>As variáveis de ambiente do Supabase não foram encontradas.</p>
+        <p style={{ fontSize: '0.9rem', marginTop: '10px', color: '#64748b' }}>
+          Certifique-se de que VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão configuradas no Vercel.
+        </p>
+      </div>
+    )
   }
 
   if (loading) return <div className="loading-screen">Carregando PettoFlow...</div>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Building2, ExternalLink, Plus, Trash2, X } from 'lucide-react'
+import { Building2, Plus, Trash2, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import ClientProfileModal from './ClientProfileModal'
 
 const ClientModal = ({ client, onSave, onClose }) => {
   const [form, setForm] = useState(client || {
@@ -76,9 +77,10 @@ const ClientModal = ({ client, onSave, onClose }) => {
   )
 }
 
-const ClientesView = ({ clients, onRefresh }) => {
+const ClientesView = ({ clients, tasks, onRefresh, searchQuery }) => {
   const [editingClient, setEditingClient] = useState(null)
-  const [showModal, setShowModal] = useState(false)
+  const [viewingClient, setViewingClient] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const handleSave = async (form) => {
     const { id, ...payload } = form
@@ -91,7 +93,7 @@ const ClientesView = ({ clients, onRefresh }) => {
     
     if (error) console.error('Error saving client:', error)
     else {
-      setShowModal(false)
+      setShowEditModal(false)
       setEditingClient(null)
       onRefresh()
     }
@@ -108,14 +110,19 @@ const ClientesView = ({ clients, onRefresh }) => {
     <div className="clients-view">
       <div className="section-header-row">
         <h3 className="section-title">Gestão de Clientes</h3>
-        <button className="add-member-btn" onClick={() => setShowModal(true)}>
+        <button className="add-member-btn" onClick={() => { setEditingClient(null); setShowEditModal(true) }}>
           <Plus size={16} /> Novo Cliente
         </button>
       </div>
 
       <div className="clients-list">
-        {clients && clients.map(client => (
-          <div key={client.id} className="client-item" onClick={() => { setEditingClient(client); setShowModal(true) }}>
+        {(clients || []).filter(client => {
+          if (!searchQuery) return true
+          const q = searchQuery.toLowerCase()
+          return (client.name || '').toLowerCase().includes(q) || 
+                 (client.industry || '').toLowerCase().includes(q)
+        }).map(client => (
+          <div key={client.id} className="client-item" onClick={() => setViewingClient(client)}>
             <div className="client-icon">
               <Building2 size={24} />
             </div>
@@ -146,11 +153,19 @@ const ClientesView = ({ clients, onRefresh }) => {
       </div>
 
       <AnimatePresence>
-        {showModal && (
+        {showEditModal && (
           <ClientModal 
             client={editingClient} 
             onSave={handleSave} 
-            onClose={() => { setShowModal(false); setEditingClient(null) }} 
+            onClose={() => { setShowEditModal(false); setEditingClient(null) }} 
+          />
+        )}
+        {viewingClient && (
+          <ClientProfileModal
+            client={viewingClient}
+            clientTasks={(tasks || []).filter(t => t.client_id === viewingClient.id)}
+            onEdit={(client) => { setEditingClient(client); setShowEditModal(true) }}
+            onClose={() => setViewingClient(null)}
           />
         )}
       </AnimatePresence>

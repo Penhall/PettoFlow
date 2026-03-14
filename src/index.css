@@ -1242,3 +1242,247 @@ body {
   border-color: var(--primary);
   color: var(--primary);
 }
+
+/* --- Client Profile & Interaction Logs --- */
+.profile-modal {
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-header-info h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-main);
+}
+
+.profile-header-info .subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 24px;
+  padding: 24px;
+}
+
+.profile-sidebar {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-right: 1px solid var(--border-color);
+  padding-right: 24px;
+  overflow-y: auto;
+}
+
+.info-card {
+  background: var(--bg-hover);
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-card h3, .related-tasks h3, .interaction-feed h3 {
+  font-size: 1rem;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.info-card p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.task-list-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-mini-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+}
+
+.task-mini-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.interaction-feed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.add-log-form {
+  background: #F8FAFC;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-type-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.log-type-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: white;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.log-type-btn:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.log-type-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.log-input-row {
+  display: flex;
+  gap: 12px;
+}
+
+.log-input-row input {
+  flex: 1;
+}
+
+.add-log-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.add-log-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logs-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 8px;
+}
+
+.empty-log {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+  gap: 8px;
+  opacity: 0.7;
+}
+
+.empty-log p {
+  font-weight: 600;
+  margin: 0;
+}
+
+.empty-log span {
+  font-size: 0.9rem;
+}
+
+.log-item {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.log-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.log-notes {
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.log-type-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.type-ligacao { background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; }
+.type-email { background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
+.type-reuniao { background: #F3E8FF; color: #7E22CE; border: 1px solid #E9D5FF; }
+.type-whatsapp { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+.type-outro { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }

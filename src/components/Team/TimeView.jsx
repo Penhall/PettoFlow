@@ -57,7 +57,7 @@ const MemberModal = ({ member, onSave, onClose }) => {
   )
 }
 
-const TimeView = ({ tasks, team, onRefresh }) => {
+const TimeView = ({ tasks, team, onRefresh, searchQuery }) => {
   const [editingMember, setEditingMember] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
@@ -66,6 +66,11 @@ const TimeView = ({ tasks, team, onRefresh }) => {
     const done = memberTasks.filter(t => t.status === 'Concluído').length
     const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
     return { ...member, initials, memberTasks, done }
+  }).filter(member => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (member.name || '').toLowerCase().includes(q) || 
+           (member.role || '').toLowerCase().includes(q)
   })
 
   const handleSave = async (form) => {

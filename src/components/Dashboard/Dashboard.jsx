@@ -1,4 +1,4 @@
-import { TrendingUp, CheckCircle, Clock, AlertCircle, BarChart, PieChart, Users } from 'lucide-react'
+import { TrendingUp, CheckCircle, Clock, AlertCircle, BarChart, PieChart, Users, DollarSign } from 'lucide-react'
 
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 
@@ -8,11 +8,14 @@ const Dashboard = ({ tasks }) => {
   const lateTasks = tasks.filter(t => t.status === 'A Fazer' && t.progress === 0).length
   const totalMembers = [...new Set(tasks.map(t => t.owner).filter(Boolean))].length
 
+  const pipelineValue = tasks.filter(t => t.status !== 'Concluído').reduce((sum, t) => sum + Number(t.deal_value || 0), 0)
+  const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val)
+
   const statCards = [
+    { label: 'Valor em Pipeline', value: formatCurrency(pipelineValue), icon: DollarSign, color: '#05CD99' },
     { label: 'Tarefas Ativas', value: activeTasks, icon: Clock, color: '#7C3AED' },
-    { label: 'Concluídas', value: completedTasks, icon: CheckCircle, color: '#05CD99' },
     { label: 'Sem Início', value: lateTasks, icon: AlertCircle, color: '#EE5D50' },
-    { label: 'Membros Time', value: totalMembers, icon: Users, color: '#FFB547' },
+    { label: 'Time Envolvido', value: totalMembers, icon: Users, color: '#FFB547' },
   ]
 
   const avgProgress = tasks.length
