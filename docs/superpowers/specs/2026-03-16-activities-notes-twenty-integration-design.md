@@ -41,7 +41,7 @@ CREATE TABLE activities (
   -- valores: 'pending' | 'completed'
   scheduled_at  TIMESTAMPTZ,
   completed_at  TIMESTAMPTZ,
-  created_by    TEXT,
+  created_by    TEXT,                    -- sem FK intencional (MVP, sem RLS neste ciclo)
   related_to    JSONB       DEFAULT '[]',
   -- ex: [{"type":"client","id":"uuid","label":"Acme Corp"},
   --      {"type":"task","id":"uuid","label":"Implementar login"},
@@ -126,7 +126,7 @@ App.jsx
 - Fetch inicial ao montar: `supabase.from('activities').select('*').order('created_at', { ascending: false })`
 - Expõe: `{ activities, loading, addActivity, updateActivity, deleteActivity }`
 - Query filtrada por vínculo: `.contains('related_to', [{ type, id }])`
-- Instanciado uma vez no `App.jsx`, passado como props onde necessário
+- Instanciado uma vez no `App.jsx`, passado como props onde necessário (prop-drilling explícito — sem Context wrapper por ora, coerente com o padrão atual do projeto)
 
 ### `useReminders.js`
 - Recebe `activities[]` como parâmetro
@@ -206,6 +206,8 @@ App.jsx
 | `dark` | radius-md, fundo card-bg | backdrop blur, fundo card-bg | chips com fundo primary-light | overlay escuro |
 | `twenty` | radius-sm, borda border-color | sem blur, fundo #1F1F1F | chips radius-sm, fundo chip-bg | overlay sidebar-overlay |
 
+> **Nota `twenty`:** `--font-serif` é intencionalmente igual a `--font-sans` (`'Inter'`) — o Twenty CRM usa uma única typeface sans em toda a UI.
+
 ---
 
 ## Tratamento de Erros
@@ -227,6 +229,7 @@ App.jsx
 | Conflito de atalho Ctrl+K | Fallback `/` como alternativa; detecta plataforma |
 | RecordSidebar em mobile | Fullscreen abaixo de 768px |
 | Chips órfãos sem cascade delete | Label preservado no JSON, ícone de aviso |
+| `setTimeout` com aba aberta por dias | Limite prático ~24 dias — irrelevante para uso típico de CRM |
 
 ---
 
