@@ -2134,4 +2134,73 @@ body {
   color: var(--text-secondary);
   text-align: center;
 }
+
+/* ─── ActivityForm / Tiptap ─── */
+.activity-modal { max-width: 620px; width: 100%; }
+
+.type-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.type-btn {
+  padding: 5px 12px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all .15s;
+}
+.type-btn:hover { border-color: var(--primary); color: var(--text-main); }
+.type-btn.active {
+  background: var(--primary);
+  color: var(--bg-main);
+  border-color: var(--primary);
+}
+
+.tiptap-wrapper {
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.tiptap-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: var(--border-width) solid var(--border-color);
+  background: var(--bg-main);
+}
+
+.tiptap-toolbar button {
+  padding: 3px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+}
+.tiptap-toolbar button:hover { background: var(--primary-light); color: var(--text-main); }
+.tiptap-toolbar button.active { background: var(--primary-light); color: var(--primary); }
+
+.tiptap-content {
+  padding: 12px;
+  min-height: 100px;
+  font-size: 13px;
+  color: var(--text-main);
+  outline: none;
+}
+.tiptap-content p { margin-bottom: 8px; }
+.tiptap-content ul { padding-left: 20px; }
+.tiptap-content:focus-within { outline: none; }
+
+.editor-loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
 .timeline-empty p { font-size: 13px; margin: 0; }
