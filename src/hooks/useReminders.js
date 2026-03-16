@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react'
 
 export function useReminders(activities, onReminder) {
   const timersRef = useRef([])
+  const onReminderRef = useRef(onReminder)
+  useEffect(() => { onReminderRef.current = onReminder })
 
   useEffect(() => {
     // Limpar timers anteriores
@@ -17,7 +19,7 @@ export function useReminders(activities, onReminder) {
     pending.forEach(activity => {
       const delay = new Date(activity.scheduled_at).getTime() - now
       const timerId = setTimeout(() => {
-        onReminder({
+        onReminderRef.current({
           title: activity.title,
           type: activity.type,
           related_to: activity.related_to,
@@ -30,5 +32,5 @@ export function useReminders(activities, onReminder) {
     return () => {
       timersRef.current.forEach(clearTimeout)
     }
-  }, [activities, onReminder])
+  }, [activities])
 }
