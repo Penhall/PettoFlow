@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
-const RecordSidebar = ({ isOpen, onClose, title, subtitle, children }) => {
+const RecordSidebar = ({ isOpen, onClose = () => {}, title, subtitle, children }) => {
   // Fecha com Escape
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -34,7 +34,7 @@ const RecordSidebar = ({ isOpen, onClose, title, subtitle, children }) => {
           >
             <div className="record-sidebar-header">
               <div>
-                <h2 className="record-sidebar-title">{title}</h2>
+                {title && <h2 className="record-sidebar-title">{title}</h2>}
                 {subtitle && <span className="record-sidebar-subtitle">{subtitle}</span>}
               </div>
               <button className="icon-btn" onClick={onClose} aria-label="Fechar">

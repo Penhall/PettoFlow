@@ -1,24 +1,26 @@
 // src/components/Activities/ActivityForm.jsx
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useRef, useState, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { X, Calendar } from 'lucide-react'
 import RelationChips from './RelationChips'
 
-// Lazy load do Tiptap — só carrega quando o form é aberto
+// Lazy load do Tiptap — carrega ambos os pacotes juntos
 const TiptapEditor = lazy(() =>
-  import('@tiptap/react').then(({ useEditor, EditorContent }) => {
-    // Wrapper como componente default exportável
+  Promise.all([
+    import('@tiptap/react'),
+    import('@tiptap/starter-kit'),
+  ]).then(([{ useEditor, EditorContent }, { default: StarterKit }]) => {
     const Editor = ({ content, onChange }) => {
-      const [StarterKit, setStarterKit] = useState(null)
-      useEffect(() => {
-        import('@tiptap/starter-kit').then(m => setStarterKit(m.default))
-      }, [])
+      const onChangeRef = useRef(onChange)
+      // Mantém ref atualizado sem re-criar o editor
+      onChangeRef.current = onChange
+
       const editor = useEditor({
-        extensions: StarterKit ? [StarterKit] : [],
+        extensions: [StarterKit],
         content: content || '',
-        onUpdate: ({ editor }) => onChange(editor.getJSON()),
-      }, [StarterKit])
-      if (!StarterKit || !editor) return <div className="editor-loading">Carregando editor...</div>
+        onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
+      })
+      if (!editor) return <div className="editor-loading">Carregando editor...</div>
       return (
         <div className="tiptap-wrapper">
           <div className="tiptap-toolbar">
@@ -43,7 +45,7 @@ const ACTIVITY_TYPES = [
   { value: 'task',     label: 'Tarefa' },
 ]
 
-const ActivityForm = ({ activity, onSave, onClose, clients, tasks, team }) => {
+const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], team = [] }) => {
   const [form, setForm] = useState({
     title: '',
     type: 'meeting',
