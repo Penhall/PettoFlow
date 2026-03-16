@@ -1,6 +1,6 @@
 // src/components/Activities/RelationChips.jsx
-import { useState, useRef, useEffect } from 'react'
-import { X, Plus } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { X } from 'lucide-react'
 
 const TYPE_COLORS = {
   client:   { bg: 'var(--chip-bg)', label: '🏢' },
@@ -13,11 +13,11 @@ const RelationChips = ({ value = [], onChange, clients = [], tasks = [], team = 
   const [showDropdown, setShowDropdown] = useState(false)
   const inputRef = useRef(null)
 
-  const allOptions = [
+  const allOptions = useMemo(() => [
     ...clients.map(c => ({ type: 'client', id: String(c.id), label: c.name })),
     ...tasks.map(t => ({ type: 'task',   id: String(t.id), label: t.title })),
     ...team.map(m => ({ type: 'team',   id: String(m.id), label: m.name })),
-  ]
+  ], [clients, tasks, team])
 
   const filtered = search.trim()
     ? allOptions.filter(o =>
@@ -70,7 +70,7 @@ const RelationChips = ({ value = [], onChange, clients = [], tasks = [], team = 
             placeholder={value.length === 0 ? 'Vincular a cliente, tarefa ou membro...' : 'Adicionar...'}
             value={search}
             onChange={e => { setSearch(e.target.value); setShowDropdown(true) }}
-            onFocus={() => search && setShowDropdown(true)}
+            onKeyDown={e => { if (e.key === 'Escape') { setShowDropdown(false); setSearch('') } }}
           />
         </div>
       </div>
