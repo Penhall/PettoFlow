@@ -11,7 +11,10 @@ export function useCommandPalette(tasks, clients, activities) {
       const trigger = isMac ? e.metaKey && e.key === 'k' : e.ctrlKey && e.key === 'k'
       if (trigger) {
         e.preventDefault()
-        setIsOpen(prev => !prev)
+        setIsOpen(prev => {
+          if (prev) setQuery('')
+          return !prev
+        })
       }
       if (e.key === 'Escape') {
         setIsOpen(false)
