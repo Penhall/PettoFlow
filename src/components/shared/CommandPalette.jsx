@@ -20,8 +20,6 @@ const CommandPalette = ({ isOpen, query, setQuery, results, onClose, onSelect, o
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 50)
   }, [isOpen])
 
-  const items = results
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -55,7 +53,7 @@ const CommandPalette = ({ isOpen, query, setQuery, results, onClose, onSelect, o
 
             {query.trim() ? (
               <div className="palette-results">
-                {items.length === 0 ? (
+                {results.length === 0 ? (
                   <div className="palette-empty">
                     <p>Nenhum resultado para "{query}"</p>
                     <button className="palette-action-btn" onClick={() => { onCreateActivity(); onClose() }}>
@@ -63,7 +61,7 @@ const CommandPalette = ({ isOpen, query, setQuery, results, onClose, onSelect, o
                     </button>
                   </div>
                 ) : (
-                  items.map(item => {
+                  results.map(item => {
                     const Icon = TYPE_ICONS[item.type] || Activity
                     return (
                       <button
