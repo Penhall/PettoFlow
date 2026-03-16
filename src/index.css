@@ -1888,4 +1888,92 @@ body {
 .type-email { background: transparent; color: var(--text-main); }
 .type-reuniao { background: transparent; color: var(--text-main); }
 .type-whatsapp { background: transparent; color: var(--text-main); }
+
+/* ─── RelationChips ─── */
+.relation-chips-wrapper { position: relative; }
+
+.relation-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  cursor: text;
+}
+
+.relation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--chip-bg);
+  color: var(--text-main);
+  font-size: 12px;
+  border: var(--border-width) solid var(--border-color);
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.chip-remove:hover { color: var(--danger); }
+
+.chip-input-wrapper { flex: 1; min-width: 120px; }
+.chip-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-main);
+}
+.chip-input::placeholder { color: var(--text-secondary); }
+
+.chip-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.chip-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+}
+.chip-option:hover { background: var(--primary-light); }
+
+.chip-option-type {
+  margin-left: auto;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-secondary);
+}
 .type-outro { background: transparent; color: var(--text-secondary); }
