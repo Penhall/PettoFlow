@@ -6,25 +6,28 @@ export function useActivities() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const fetchActivities = async () => {
+  useEffect(() => {
+    if (!supabase) { setLoading(false); return }
+    let cancelled = false
     setLoading(true)
-    const { data, error } = await supabase
+    supabase
       .from('activities')
       .select('*')
       .order('created_at', { ascending: false })
-    if (error) console.error('Error fetching activities:', error)
-    else setActivities(data || [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchActivities()
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) console.error('Error fetching activities:', error)
+        else setActivities(data || [])
+        setLoading(false)
+      })
+    return () => { cancelled = true }
   }, [])
 
   const addActivity = async (activity) => {
+    if (!supabase) return null
     const { data, error } = await supabase
       .from('activities')
-      .insert([{ ...activity, created_at: new Date() }])
+      .insert([activity])
       .select()
     if (error) { console.error('Error adding activity:', error); return null }
     setActivities(prev => [data[0], ...prev])
@@ -32,9 +35,10 @@ export function useActivities() {
   }
 
   const updateActivity = async (id, updates) => {
+    if (!supabase) return null
     const { data, error } = await supabase
       .from('activities')
-      .update({ ...updates, updated_at: new Date() })
+      .update(updates)
       .eq('id', id)
       .select()
     if (error) { console.error('Error updating activity:', error); return null }
@@ -43,6 +47,7 @@ export function useActivities() {
   }
 
   const deleteActivity = async (id) => {
+    if (!supabase) return false
     const { error } = await supabase
       .from('activities')
       .delete()
