@@ -9,6 +9,11 @@ import TaskModal from './components/Tasks/TaskModal'
 import Dashboard from './components/Dashboard/Dashboard'
 import TimeView from './components/Team/TimeView'
 import ClientesView from './components/Clients/ClientesView'
+import ActivitiesView from './components/Activities/ActivitiesView'
+import ReminderToast from './components/shared/ReminderToast'
+import CommandPalette from './components/shared/CommandPalette'
+import { useActivities } from './hooks/useActivities'
+import { useCommandPalette } from './hooks/useCommandPalette'
 import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder } from 'lucide-react'
 import { supabase } from './lib/supabaseClient'
 
@@ -31,6 +36,9 @@ function App() {
   const [addModalStatus, setAddModalStatus] = useState('A Fazer')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
+
+  const { activities } = useActivities()
+  const { isOpen: paletteOpen, query, setQuery, results, open: openPalette, close: closePalette } = useCommandPalette(tasks, clients, activities)
 
   // Fetch tasks from Supabase
   const fetchTasks = async () => {
@@ -194,6 +202,7 @@ function App() {
       case 'tarefas': return 'Minhas Tarefas'
       case 'time': return 'Time'
       case 'clientes': return 'Clientes'
+      case 'atividades': return 'Atividades'
       default: return 'PettoFlow'
     }
   }
@@ -315,6 +324,8 @@ function App() {
         return <TimeView tasks={tasks} team={team} onRefresh={fetchTeam} searchQuery={searchQuery} />
       case 'clientes':
         return <ClientesView clients={clients} tasks={tasks} onRefresh={fetchClients} searchQuery={searchQuery} />
+      case 'atividades':
+        return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} />
       default:
         return null
     }
@@ -359,6 +370,23 @@ function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <ReminderToast activities={activities} />
+
+      <CommandPalette
+        isOpen={paletteOpen}
+        query={query}
+        setQuery={setQuery}
+        results={results}
+        onClose={closePalette}
+        onSelect={(item) => {
+          if (item.type === 'client') handleTabChange('clientes')
+          else if (item.type === 'task') handleTabChange('tarefas')
+          else if (item.type === 'activity') handleTabChange('atividades')
+          closePalette()
+        }}
+        onCreateActivity={() => { handleTabChange('atividades'); closePalette() }}
+      />
 
       <AnimatePresence>
         {(showAddModal || showEditModal) && (

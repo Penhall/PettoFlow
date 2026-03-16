@@ -1,9 +1,10 @@
-import { LayoutDashboard, CheckSquare, Users, UserCircle } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tarefas', label: 'Minhas Tarefas', icon: CheckSquare },
+    { id: 'atividades', label: 'Atividades', icon: Activity },
     { id: 'time', label: 'Time', icon: Users },
     { id: 'clientes', label: 'Clientes', icon: UserCircle },
   ];

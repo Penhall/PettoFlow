@@ -154,21 +154,21 @@ const ClientesView = ({ clients, tasks, onRefresh, searchQuery }) => {
 
       <AnimatePresence>
         {showEditModal && (
-          <ClientModal 
-            client={editingClient} 
-            onSave={handleSave} 
-            onClose={() => { setShowEditModal(false); setEditingClient(null) }} 
-          />
-        )}
-        {viewingClient && (
-          <ClientProfileModal
-            client={viewingClient}
-            clientTasks={(tasks || []).filter(t => t.client_id === viewingClient.id)}
-            onEdit={(client) => { setEditingClient(client); setShowEditModal(true) }}
-            onClose={() => setViewingClient(null)}
+          <ClientModal
+            client={editingClient}
+            onSave={handleSave}
+            onClose={() => { setShowEditModal(false); setEditingClient(null) }}
           />
         )}
       </AnimatePresence>
+
+      <ClientProfileModal
+        isOpen={!!viewingClient}
+        client={viewingClient}
+        clientTasks={(tasks || []).filter(t => t.client_id === viewingClient?.id)}
+        onEdit={(client) => { setEditingClient(client); setShowEditModal(true) }}
+        onClose={() => setViewingClient(null)}
+      />
     </div>
   )
 }
