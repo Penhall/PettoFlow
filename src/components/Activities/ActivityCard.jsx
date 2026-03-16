@@ -48,12 +48,14 @@ const ActivityCard = ({ activity, onToggleStatus, onDelete }) => {
         </span>
         <span className="activity-date">
           {activity.scheduled_at
-            ? new Date(activity.scheduled_at).toLocaleDateString('pt-BR', {
+            ? new Date(activity.scheduled_at).toLocaleString('pt-BR', {
                 day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
               })
-            : new Date(activity.created_at).toLocaleDateString('pt-BR', {
-                day: '2-digit', month: 'short'
-              })
+            : activity.created_at
+              ? new Date(activity.created_at).toLocaleDateString('pt-BR', {
+                  day: '2-digit', month: 'short'
+                })
+              : '—'
           }
         </span>
         {activity.created_by && (
@@ -69,7 +71,7 @@ const ActivityCard = ({ activity, onToggleStatus, onDelete }) => {
       {Array.isArray(activity.related_to) && activity.related_to.length > 0 && (
         <div className="activity-chips">
           {activity.related_to.map((r, i) => (
-            <span key={i} className="activity-chip">
+            <span key={r.id ?? r.label ?? i} className="activity-chip">
               {r.label}
               {!r.id && <AlertTriangle size={10} style={{ marginLeft: 4, color: 'var(--warning)' }} />}
             </span>
