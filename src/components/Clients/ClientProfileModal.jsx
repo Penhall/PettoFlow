@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { X, Building2, Phone, Mail, FileText, Plus, MessageSquare } from 'lucide-react'
+import { Building2, Phone, Mail, Plus, MessageSquare } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import RecordSidebar from '../shared/RecordSidebar'
 
-const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
+const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) => {
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState({ type: 'Ligação', notes: '' })
   const [loadingLogs, setLoadingLogs] = useState(false)
 
   useEffect(() => {
-    if (client) {
-      fetchLogs()
-    }
-  }, [client])
+    if (client?.id) fetchLogs()
+  }, [client?.id])
 
   const fetchLogs = async () => {
     setLoadingLogs(true)
@@ -21,26 +19,17 @@ const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
       .select('*')
       .eq('client_id', client.id)
       .order('created_at', { ascending: false })
-    
-    if (!error) {
-      setLogs(data || [])
-    }
+    if (!error) setLogs(data || [])
     setLoadingLogs(false)
   }
 
   const handleAddLog = async (e) => {
     e.preventDefault()
     if (!newLog.notes.trim()) return
-
     const { data, error } = await supabase
       .from('interaction_logs')
-      .insert([{
-        client_id: client.id,
-        type: newLog.type,
-        notes: newLog.notes
-      }])
+      .insert([{ client_id: client.id, type: newLog.type, notes: newLog.notes }])
       .select()
-
     if (!error && data) {
       setLogs([data[0], ...logs])
       setNewLog({ type: 'Ligação', notes: '' })
@@ -48,22 +37,13 @@ const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
   }
 
   return (
-    <motion.div className="modal-overlay" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <motion.div className="modal profile-modal" onClick={e => e.stopPropagation()} initial={{ scale: 0.9 }} animate={{ scale: 1 }}>
-        <div className="modal-header">
-          <div className="profile-header-info">
-            <div className="client-icon sm"><Building2 size={20} /></div>
-            <div>
-              <h2>{client.name}</h2>
-              <span className="subtitle">{client.industry} • {client.status}</span>
-            </div>
-          </div>
-          <div className="header-actions">
-            <button className="action-btn" onClick={() => onEdit(client)}>Editar Cliente</button>
-            <button className="icon-btn" onClick={onClose}><X size={20} /></button>
-          </div>
-        </div>
-
+    <RecordSidebar
+      isOpen={isOpen}
+      onClose={onClose}
+      title={client?.name}
+      subtitle={client ? `${client.industry || ''} • ${client.status || ''}` : ''}
+    >
+      {client && (
         <div className="profile-body">
           <div className="profile-sidebar">
             <div className="info-card">
@@ -76,14 +56,13 @@ const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
               <p>Receita Est.: <strong>{client.revenue || 'R$ 0'}</strong></p>
               <p>Projetos Ativos: <strong>{client.projects || 0}</strong></p>
             </div>
-
             <div className="related-tasks">
-              <h3>Tarefas Vinculadas ({clientTasks.length})</h3>
+              <h3>Tarefas Vinculadas ({(clientTasks || []).length})</h3>
               <div className="task-list-mini">
-                {clientTasks.length === 0 ? (
+                {(clientTasks || []).length === 0 ? (
                   <p className="empty-text">Nenhuma tarefa associada.</p>
                 ) : (
-                  clientTasks.map(t => (
+                  (clientTasks || []).map(t => (
                     <div key={t.id} className="task-mini-card">
                       <span className="task-mini-title">{t.title}</span>
                       <span className={`status-badge ${t.status === 'Concluído' ? 'done' : 'progress'}`}>{t.status}</span>
@@ -92,30 +71,33 @@ const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
                 )}
               </div>
             </div>
+            <button className="action-btn" style={{ marginTop: 12 }} onClick={() => onEdit(client)}>
+              <Building2 size={14} style={{ marginRight: 6 }} />
+              Editar Cliente
+            </button>
           </div>
 
           <div className="interaction-feed">
             <h3>Histórico de Interações</h3>
-            
             <form onSubmit={handleAddLog} className="add-log-form">
               <div className="log-type-selector">
                 {['Ligação', 'Email', 'Reunião', 'WhatsApp', 'Outro'].map(type => (
-                  <button 
-                    key={type} 
+                  <button
+                    key={type}
                     type="button"
                     className={`log-type-btn ${newLog.type === type ? 'active' : ''}`}
-                    onClick={() => setNewLog({...newLog, type})}
+                    onClick={() => setNewLog({ ...newLog, type })}
                   >
                     {type}
                   </button>
                 ))}
               </div>
               <div className="log-input-row">
-                <input 
-                  type="text" 
-                  placeholder="Registro de reunião, detalhes da ligação..." 
+                <input
+                  type="text"
+                  placeholder="Registro de reunião, detalhes da ligação..."
                   value={newLog.notes}
-                  onChange={e => setNewLog({...newLog, notes: e.target.value})}
+                  onChange={e => setNewLog({ ...newLog, notes: e.target.value })}
                 />
                 <button type="submit" className="add-log-btn" disabled={!newLog.notes.trim()}>
                   <Plus size={16} /> Adicionar
@@ -136,7 +118,7 @@ const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
                 logs.map(log => (
                   <div key={log.id} className="log-item">
                     <div className="log-header">
-                      <span className={`log-type-badge type-${log.type.toLowerCase().replace('ç','c').replace('ã','a')}`}>
+                      <span className={`log-type-badge type-${log.type.toLowerCase().replace('ç', 'c').replace('ã', 'a')}`}>
                         {log.type}
                       </span>
                       <span className="log-date">
@@ -150,8 +132,8 @@ const ClientProfileModal = ({ client, clientTasks, onEdit, onClose }) => {
             </div>
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+      )}
+    </RecordSidebar>
   )
 }
 

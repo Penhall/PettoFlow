@@ -23,6 +23,7 @@ export function ThemeProvider({ children }) {
       { id: 'ledger', name: 'Livro-Razão (Ledger)' },
       { id: 'classic', name: 'Clássico SaaS' },
       { id: 'dark', name: 'Modo Noturno' },
+      { id: 'twenty', name: 'Twenty (Grafite)' },
     ]
   };
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
+import RelationChips from '../Activities/RelationChips'
 
-const TaskModal = ({ task, onSave, onClose, defaultStatus, team, clients }) => {
+const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [] }) => {
   const [form, setForm] = useState({
     title: '',
     status: defaultStatus || 'A Fazer',
@@ -12,7 +13,8 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team, clients }) => {
     progress: 0,
     deal_value: 0,
     client_id: null,
-    category: 'Operacional'
+    category: 'Operacional',
+    related_to: [],
   })
 
   useEffect(() => {
@@ -22,7 +24,8 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team, clients }) => {
         tags: task.tags || [],
         deal_value: task.deal_value || 0,
         client_id: task.client_id || null,
-        category: task.category || 'Operacional'
+        category: task.category || 'Operacional',
+        related_to: task.related_to || [],
       })
     }
   }, [task])
@@ -146,6 +149,17 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team, clients }) => {
               max="100"
               value={form.progress}
               onChange={e => change('progress', Number(e.target.value))}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Vínculos</label>
+            <RelationChips
+              value={form.related_to}
+              onChange={v => change('related_to', v)}
+              clients={clients}
+              tasks={[]}
+              team={team}
             />
           </div>
 
