@@ -1,0 +1,21 @@
+
+> pettoflow@0.0.0 lint
+> eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0
+
+
+E:\PROJETOS\PettoFlow\src\components\Clients\ClientesView.jsx
+  3:21  error  'ExternalLink' is defined but never used  no-unused-vars
+
+E:\PROJETOS\PettoFlow\src\components\Tasks\KanbanView.jsx
+    2:10  error  'motion' is defined but never used     no-unused-vars
+   15:3   error  'arrayMove' is defined but never used  no-unused-vars
+  140:26  error  'event' is defined but never used      no-unused-vars
+
+E:\PROJETOS\PettoFlow\src\components\Team\TimeView.jsx
+   3:16  error  'Phone' is defined but never used                 no-unused-vars
+  72:17  error  'initials' is assigned a value but never used     no-unused-vars
+  72:27  error  'memberTasks' is assigned a value but never used  no-unused-vars
+  72:40  error  'done' is assigned a value but never used         no-unused-vars
+
+✖ 8 problems (8 errors, 0 warnings)
+
