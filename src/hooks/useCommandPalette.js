@@ -1,5 +1,5 @@
 // src/hooks/useCommandPalette.js
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 export function useCommandPalette(tasks, clients, activities) {
   const [isOpen, setIsOpen] = useState(false)
@@ -25,7 +25,7 @@ export function useCommandPalette(tasks, clients, activities) {
   const open = useCallback(() => { setIsOpen(true); setQuery('') }, [])
   const close = useCallback(() => { setIsOpen(false); setQuery('') }, [])
 
-  const results = useCallback(() => {
+  const results = useMemo(() => {
     if (!query.trim()) return []
     const q = query.toLowerCase()
     const matchedClients = (clients || [])
