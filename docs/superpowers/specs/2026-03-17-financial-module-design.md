@@ -208,7 +208,8 @@ Não há `getBalance` no hook — a conta não conhece as transações; o cálcu
 ### `useTransactions(filters?, rules?)`
 
 ```js
-// filters: { accountId?, categoryId?, dateFrom?, dateTo?, needsReview? }
+// filters: { accountId?, categoryId?, dateFrom?, dateTo?, needsReview?, relatedTo?: {type, id} }
+//   relatedTo usa o operador PostgREST `cs` (contains) sobre a coluna JSONB related_to
 // rules: FinRule[] — passado por FinanceView (que obtém do useFinRules)
 const {
   transactions,
@@ -216,14 +217,15 @@ const {
   addTransaction,      // aplica runRulesEngine(form, rules) antes de salvar
   updateTransaction,
   deleteTransaction,
-  applyRules,          // re-processa SOMENTE as transações atualmente carregadas com needs_review=true
+  applyRules,          // () => Promise<void> — re-processa SOMENTE as transações atualmente carregadas com needs_review=true; erros logados por transação
 } = useTransactions(filters, rules)
 ```
 
 **Fluxo de `addTransaction(form)`:**
-1. Chama `runRulesEngine(form, rules ?? [])` — regras ativas ordenadas por `priority` asc
-2. Se alguma regra bateu: form enriquecido (category_id, notes, payee normalizado); salva com `needs_review = false`
-3. Se nenhuma bateu: salva com `needs_review = true`
+1. Chama `runRulesEngine(form, rules ?? [])` — regras ativas ordenadas por `priority ASC, id ASC` (desempate por id)
+2. Todas as regras cujas condições batem são aplicadas em sequência (apply-all, não first-match-wins)
+3. Se ao menos uma regra bateu: form enriquecido (category_id, notes, payee normalizado); salva com `needs_review = false`
+4. Se nenhuma bateu: salva com `needs_review = true`
 
 **Escopo de `applyRules()`:**
 - Re-processa apenas as transações **atualmente no estado local** que têm `needs_review = true`
@@ -245,6 +247,38 @@ const {
 ```
 
 Prioridade é um campo numérico editado diretamente no `RuleBuilder` — não há drag-and-drop nem `reorderRules`.
+
+---
+
+### `usePayees()`
+
+```js
+const {
+  payees,      // Payee[]
+  loading,
+  addPayee,    // (name: string) => Promise<Payee>
+  updatePayee, // (id, updates) => Promise<Payee>
+} = usePayees()
+```
+
+`addPayee` retorna o payee criado imediatamente — o `TransactionForm` usa o ID retornado para pré-selecionar o novo payee antes de salvar a transação.
+
+---
+
+### `useFinCategories()`
+
+```js
+const {
+  groups,      // CategoryGroup[]  — category_groups ordenados por sort_order
+  categories,  // FinCategory[]    — fin_categories (todas, incluindo hidden)
+  loading,
+  addGroup,       // (group) => Promise<CategoryGroup>
+  addCategory,    // (category) => Promise<FinCategory>
+  updateCategory, // (id, updates) => Promise<FinCategory>
+} = useFinCategories()
+```
+
+O componente que consome (ex: `TransactionForm`) filtra `categories.filter(c => !c.hidden)` para o select agrupado.
 
 ---
 
@@ -279,6 +313,10 @@ Tab interna com 3 views:
 | **Extrato** | `TransactionList` — filtros por conta/período/categoria, badge `needs_review`, botão "Aplicar Regras" |
 | **Contas** | Grid de `AccountCard` — nome, tipo, saldo calculado, botão "Nova Conta" |
 | **Regras** | Lista de `fin_rules` com `RuleBuilder` inline ao editar |
+
+### `AccountCard`
+
+Props: `account` (Account), `balance` (number — centavos, pré-calculado em `FinanceView`). O cálculo por conta acontece uma vez no container, não dentro de cada card.
 
 ### `TransactionForm`
 Modal overlay (padrão existente). Recebe `clients`, `tasks`, `team` como props de `FinanceView`.
