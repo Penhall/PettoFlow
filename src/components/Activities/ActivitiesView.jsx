@@ -72,6 +72,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
           activities={filteredActivities}
           onToggleStatus={handleToggleStatus}
           onDelete={handleDelete}
+          onEdit={(activity) => { setEditingActivity(activity); setShowForm(true) }}
           emptyMessage="Nenhuma atividade encontrada."
         />
       </div>

@@ -1,6 +1,6 @@
 // src/components/Activities/ActivityCard.jsx
 import { motion } from 'framer-motion'
-import { CheckCircle, Circle, Trash2, AlertTriangle } from 'lucide-react'
+import { CheckCircle, Circle, Trash2, AlertTriangle, Pencil } from 'lucide-react'
 
 const TYPE_COLORS = {
   meeting:  '#7C3AED',
@@ -30,7 +30,7 @@ const extractText = (body) => {
   } catch { return null }
 }
 
-const ActivityCard = ({ activity, onToggleStatus, onDelete }) => {
+const ActivityCard = ({ activity, onToggleStatus, onDelete, onEdit }) => {
   const isDone = activity.status === 'completed'
   const color = TYPE_COLORS[activity.type] || '#94A3B8'
   const preview = extractText(activity.body)
@@ -86,6 +86,9 @@ const ActivityCard = ({ activity, onToggleStatus, onDelete }) => {
           title={isDone ? 'Marcar como pendente' : 'Marcar como concluída'}
         >
           {isDone ? <CheckCircle size={15} style={{ color: 'var(--success)' }} /> : <Circle size={15} />}
+        </button>
+        <button className="icon-btn sm" onClick={() => onEdit(activity)} title="Editar">
+          <Pencil size={14} />
         </button>
         <button className="icon-btn sm danger" onClick={() => onDelete(activity.id)} title="Excluir">
           <Trash2 size={14} />

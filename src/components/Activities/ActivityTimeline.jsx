@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Activity } from 'lucide-react'
 import ActivityCard from './ActivityCard'
 
-const ActivityTimeline = ({ activities, onToggleStatus, onDelete, emptyMessage }) => {
+const ActivityTimeline = ({ activities, onToggleStatus, onDelete, onEdit, emptyMessage }) => {
   if (!activities || activities.length === 0) {
     return (
       <div className="timeline-empty">
@@ -25,6 +25,7 @@ const ActivityTimeline = ({ activities, onToggleStatus, onDelete, emptyMessage }
                 activity={activity}
                 onToggleStatus={onToggleStatus}
                 onDelete={onDelete}
+                onEdit={onEdit}
               />
             </div>
           ))}
