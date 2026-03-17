@@ -51,11 +51,7 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
   }
 
   const handleSaveTransaction = async (txForm) => {
-    // Se a tarefa já foi salva, vincula automaticamente a ela via related_to
-    const related = task?.id
-      ? [{ type: 'task', id: task.id, label: task.title }]
-      : []
-    await addTransaction({ ...txForm, related_to: related })
+    await addTransaction(txForm)
     setShowTransactionForm(false)
   }
 
@@ -199,6 +195,7 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
       <AnimatePresence>
         {showTransactionForm && (
           <TransactionForm
+            transaction={task?.id ? { related_to: [{ type: 'task', id: task.id, label: task.title }] } : undefined}
             accounts={accounts}
             payees={payees}
             groups={groups}
