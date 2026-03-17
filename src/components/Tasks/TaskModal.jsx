@@ -1,13 +1,40 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, DollarSign } from 'lucide-react'
 import RelationChips from '../Activities/RelationChips'
-import { DollarSign } from 'lucide-react'
 import TransactionForm      from '../Finance/TransactionForm'
 import { useAccounts }      from '../../hooks/useAccounts'
 import { usePayees }        from '../../hooks/usePayees'
 import { useFinCategories } from '../../hooks/useFinCategories'
 import { useTransactions }  from '../../hooks/useTransactions'
+
+const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
+  const { accounts }           = useAccounts()
+  const { payees, addPayee }   = usePayees()
+  const { groups, categories } = useFinCategories()
+  const { addTransaction }     = useTransactions()
+
+  const handleSave = async (txForm) => {
+    await addTransaction(txForm)
+    onClose()
+  }
+
+  return (
+    <TransactionForm
+      transaction={task?.id ? { related_to: [{ type: 'task', id: task.id, label: task.title }] } : undefined}
+      accounts={accounts}
+      payees={payees}
+      groups={groups}
+      categories={categories}
+      clients={clients}
+      tasks={tasks}
+      team={team}
+      onSave={handleSave}
+      onClose={onClose}
+      addPayee={addPayee}
+    />
+  )
+}
 
 const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [], tasks = [] }) => {
   const [form, setForm] = useState({
@@ -24,10 +51,6 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
   })
 
   const [showTransactionForm, setShowTransactionForm] = useState(false)
-  const { accounts }               = useAccounts()
-  const { payees, addPayee }       = usePayees()
-  const { groups, categories }     = useFinCategories()
-  const { addTransaction }         = useTransactions()
 
   useEffect(() => {
     if (task) {
@@ -48,11 +71,6 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
     e.preventDefault()
     if (!form.title.trim()) return
     onSave(form)
-  }
-
-  const handleSaveTransaction = async (txForm) => {
-    await addTransaction(txForm)
-    setShowTransactionForm(false)
   }
 
   return (
@@ -194,18 +212,12 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
 
       <AnimatePresence>
         {showTransactionForm && (
-          <TransactionForm
-            transaction={task?.id ? { related_to: [{ type: 'task', id: task.id, label: task.title }] } : undefined}
-            accounts={accounts}
-            payees={payees}
-            groups={groups}
-            categories={categories}
+          <TransactionFormWrapper
+            task={task}
             clients={clients}
             tasks={tasks}
             team={team}
-            onSave={handleSaveTransaction}
             onClose={() => setShowTransactionForm(false)}
-            addPayee={addPayee}
           />
         )}
       </AnimatePresence>

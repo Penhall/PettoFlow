@@ -66,6 +66,7 @@ CREATE TABLE public.fin_rules (
 CREATE INDEX idx_transactions_account_date ON public.transactions (account_id, date DESC);
 CREATE INDEX idx_transactions_category     ON public.transactions (category_id);
 CREATE INDEX idx_transactions_needs_review ON public.transactions (needs_review) WHERE needs_review = true;
+CREATE INDEX idx_transactions_related_to   ON public.transactions USING GIN (related_to);
 
 -- 3. RLS
 

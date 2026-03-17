@@ -12,7 +12,7 @@ const AccountForm = ({ account, onSave, onClose }) => {
     if (account) {
       setForm({ name: account.name, type: account.type })
       // Usar toFixed(2) garante sempre dois casas decimais (ex: 150000 → "1500,00")
-      setBalanceInput((account.opening_balance / 100).toFixed(2).replace('.', ','))
+      setBalanceInput(((account.opening_balance ?? 0) / 100).toFixed(2).replace('.', ','))
     }
   }, [account])
 

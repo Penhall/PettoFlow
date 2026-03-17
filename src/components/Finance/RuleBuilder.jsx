@@ -93,6 +93,7 @@ const RuleBuilder = ({ rule, onSave, onCancel }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
+    if (form.conditions.length === 0) return
     onSave(form)
   }
 
