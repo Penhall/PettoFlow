@@ -10,6 +10,7 @@ import Dashboard from './components/Dashboard/Dashboard'
 import TimeView from './components/Team/TimeView'
 import ClientesView from './components/Clients/ClientesView'
 import ActivitiesView from './components/Activities/ActivitiesView'
+import FinanceView from './components/Finance/FinanceView'
 import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
@@ -203,6 +204,7 @@ function App() {
       case 'time': return 'Time'
       case 'clientes': return 'Clientes'
       case 'atividades': return 'Atividades'
+      case 'financas': return 'Finanças'
       default: return 'PettoFlow'
     }
   }
@@ -326,6 +328,8 @@ function App() {
         return <ClientesView clients={clients} tasks={tasks} onRefresh={fetchClients} searchQuery={searchQuery} />
       case 'atividades':
         return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} />
+      case 'financas':
+        return <FinanceView clients={clients} tasks={tasks} team={team} />
       default:
         return null
     }
@@ -411,6 +415,7 @@ function App() {
             defaultStatus={addModalStatus}
             team={team}
             clients={clients}
+            tasks={tasks}
           />
         )}
       </AnimatePresence>
