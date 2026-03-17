@@ -816,7 +816,8 @@ const AccountForm = ({ account, onSave, onClose }) => {
   useEffect(() => {
     if (account) {
       setForm({ name: account.name, type: account.type })
-      setBalanceInput(String(account.opening_balance / 100).replace('.', ','))
+      // Usar toFixed(2) garante sempre dois casas decimais (ex: 150000 → "1500,00")
+      setBalanceInput((account.opening_balance / 100).toFixed(2).replace('.', ','))
     }
   }, [account])
 
@@ -1060,8 +1061,9 @@ const TransactionForm = ({
         related_to:  transaction.related_to   || [],
         cleared:     transaction.cleared      || false,
       })
-      setAmountInput(transaction.amount
-        ? String(Math.abs(transaction.amount) / 100).replace('.', ',')
+      // Preservar sinal: despesas mostram "-150,00"; toFixed(2) garante duas casas decimais
+      setAmountInput(transaction.amount != null
+        ? (transaction.amount / 100).toFixed(2).replace('.', ',')
         : '')
       setPayeeSearch(payees.find(p => p.id === transaction.payee_id)?.name || '')
     } else if (accounts.length > 0) {
@@ -1627,16 +1629,58 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
       <div className="board-container">
         {/* TAB: Extrato */}
         {activeTab === 'extrato' && (
-          <TransactionList
-            transactions={transactions}
-            accounts={accounts}
-            payees={payees}
-            categories={categories}
-            onEdit={(tx) => { setEditingTransaction(tx); setShowTransactionForm(true) }}
-            onDelete={deleteTransaction}
-            onApplyRules={applyRules}
-            loading={txLoading}
-          />
+          <>
+            {/* Filtros por conta / período / categoria — spec linha 314 */}
+            <div className="finance-filters">
+              <select
+                value={extractoFilters.accountId ?? ''}
+                onChange={e => setExtractoFilters(f => ({
+                  ...f, accountId: e.target.value ? Number(e.target.value) : undefined
+                }))}
+              >
+                <option value="">Todas as contas</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <input
+                type="date"
+                value={extractoFilters.dateFrom ?? ''}
+                onChange={e => setExtractoFilters(f => ({ ...f, dateFrom: e.target.value || undefined }))}
+                placeholder="De"
+              />
+              <input
+                type="date"
+                value={extractoFilters.dateTo ?? ''}
+                onChange={e => setExtractoFilters(f => ({ ...f, dateTo: e.target.value || undefined }))}
+                placeholder="Até"
+              />
+              <select
+                value={extractoFilters.categoryId ?? ''}
+                onChange={e => setExtractoFilters(f => ({
+                  ...f, categoryId: e.target.value ? Number(e.target.value) : undefined
+                }))}
+              >
+                <option value="">Todas as categorias</option>
+                {categories.filter(c => !c.hidden).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              {Object.values(extractoFilters).some(Boolean) && (
+                <button className="action-btn sm" onClick={() => setExtractoFilters({})}>
+                  Limpar filtros
+                </button>
+              )}
+            </div>
+            <TransactionList
+              transactions={transactions}
+              accounts={accounts}
+              payees={payees}
+              categories={categories}
+              onEdit={(tx) => { setEditingTransaction(tx); setShowTransactionForm(true) }}
+              onDelete={deleteTransaction}
+              onApplyRules={applyRules}
+              loading={txLoading}
+            />
+          </>
         )}
 
         {/* TAB: Contas */}
@@ -2068,6 +2112,25 @@ Adicionar:
         return <FinanceView clients={clients} tasks={tasks} team={team} />
 ```
 
+- [ ] **Step 3b: Passar `tasks` ao `<TaskModal>` (necessário para Task 18)**
+
+`TaskModal` precisará de `tasks` em Task 18 para o `RelationChips` do `TransactionForm`. App.jsx já tem `tasks` em estado mas não o repassa ao `TaskModal`. Localizar:
+```jsx
+            defaultStatus={addModalStatus}
+            team={team}
+            clients={clients}
+          />
+```
+
+Substituir por:
+```jsx
+            defaultStatus={addModalStatus}
+            team={team}
+            clients={clients}
+            tasks={tasks}
+          />
+```
+
 - [ ] **Step 4: Verificar build**
 
 ```bash
@@ -2135,10 +2198,10 @@ Adicionar:
 - [ ] **Step 3: Adicionar seção Transações no JSX**
 
 A seção deve ser irmã de `.profile-body` (não dentro dele) e permanecer dentro do guard `{client && (...)}`.
-Localizar o fechamento do bloco `{client && (...)}`  — a linha que fecha o div `profile-body`:
+Localizar o fechamento do bloco `{client && (...)}` — os dois `</div>` que fecham `interaction-feed` e `profile-body` seguidos pelo `)}` que fecha o guard (as linhas não têm comentários JSX inline no arquivo real):
 ```jsx
-          </div>  {/* fecha interaction-feed */}
-        </div>  {/* fecha profile-body */}
+          </div>
+        </div>
       )}
     </RecordSidebar>
 ```
@@ -2211,9 +2274,15 @@ import { useFinCategories } from '../../hooks/useFinCategories'
 import { useTransactions }  from '../../hooks/useTransactions'
 ```
 
-- [ ] **Step 2: Adicionar state e hooks no componente**
+- [ ] **Step 2: Adicionar `tasks` à assinatura de props e adicionar state/hooks**
 
-Após o bloco `useState` do form (linha ~18):
+A assinatura atual do componente é `({ task, onSave, onClose, defaultStatus, team = [], clients = [] })`.
+Estender para incluir `tasks`:
+```js
+const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [], tasks = [] }) => {
+```
+
+Após o bloco `useState` do form (linha ~18), adicionar:
 ```js
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const { accounts }               = useAccounts()
