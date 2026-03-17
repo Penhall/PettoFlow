@@ -672,9 +672,9 @@ body {
   border: var(--border-width) solid var(--border-color);
 }
 
-.status-badge.todo { background: transparent; color: var(--text-secondary); border-color: var(--text-secondary); }
-.status-badge.progress { background: var(--text-main); color: var(--bg-main); border-color: var(--text-main); }
-.status-badge.done { background: var(--success); color: var(--bg-main); border-color: var(--success); }
+.status-badge.todo     { background: transparent;  color: var(--text-secondary); border-color: var(--border-color); }
+.status-badge.progress { background: #F59E0B22;    color: #D97706;               border-color: #D97706; }
+.status-badge.done     { background: #05CD9922;    color: #05CD99;               border-color: #05CD99; }
 
 /* Dashboard Styles */
 .dashboard-view {
@@ -1131,8 +1131,7 @@ body {
 .view-wrapper { display: contents; }
 .board-container { display: flex; flex-direction: column; flex: 1; }
 
-/* Status badge faltante */
-.status-badge.done { background: var(--success); color: var(--bg-main); border-color: var(--success); }
+/* Status badge override removido — regra unificada nas linhas acima */
 
 /* Tags faltantes */
 .tag.pesquisa { background: transparent; color: var(--text-main); border-color: var(--border-color); }
@@ -1326,7 +1325,7 @@ body {
 .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; font-size: 0.85rem; }
 .bar-row > span:first-child { min-width: 110px; color: var(--text-secondary); }
 .bar-row > span:last-child  { min-width: 20px; text-align: right; font-weight: 700; }
-.bar-track { flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; }
+.bar-track { flex: 1; height: 8px; background: var(--bg-main); border-radius: 4px; overflow: hidden; }
 .bar-fill  { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.5s; }
 .bar-fill.priority-fill-alta  { background: var(--danger); }
 .bar-fill.priority-fill-media { background: var(--warning); }
@@ -1334,26 +1333,27 @@ body {
 
 /* Dashboard extras */
 .dashboard-section {
-  background: white;
-  border-radius: 16px;
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
   padding: 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  border: var(--border-width) solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
-.dashboard-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+.dashboard-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--text-main); }
 .big-progress { display: flex; align-items: center; gap: 16px; }
-.big-progress-track { flex: 1; height: 16px; background: #F1F5F9; border-radius: 8px; overflow: hidden; }
+.big-progress-track { flex: 1; height: 16px; background: var(--bg-main); border-radius: 8px; overflow: hidden; }
 .big-progress-fill  { height: 100%; background: var(--primary); border-radius: 8px; transition: width 0.6s; }
-.big-progress span  { font-size: 1.2rem; font-weight: 700; min-width: 50px; }
+.big-progress span  { font-size: 1.2rem; font-weight: 700; min-width: 50px; color: var(--text-main); }
 .recent-tasks { display: flex; flex-direction: column; gap: 8px; }
 .recent-task-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid var(--border-color);
 }
 .recent-task-row:last-child { border-bottom: none; }
-.recent-task-title { flex: 1; font-size: 0.9rem; }
+.recent-task-title { flex: 1; font-size: 0.9rem; color: var(--text-main); }
 .activity-avatar {
   width: 32px; height: 32px;
   background: var(--primary-light);
@@ -1376,7 +1376,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid var(--border-color);
   font-size: 0.82rem;
 }
 .member-task-row:last-child { border-bottom: none; }
