@@ -2413,3 +2413,210 @@ body {
   align-items: center;
   gap: 12px;
 }
+
+/* =====================================================
+   FINANCE MODULE
+   ===================================================== */
+
+.finance-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* --- Accounts grid --- */
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 4px;
+}
+
+.account-card {
+  background: var(--card-bg);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.account-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+.account-card.negative { border-color: var(--danger); }
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.account-icon { color: var(--primary); }
+.account-type-badge {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+.account-name { font-weight: 600; font-size: 1rem; color: var(--text-main); }
+.account-balance { font-size: 1.25rem; font-weight: 700; }
+.account-balance.positive { color: var(--success); }
+.account-balance.negative { color: var(--danger); }
+
+/* --- Transaction list --- */
+.transaction-list { display: flex; flex-direction: column; gap: 0; }
+
+.review-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #F59E0B22;
+  color: #D97706;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+}
+.review-banner .action-btn.sm { margin-left: auto; }
+
+.tx-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.tx-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  border-bottom: var(--border-width) solid var(--border-color);
+  font-weight: 500;
+}
+.tx-table td {
+  padding: 10px 12px;
+  border-bottom: var(--border-width) solid var(--border-color);
+  color: var(--text-main);
+}
+.tx-table tr.needs-review { background: #F59E0B0A; }
+.tx-table tr:hover { background: var(--bg-main); }
+
+.tx-amount { font-weight: 600; text-align: right; }
+.tx-amount.income  { color: var(--success); }
+.tx-amount.expense { color: var(--danger);  }
+.tx-amount-col { text-align: right; }
+.tx-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.cleared-icon { color: var(--success); }
+.review-icon  { color: #D97706; margin-left: 4px; vertical-align: middle; }
+
+/* --- Finance filters --- */
+.finance-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.finance-filters select,
+.finance-filters input[type="date"] {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* --- Rules list --- */
+.rules-list { display: flex; flex-direction: column; gap: 8px; }
+
+.rule-item {
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+}
+.rule-item.editing { border-color: var(--primary); }
+
+.rule-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+.rule-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rule-name { font-weight: 600; color: var(--text-main); }
+.rule-status { font-size: 0.75rem; padding: 2px 8px; border-radius: var(--radius-full); }
+.rule-status.active   { background: #05CD9922; color: #05CD99; }
+.rule-status.inactive { background: var(--bg-main); color: var(--text-secondary); }
+.rule-priority { font-size: 0.75rem; color: var(--text-secondary); }
+.rule-meta     { font-size: 0.75rem; color: var(--text-secondary); }
+.rule-actions  { display: flex; gap: 8px; }
+
+/* --- Rule builder --- */
+.rule-builder { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.rule-section { display: flex; flex-direction: column; gap: 8px; }
+.rule-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rule-section-header h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.rule-row { display: flex; gap: 8px; align-items: center; }
+.rule-row select,
+.rule-row input { flex: 1; min-width: 0; }
+.rule-active-toggle { justify-content: flex-end; padding-top: 20px; }
+
+/* --- Payee inline dropdown --- */
+.payee-input-wrapper { position: relative; }
+.payee-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.payee-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 0.875rem;
+}
+.payee-option:hover { background: var(--bg-main); }
+.payee-option.create { color: var(--primary); font-style: italic; }
+
+/* --- Client transactions section --- */
+.client-transactions-section {
+  padding: 20px;
+  border-top: var(--border-width) solid var(--border-color);
+}
+.client-transactions-section h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+/* --- Shared helpers (Finance scope) --- */
+.action-btn.sm  { font-size: 0.8rem; padding: 4px 10px; }
+.icon-btn.sm    { width: 24px; height: 24px; padding: 4px; }
+.icon-btn.danger       { color: var(--danger); }
+.icon-btn.danger:hover { background: #ef444422; }
+.action-btn.danger       { color: var(--danger); border-color: var(--danger); }
+.action-btn.danger:hover { background: #ef444422; }
+.modal-wide     { max-width: 680px; }
+.form-hint      { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.875rem; color: var(--text-main); }
+.checkbox-label input[type="checkbox"] { width: auto; }
