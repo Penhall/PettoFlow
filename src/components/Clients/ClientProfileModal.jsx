@@ -2,11 +2,23 @@ import { useState, useEffect } from 'react'
 import { Building2, Phone, Mail, Plus, MessageSquare } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import RecordSidebar from '../shared/RecordSidebar'
+import { useTransactions }  from '../../hooks/useTransactions'
+import { useAccounts }      from '../../hooks/useAccounts'
+import { usePayees }        from '../../hooks/usePayees'
+import { useFinCategories } from '../../hooks/useFinCategories'
+import TransactionList      from '../Finance/TransactionList'
 
 const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) => {
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState({ type: 'Ligação', notes: '' })
   const [loadingLogs, setLoadingLogs] = useState(false)
+
+  // Transações vinculadas ao cliente (filtro por related_to via PostgREST cs)
+  const clientFilter = client?.id ? { relatedTo: { type: 'client', id: client.id } } : {}
+  const { transactions: clientTxs, loading: txLoading } = useTransactions(clientFilter)
+  const { accounts }    = useAccounts()
+  const { payees }      = usePayees()
+  const { categories }  = useFinCategories()
 
   useEffect(() => {
     if (client?.id) fetchLogs()
@@ -131,6 +143,21 @@ const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) =>
               )}
             </div>
           </div>
+        </div>
+      )}
+      {client && (
+        <div className="client-transactions-section">
+          <h3>Transações Vinculadas</h3>
+          <TransactionList
+            transactions={clientTxs}
+            accounts={accounts}
+            payees={payees}
+            categories={categories}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onApplyRules={() => {}}
+            loading={txLoading}
+          />
         </div>
       )}
     </RecordSidebar>
