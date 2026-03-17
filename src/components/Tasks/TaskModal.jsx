@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import RelationChips from '../Activities/RelationChips'
+import { DollarSign } from 'lucide-react'
+import TransactionForm      from '../Finance/TransactionForm'
+import { useAccounts }      from '../../hooks/useAccounts'
+import { usePayees }        from '../../hooks/usePayees'
+import { useFinCategories } from '../../hooks/useFinCategories'
+import { useTransactions }  from '../../hooks/useTransactions'
 
-const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [] }) => {
+const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [], tasks = [] }) => {
   const [form, setForm] = useState({
     title: '',
     status: defaultStatus || 'A Fazer',
@@ -16,6 +22,12 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
     category: 'Operacional',
     related_to: [],
   })
+
+  const [showTransactionForm, setShowTransactionForm] = useState(false)
+  const { accounts }               = useAccounts()
+  const { payees, addPayee }       = usePayees()
+  const { groups, categories }     = useFinCategories()
+  const { addTransaction }         = useTransactions()
 
   useEffect(() => {
     if (task) {
@@ -38,7 +50,17 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
     onSave(form)
   }
 
+  const handleSaveTransaction = async (txForm) => {
+    // Se a tarefa já foi salva, vincula automaticamente a ela via related_to
+    const related = task?.id
+      ? [{ type: 'task', id: task.id, label: task.title }]
+      : []
+    await addTransaction({ ...txForm, related_to: related })
+    setShowTransactionForm(false)
+  }
+
   return (
+    <>
     <motion.div
       className="modal-overlay"
       initial={{ opacity: 0 }}
@@ -165,11 +187,32 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
 
           <div className="modal-actions">
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>
+            <button type="button" className="action-btn" onClick={() => setShowTransactionForm(true)}>
+              <DollarSign size={14} style={{ marginRight: 4 }} />Vincular Transação
+            </button>
             <button type="submit" className="add-member-btn">{task ? 'Salvar' : 'Criar Tarefa'}</button>
           </div>
         </form>
       </motion.div>
     </motion.div>
+
+      <AnimatePresence>
+        {showTransactionForm && (
+          <TransactionForm
+            accounts={accounts}
+            payees={payees}
+            groups={groups}
+            categories={categories}
+            clients={clients}
+            tasks={tasks}
+            team={team}
+            onSave={handleSaveTransaction}
+            onClose={() => setShowTransactionForm(false)}
+            addPayee={addPayee}
+          />
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 
