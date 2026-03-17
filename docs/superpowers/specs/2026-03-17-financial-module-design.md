@@ -286,6 +286,7 @@ O componente que consome (ex: `TransactionForm`) filtra `categories.filter(c => 
 
 ```js
 // Entrada: form (objeto transação parcial) + array de regras ativas
+// rules deve chegar pré-ordenada pelo chamador (priority ASC, id ASC) — runRulesEngine não reordena internamente
 // Saída: form enriquecido (mutação em cópia) + flag ruleMatched
 runRulesEngine(transaction, rules)      // → { enriched, ruleMatched: boolean }
 
@@ -338,8 +339,8 @@ Editor visual com duas seções:
 - Campo "Prioridade" (número inteiro) e toggle "Ativa"
 
 ### Integração com views existentes
-- `ClientProfileModal` (RecordSidebar): nova seção "Transações" com `TransactionList` filtrado por `related_to` do cliente
-- `TaskModal`: campo opcional "Transação vinculada" abre `TransactionForm` pré-preenchido com `related_to` da tarefa
+- `ClientProfileModal` (RecordSidebar): nova seção "Transações" adicionada como card de largura total abaixo das duas colunas existentes (`profile-sidebar` + `interaction-feed`). Contém `TransactionList` com filtro `relatedTo: { type: 'client', id: client.id }`.
+- `TaskModal`: campo opcional "Transação vinculada" — botão que abre `TransactionForm` em modal sobreposto ao `TaskModal`, pré-preenchido com `related_to: [{ type: 'task', id: task.id, label: task.title }]`.
 
 ---
 
