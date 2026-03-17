@@ -1,0 +1,124 @@
+<h2>Padrões de UI do Twenty — quais adotar?</h2>
+<p class="subtitle">Selecione todos que quiser incorporar ao PettoFlow</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="command-palette" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Command Palette (⌘K)</h3>
+      <p>Atalho global para buscar qualquer registro, criar atividade, navegar entre módulos. Abre um modal de busca estilo Raycast.</p>
+      <div style="margin-top:12px; background:#1a1a2e; border-radius:8px; padding:12px; font-family:monospace; font-size:12px; color:#a0aec0;">
+        <div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:8px;">
+          <span style="color:#666">⌘K</span>
+          <input class="mock-input" placeholder="Buscar cliente, tarefa, atividade..." style="background:transparent;border:none;color:#e2e8f0;flex:1;font-size:13px;outline:none;" />
+        </div>
+        <div style="padding:6px 4px;color:#7c3aed;font-size:11px;">↳ Nova Atividade com Acme Corp</div>
+        <div style="padding:6px 4px;color:#64748b;font-size:11px;">↳ Ver tarefas de João Silva</div>
+        <div style="padding:6px 4px;color:#64748b;font-size:11px;">↳ Navegar para Dashboard</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="inline-edit" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Edição Inline de Campos</h3>
+      <p>Clicar em qualquer campo do registro o torna editável na hora — sem abrir modal. Salva ao perder foco.</p>
+      <div style="margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
+          <span style="color:#94a3b8;width:80px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Cliente</span>
+          <span style="background:#ede9fe;color:#7c3aed;padding:2px 10px;border-radius:4px;cursor:pointer;" title="clique para editar">Acme Corp ✏️</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
+          <span style="color:#94a3b8;width:80px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Status</span>
+          <select style="border:1px solid #7c3aed;border-radius:4px;padding:2px 8px;font-size:12px;background:white;">
+            <option>Em negociação</option><option>Ativo</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <span style="color:#94a3b8;width:80px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Email</span>
+          <input class="mock-input" value="contato@acme.com" style="border:1px solid #7c3aed;border-radius:4px;padding:2px 8px;font-size:12px;width:180px;" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="activity-timeline" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Activity Timeline Vertical</h3>
+      <p>Feed cronológico com linha vertical conectando os eventos. Cada item mostra tipo, data, rich text e vínculos (cliente, tarefa, membro).</p>
+      <div style="margin-top:12px;position:relative;padding-left:24px;font-size:12px;">
+        <div style="position:absolute;left:8px;top:0;bottom:0;width:2px;background:#e2e8f0;"></div>
+        <div style="margin-bottom:16px;position:relative;">
+          <div style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:#7c3aed;border:2px solid white;box-shadow:0 0 0 2px #7c3aed;"></div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+              <span style="background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:3px;font-size:10px;">REUNIÃO</span>
+              <span style="color:#94a3b8;font-size:10px;">hoje, 14:30 · João Silva</span>
+            </div>
+            <p style="color:#1e293b;margin:0;font-size:12px;"><strong>Demo do produto</strong> — Apresentamos a proposta v2. Cliente pediu ajustes no módulo de relatórios.</p>
+            <div style="display:flex;gap:4px;margin-top:6px;">
+              <span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:3px;font-size:10px;">🏢 Acme Corp</span>
+              <span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:3px;font-size:10px;">✅ Tarefa #42</span>
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;">
+          <div style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:#05cd99;border:2px solid white;box-shadow:0 0 0 2px #05cd99;"></div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+              <span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:3px;font-size:10px;">LIGAÇÃO</span>
+              <span style="color:#94a3b8;font-size:10px;">ontem, 09:15 · Ana Lima</span>
+            </div>
+            <p style="color:#1e293b;margin:0;font-size:12px;">Follow-up sobre proposta enviada por email.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="record-sidebar" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Record Sidebar (painel deslizante)</h3>
+      <p>Ao clicar em um cliente/tarefa/contato, abre um painel lateral deslizante com todos os detalhes + activities vinculadas — sem sair da view atual.</p>
+      <div style="margin-top:12px;display:flex;gap:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:12px;height:100px;">
+        <div style="flex:1;background:#f8fafc;padding:10px;border-right:1px solid #e2e8f0;">
+          <div style="color:#94a3b8;font-size:10px;margin-bottom:6px;">LISTA DE CLIENTES</div>
+          <div style="background:#ede9fe;border-radius:4px;padding:5px 8px;margin-bottom:4px;">Acme Corp →</div>
+          <div style="padding:5px 8px;color:#475569;">Beta Ltda</div>
+          <div style="padding:5px 8px;color:#475569;">Gama S.A.</div>
+        </div>
+        <div style="width:220px;background:white;padding:10px;">
+          <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">Acme Corp</div>
+          <div style="color:#94a3b8;font-size:10px;margin-bottom:4px;">Tecnologia · Ativo</div>
+          <div style="height:2px;background:#ede9fe;margin-bottom:8px;border-radius:1px;"></div>
+          <div style="color:#64748b;font-size:10px;">3 atividades · 5 tarefas</div>
+          <div style="color:#7c3aed;font-size:10px;margin-top:4px;">+ Nova atividade</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="relation-chips" onclick="toggleSelect(this)">
+    <div class="letter">E</div>
+    <div class="content">
+      <h3>Relation Chips (vínculos inline)</h3>
+      <p>Ao criar/editar uma atividade, busca e vincula registros com chips compactos — cliente, tarefa, membro do time — tudo inline no form.</p>
+      <div style="margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font-size:12px;">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;margin-bottom:6px;">Vincular a:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span style="background:#ede9fe;color:#7c3aed;padding:3px 10px;border-radius:100px;display:flex;align-items:center;gap:4px;">🏢 Acme Corp <span style="opacity:.6">×</span></span>
+          <span style="background:#dcfce7;color:#16a34a;padding:3px 10px;border-radius:100px;display:flex;align-items:center;gap:4px;">✅ Task #42 <span style="opacity:.6">×</span></span>
+          <span style="background:#fef3c7;color:#d97706;padding:3px 10px;border-radius:100px;display:flex;align-items:center;gap:4px;">👤 João <span style="opacity:.6">×</span></span>
+          <span style="background:#f1f5f9;color:#64748b;padding:3px 10px;border-radius:100px;cursor:pointer;">+ Adicionar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:24px;">Pode selecionar múltiplos. Clique para marcar/desmarcar.</p>
