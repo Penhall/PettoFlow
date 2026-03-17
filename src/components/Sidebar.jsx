@@ -1,6 +1,9 @@
-import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tarefas', label: 'Minhas Tarefas', icon: CheckSquare },
@@ -11,11 +14,19 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="logo-container">
         <div className="logo-icon">PF</div>
-        <span className="logo-text">PettoFlow</span>
+        {!isCollapsed && <span className="logo-text">PettoFlow</span>}
       </div>
+      
+      <button 
+        className="collapse-btn" 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        title={isCollapsed ? "Expandir Menu" : "Recolher Menu"}
+      >
+        {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      </button>
       
       <nav className="nav-menu">
         {menuItems.map((item) => (
@@ -25,7 +36,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             onClick={() => setActiveTab(item.id)}
           >
             <item.icon size={20} />
-            <span>{item.label}</span>
+            {!isCollapsed && <span>{item.label}</span>}
           </button>
         ))}
       </nav>
@@ -33,10 +44,12 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       <div className="sidebar-footer">
         <div className="user-profile">
           <div className="avatar">P</div>
-          <div className="user-info">
-            <span className="user-name">Usuário Petto</span>
-            <span className="user-role">Administrador</span>
-          </div>
+          {!isCollapsed && (
+            <div className="user-info">
+              <span className="user-name">Usuário Petto</span>
+              <span className="user-role">Administrador</span>
+            </div>
+          )}
         </div>
       </div>
     </aside>

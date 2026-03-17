@@ -9,11 +9,6 @@ const Header = ({ title, searchQuery, onSearch, onExport }) => {
   return (
     <header className="top-header">
       <div className="header-left">
-        <div className="breadcrumb">
-          <span>Projetos</span>
-          <ChevronRight size={14} />
-          <span className="current">{title}</span>
-        </div>
         <h1 className="page-title">{title}</h1>
       </div>
 

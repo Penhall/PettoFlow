@@ -216,15 +216,8 @@ function App() {
       case 'tarefas':
         return (
           <>
-            <section className="view-controls">
+            <section className="taskbar">
               <div className="tabs">
-                <button
-                  className={`tab-btn ${viewType === 'overview' ? 'active' : ''}`}
-                  onClick={() => setViewType('overview')}
-                >
-                  <BarChart2 size={16} />
-                  Visão Geral
-                </button>
                 <button
                   className={`tab-btn ${viewType === 'kanban' ? 'active' : ''}`}
                   onClick={() => setViewType('kanban')}
@@ -238,6 +231,13 @@ function App() {
                 >
                   <ListIcon size={16} />
                   Lista
+                </button>
+                <button
+                  className={`tab-btn ${viewType === 'overview' ? 'active' : ''}`}
+                  onClick={() => setViewType('overview')}
+                >
+                  <BarChart2 size={16} />
+                  Visão Geral
                 </button>
                 <button
                   className={`tab-btn ${viewType === 'files' ? 'active' : ''}`}
