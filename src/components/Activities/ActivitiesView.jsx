@@ -2,13 +2,21 @@ import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Plus } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
+import { useActivityTemplates } from '../../hooks/useActivityTemplates'
 import ActivityTimeline from './ActivityTimeline'
 import ActivityForm from './ActivityForm'
+import TemplatesTab from './TemplatesTab'
+import ActivityTemplateForm from './ActivityTemplateForm'
 
 const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' }) => {
   const { activities, loading, addActivity, updateActivity, deleteActivity } = useActivities()
+  const { templates, createTemplate, updateTemplate, deleteTemplate, applyTemplate } = useActivityTemplates()
+
+  const [activeTab, setActiveTab] = useState('timeline')
   const [showForm, setShowForm] = useState(false)
   const [editingActivity, setEditingActivity] = useState(null)
+  const [showTemplateForm, setShowTemplateForm] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState(null)
 
   const filteredActivities = activities.filter(activity => {
     if (!searchQuery) return true
@@ -44,6 +52,40 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
     setShowForm(true)
   }
 
+  const handleApplyTemplate = (templateId) => {
+    return applyTemplate(templateId)
+  }
+
+  // Template handlers
+  const handleNewTemplate = () => {
+    setEditingTemplate(null)
+    setShowTemplateForm(true)
+  }
+
+  const handleEditTemplate = (template) => {
+    setEditingTemplate(template)
+    setShowTemplateForm(true)
+  }
+
+  const handleDeleteTemplate = async (id) => {
+    await deleteTemplate(id)
+  }
+
+  const handleSaveTemplate = async (formData) => {
+    if (editingTemplate) {
+      await updateTemplate(editingTemplate.id, formData)
+    } else {
+      await createTemplate(formData)
+    }
+    setShowTemplateForm(false)
+    setEditingTemplate(null)
+  }
+
+  const handleCloseTemplateForm = () => {
+    setShowTemplateForm(false)
+    setEditingTemplate(null)
+  }
+
   if (loading) {
     return (
       <div className="activities-view">
@@ -60,21 +102,54 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
         <h3>Atividades</h3>
         <div className="view-controls">
           <div className="actions">
-            <button className="add-member-btn" onClick={handleOpenNew}>
-              <Plus size={16} /> Nova Atividade
-            </button>
+            {activeTab === 'timeline' && (
+              <button className="add-member-btn" onClick={handleOpenNew}>
+                <Plus size={16} /> Nova Atividade
+              </button>
+            )}
+            {activeTab === 'modelos' && (
+              <button className="add-member-btn" onClick={handleNewTemplate}>
+                <Plus size={16} /> Novo Modelo
+              </button>
+            )}
           </div>
         </div>
       </div>
 
+      <div className="tabs" style={{ marginBottom: '1rem' }}>
+        <button
+          className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('timeline')}
+        >
+          Timeline
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'modelos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('modelos')}
+        >
+          Modelos
+        </button>
+      </div>
+
       <div className="board-container">
-        <ActivityTimeline
-          activities={filteredActivities}
-          onToggleStatus={handleToggleStatus}
-          onDelete={handleDelete}
-          onEdit={(activity) => { setEditingActivity(activity); setShowForm(true) }}
-          emptyMessage="Nenhuma atividade encontrada."
-        />
+        {activeTab === 'timeline' && (
+          <ActivityTimeline
+            activities={filteredActivities}
+            onToggleStatus={handleToggleStatus}
+            onDelete={handleDelete}
+            onEdit={(activity) => { setEditingActivity(activity); setShowForm(true) }}
+            emptyMessage="Nenhuma atividade encontrada."
+          />
+        )}
+
+        {activeTab === 'modelos' && (
+          <TemplatesTab
+            templates={templates}
+            onNew={handleNewTemplate}
+            onEdit={handleEditTemplate}
+            onDelete={handleDeleteTemplate}
+          />
+        )}
       </div>
 
       <AnimatePresence>
@@ -86,6 +161,18 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
             clients={clients}
             tasks={tasks}
             team={team}
+            templates={templates}
+            onApplyTemplate={handleApplyTemplate}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTemplateForm && (
+          <ActivityTemplateForm
+            template={editingTemplate}
+            onSave={handleSaveTemplate}
+            onClose={handleCloseTemplateForm}
           />
         )}
       </AnimatePresence>

@@ -1,7 +1,7 @@
 // src/components/Activities/ActivityForm.jsx
 import { useRef, useState, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { X, Calendar } from 'lucide-react'
+import { X, Calendar, FileText } from 'lucide-react'
 import RelationChips from './RelationChips'
 
 // Lazy load do Tiptap — carrega ambos os pacotes juntos
@@ -45,7 +45,7 @@ const ACTIVITY_TYPES = [
   { value: 'task',     label: 'Tarefa' },
 ]
 
-const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], team = [] }) => {
+const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], team = [], templates = [], onApplyTemplate }) => {
   const [form, setForm] = useState({
     title: '',
     type: 'meeting',
@@ -59,8 +59,23 @@ const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], tea
       ? new Date(activity.scheduled_at).toISOString().slice(0, 16)
       : '',
   })
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
 
   const change = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
+
+  const handleUseTemplate = (e) => {
+    const templateId = Number(e.target.value)
+    if (!templateId || !onApplyTemplate) return
+    const prefilled = onApplyTemplate(templateId)
+    if (!prefilled) return
+    setForm(prev => ({
+      ...prev,
+      ...(prefilled.type ? { type: prefilled.type } : {}),
+      ...(prefilled.notes ? { body: prefilled.notes } : {}),
+      ...(prefilled.assigned_to ? { created_by: prefilled.assigned_to } : {}),
+    }))
+    setShowTemplateSelector(false)
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -93,6 +108,43 @@ const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], tea
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
+          {templates.length > 0 && (
+            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+              {!showTemplateSelector ? (
+                <button
+                  type="button"
+                  className="action-btn"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  onClick={() => setShowTemplateSelector(true)}
+                >
+                  <FileText size={14} /> Usar Modelo
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <select
+                    className="form-input"
+                    defaultValue=""
+                    onChange={handleUseTemplate}
+                    style={{ flex: 1 }}
+                    autoFocus
+                  >
+                    <option value="" disabled>Selecione um modelo...</option>
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => setShowTemplateSelector(false)}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="form-group">
             <label>Título *</label>
             <input
