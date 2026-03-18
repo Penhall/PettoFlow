@@ -22,7 +22,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const [editingAccount, setEditingAccount]           = useState(null)
   const [editingRule, setEditingRule]                 = useState(null) // rule | 'new' | null
 
-  const { accounts, addAccount, updateAccount }             = useAccounts()
+  const { accounts, loading: acctLoading, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
   const { payees, addPayee }                                = usePayees()
   const { groups, categories }                              = useFinCategories()
   const { rules, addRule, updateRule, deleteRule }          = useFinRules()
@@ -53,9 +53,20 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
     setEditingTransaction(null)
   }
 
-  const handleSaveAccount = async (form) => {
-    if (editingAccount) await updateAccount(editingAccount.id, form)
-    else await addAccount(form)
+  const handleSaveAccount = async (formData, demotedCategory) => {
+    const { category, ...rest } = formData
+    let saved
+    if (editingAccount) {
+      saved = await updateAccount(editingAccount.id, rest)
+      if (category !== editingAccount.category) {
+        await setAccountCategory(editingAccount.id, category, demotedCategory)
+      }
+    } else {
+      saved = await addAccount({ ...rest, category: 'extras' }) // temp category
+      if (saved && category !== 'extras') {
+        await setAccountCategory(saved.id, category, demotedCategory)
+      }
+    }
     setShowAccountForm(false)
     setEditingAccount(null)
   }
@@ -259,6 +270,8 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
             account={editingAccount}
             onSave={handleSaveAccount}
             onClose={() => { setShowAccountForm(false); setEditingAccount(null) }}
+            categories={getUniqueCategories()}
+            existingPrincipal={getPrincipalAccount()}
           />
         )}
       </AnimatePresence>
