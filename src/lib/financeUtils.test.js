@@ -79,6 +79,12 @@ describe('isWithin30Days', () => {
     expect(isWithin30Days(d.toISOString())).toBe(false)
   })
 
+  it('returns true for exactly 30 days ago (inclusive boundary)', () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    expect(isWithin30Days(d.toISOString())).toBe(true)
+  })
+
   it('returns false for null', () => {
     expect(isWithin30Days(null)).toBe(false)
   })
@@ -124,5 +130,12 @@ describe('calculateFinanceTotals', () => {
     const totals = calculateFinanceTotals(accounts, transactions, receivables)
     // 180000 + 30000 - 5000
     expect(totals.projectedBalance).toBe(205000)
+  })
+
+  it('ignores positive uncleared transactions in totalBalance (pending income excluded)', () => {
+    const accts = [{ id: 1, opening_balance: 100000, is_active: true, category: 'extras' }]
+    const txs = [{ account_id: 1, amount: 50000, cleared: false }] // positive but uncleared
+    const totals = calculateFinanceTotals(accts, txs, [])
+    expect(totals.totalBalance).toBe(100000) // uncleared income not included
   })
 })

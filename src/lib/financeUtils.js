@@ -20,7 +20,8 @@ export function getPrincipalAccount(accounts = []) {
 }
 
 /**
- * Returns true if dateStr is within the last 30 days.
+ * Returns true if dateStr falls within the last 30 days (inclusive — day 30 itself counts).
+ * Returns false for null or undefined.
  */
 export function isWithin30Days(dateStr) {
   if (!dateStr) return false
@@ -51,6 +52,9 @@ export function calculateFinanceTotals(accounts = [], transactions = [], receiva
   const principal = getPrincipalAccount(activeAccounts)
   const principalBalance = principal ? (balanceByAccount[principal.id] ?? 0) : 0
 
+  // Only cleared transactions affect the current balance.
+  // Positive uncleared transactions (pending income) are excluded from totalBalance —
+  // they are visible via totalReceivable (receivables). Negative uncleared = payables.
   const totalReceivable = receivables
     .filter(r => r.status === 'pending')
     .reduce((s, r) => s + r.amount, 0)
