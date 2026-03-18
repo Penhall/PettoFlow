@@ -1,6 +1,7 @@
 // src/hooks/useAccounts.js
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getPrincipalAccount as findPrincipal } from '../lib/financeUtils'
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState([])
@@ -47,10 +48,8 @@ export function useAccounts() {
     setAccounts(prev => prev.map(a => a.id === id ? { ...a, is_active: false } : a))
   }
 
-  // Returns the active Principal account or null
-  const getPrincipalAccount = () => {
-    return accounts.find(a => a.category === 'principal' && a.is_active !== false) ?? null
-  }
+  // Thin wrapper around the tested pure function in financeUtils — delegates to avoid duplication
+  const getPrincipalAccount = () => findPrincipal(accounts)
 
   // Returns all distinct category values currently in use, plus the 3 defaults
   const getUniqueCategories = () => {
