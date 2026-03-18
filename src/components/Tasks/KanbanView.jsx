@@ -122,6 +122,8 @@ const DroppableColumn = ({ column, tasks, children }) => {
 
 const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onEditTask, onAddColumn, onDeleteColumn }) => {
   const [activeTask, setActiveTask] = useState(null)
+  const [isAddingColumn, setIsAddingColumn] = useState(false)
+  const [newColumnName, setNewColumnName] = useState('')
   
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -226,13 +228,47 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
             </div>
           )
         })}
-        <button className="add-column-card" onClick={() => {
-          const name = prompt('Nome da nova coluna:')
-          if (name) onAddColumn(name)
-        }}>
-          <Plus size={20} />
-          <span>Nova Coluna</span>
-        </button>
+        {isAddingColumn ? (
+          <div className="kanban-column" style={{ minWidth: 280, height: 'fit-content' }}>
+            <div className="column-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Nome da coluna"
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newColumnName.trim()) {
+                    onAddColumn(newColumnName.trim())
+                    setNewColumnName('')
+                    setIsAddingColumn(false)
+                  }
+                  if (e.key === 'Escape') {
+                    setIsAddingColumn(false)
+                    setNewColumnName('')
+                  }
+                }}
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-main)', color: 'var(--text-main)' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', padding: '12px 16px' }}>
+              <button className="add-member-btn" style={{ flex: 1, padding: '6px' }} onClick={() => {
+                if (newColumnName.trim()) onAddColumn(newColumnName.trim())
+                setNewColumnName('')
+                setIsAddingColumn(false)
+              }}>Salvar</button>
+              <button className="action-btn" style={{ padding: '6px 12px' }} onClick={() => {
+                setIsAddingColumn(false)
+                setNewColumnName('')
+              }}>X</button>
+            </div>
+          </div>
+        ) : (
+          <button className="add-column-card" onClick={() => setIsAddingColumn(true)}>
+            <Plus size={20} />
+            <span>Nova Coluna</span>
+          </button>
+        )}
       </div>
 
       <DragOverlay dropAnimation={dropAnimation}>
