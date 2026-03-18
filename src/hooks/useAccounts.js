@@ -47,5 +47,29 @@ export function useAccounts() {
     setAccounts(prev => prev.map(a => a.id === id ? { ...a, is_active: false } : a))
   }
 
-  return { accounts, loading, addAccount, updateAccount, closeAccount }
+  // Returns the active Principal account or null
+  const getPrincipalAccount = () => {
+    return accounts.find(a => a.category === 'principal' && a.is_active !== false) ?? null
+  }
+
+  // Returns all distinct category values currently in use, plus the 3 defaults
+  const getUniqueCategories = () => {
+    const defaults = ['principal', 'reserva', 'extras']
+    const custom = accounts.map(a => a.category).filter(Boolean)
+    return [...new Set([...defaults, ...custom])]
+  }
+
+  // Sets account category. For 'principal': demotes the previous principal first.
+  // demotedCategory: the category the outgoing principal is set to ('extras' or 'reserva')
+  const setAccountCategory = async (accountId, category, demotedCategory = 'extras') => {
+    if (category === 'principal') {
+      const current = getPrincipalAccount()
+      if (current && current.id !== accountId) {
+        await updateAccount(current.id, { category: demotedCategory })
+      }
+    }
+    return updateAccount(accountId, { category })
+  }
+
+  return { accounts, loading, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory }
 }
