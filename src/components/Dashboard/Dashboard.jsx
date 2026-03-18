@@ -2,13 +2,16 @@ import { TrendingUp, CheckCircle, Clock, AlertCircle, BarChart, PieChart, Users,
 
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 
-const Dashboard = ({ tasks }) => {
-  const activeTasks = tasks.filter(t => t.status !== 'Concluído').length
-  const completedTasks = tasks.filter(t => t.status === 'Concluído').length
-  const lateTasks = tasks.filter(t => t.status === 'A Fazer' && t.progress === 0).length
+const Dashboard = ({ tasks, columns = [] }) => {
+  const doneColumnName = columns.length > 0 ? columns[columns.length - 1].name : 'Concluído'
+  const firstColumnName = columns.length > 0 ? columns[0].name : 'A Fazer'
+
+  const activeTasks = tasks.filter(t => t.status !== doneColumnName).length
+  const completedTasks = tasks.filter(t => t.status === doneColumnName).length
+  const lateTasks = tasks.filter(t => t.status === firstColumnName && t.progress === 0).length
   const totalMembers = [...new Set(tasks.map(t => t.owner).filter(Boolean))].length
 
-  const pipelineValue = tasks.filter(t => t.status !== 'Concluído').reduce((sum, t) => sum + Number(t.deal_value || 0), 0)
+  const pipelineValue = tasks.filter(t => t.status !== doneColumnName).reduce((sum, t) => sum + Number(t.deal_value || 0), 0)
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val)
 
   const statCards = [

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, ArrowRight, GripVertical } from 'lucide-react'
+import { Plus, Trash2, ArrowRight, GripVertical, Check, X } from 'lucide-react'
 import {
   DndContext,
   closestCorners,
@@ -124,6 +124,7 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
   const [activeTask, setActiveTask] = useState(null)
   const [isAddingColumn, setIsAddingColumn] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
+  const [deletingColumn, setDeletingColumn] = useState(null)
   
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -190,11 +191,23 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                     <Plus size={14} />
                   </button>
                   {columns.length > 1 && (
-                    <button className="icon-btn sm danger" onClick={() => {
-                      if(confirm(`Excluir coluna "${column.name}"?`)) onDeleteColumn(column.id)
-                    }}>
-                      <Trash2 size={14} />
-                    </button>
+                    deletingColumn === column.id ? (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button className="icon-btn sm danger" title="Confirmar exclusão" onClick={() => {
+                          onDeleteColumn(column.id)
+                          setDeletingColumn(null)
+                        }}>
+                          <Check size={14} />
+                        </button>
+                        <button className="icon-btn sm" title="Cancelar" onClick={() => setDeletingColumn(null)}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="icon-btn sm danger" title="Excluir coluna" onClick={() => setDeletingColumn(column.id)}>
+                        <Trash2 size={14} />
+                      </button>
+                    )
                   )}
                 </div>
               </div>

@@ -219,7 +219,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard tasks={tasks} />
+        return <Dashboard tasks={tasks} columns={columns} />
       case 'tarefas':
         return (
           <>
