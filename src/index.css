@@ -445,7 +445,7 @@ body {
   align-items: center;
   margin-bottom: 24px;
   background: var(--bg-sidebar);
-  padding: 12px 24px;
+  padding: 8px 16px;
   border-radius: var(--radius-md);
   border: var(--border-width) solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -455,6 +455,56 @@ body {
 .tabs {
   display: flex;
   gap: 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: var(--border-width) solid var(--border-color);
+  background: var(--bg-main);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.80rem;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: var(--primary-light);
+}
+
+.add-member-btn {
+  background: var(--text-main);
+  color: var(--bg-main);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: var(--border-width) solid var(--border-color);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.80rem;
+  transition: all 0.2s;
+}
+
+.add-member-btn:hover {
+  background: transparent;
+  color: var(--text-main);
 }
 
 /* Kanban Board */
@@ -472,7 +522,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: var(--bg-column, var(--bg-sidebar));
+  background: transparent;
   border-radius: var(--radius-md);
   padding: 24px;
   border: var(--border-width) solid var(--border-color);
@@ -1517,10 +1567,13 @@ body {
 }
 
 .column-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100px;
   padding: 16px;
   flex: 1;
   overflow-y: auto;
-  min-height: 100px;
 }
 
 .drag-handle {
