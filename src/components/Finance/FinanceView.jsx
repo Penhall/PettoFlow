@@ -14,6 +14,7 @@ import TransactionList from './TransactionList'
 import TransactionForm from './TransactionForm'
 import RuleBuilder        from './RuleBuilder'
 import ReceivablesList   from './ReceivablesList'
+import FinanceSummary    from './FinanceSummary'
 
 const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const [activeTab, setActiveTab] = useState('extrato')
@@ -28,7 +29,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const { payees, addPayee }                                = usePayees()
   const { groups, categories }                              = useFinCategories()
   const { rules, addRule, updateRule, deleteRule }          = useFinRules()
-  const { listReceivables, invoiceReceivable, refresh: refreshReceivables } = useReceivables()
+  const { listReceivables, invoiceReceivable, refresh: refreshReceivables, receivables } = useReceivables()
 
   // Estratégia de filtros:
   // - Contas/Regras: effectiveFilters = {} → carrega TODAS as transações → balances corretos
@@ -37,6 +38,9 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const effectiveFilters = activeTab === 'extrato' ? extractoFilters : {}
   const { transactions, loading: txLoading, addTransaction, updateTransaction, deleteTransaction, applyRules }
     = useTransactions(effectiveFilters, rules)
+
+  // Unfiltered transactions for FinanceSummary — never filtered by date/account
+  const { transactions: allTransactions } = useTransactions({}, rules)
 
   const balances = useMemo(() => {
     const map = {}
@@ -88,6 +92,18 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
 
   return (
     <div className="finance-view">
+      {/* Summary cards — always visible above tabs */}
+      <FinanceSummary
+        accounts={accounts}
+        transactions={allTransactions}
+        receivables={receivables}
+        onClickReceivable={() => setActiveTab('receber')}
+        onClickPayable={() => {
+          setActiveTab('extrato')
+          setExtractoFilters({ cleared: false, onlyNegative: true })
+        }}
+      />
+
       <div className="view-header">
         <h3>Finanças</h3>
         <div className="view-controls">
@@ -166,7 +182,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-              {Object.values(extractoFilters).some(Boolean) && (
+              {Object.keys(extractoFilters).length > 0 && (
                 <button className="action-btn sm" onClick={() => setExtractoFilters({})}>
                   Limpar filtros
                 </button>

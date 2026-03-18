@@ -28,6 +28,8 @@ export function useTransactions(filters = {}, rules = []) {
     if (filters?.dateFrom)               query = query.gte('date', filters.dateFrom)
     if (filters?.dateTo)                 query = query.lte('date', filters.dateTo)
     if (filters?.needsReview !== undefined) query = query.eq('needs_review', filters.needsReview)
+    if (filters?.cleared !== undefined) query = query.eq('cleared', filters.cleared)
+    if (filters?.onlyNegative)          query = query.lt('amount', 0)
     // PostgREST operador cs (@>) para array JSONB com partial object matching.
     // PostgreSQL @> verifica se o array do lado esquerdo contém um elemento que seja
     // superset do elemento do lado direito — ou seja, {type,id,label} @> {type,id} = true.

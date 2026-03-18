@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, DollarSign } from 'lucide-react'
+import { X, DollarSign, CheckCircle, Clock, Archive } from 'lucide-react'
 import RelationChips from '../Activities/RelationChips'
 import TransactionForm      from '../Finance/TransactionForm'
 import { useAccounts }      from '../../hooks/useAccounts'
 import { usePayees }        from '../../hooks/usePayees'
 import { useFinCategories } from '../../hooks/useFinCategories'
 import { useTransactions }  from '../../hooks/useTransactions'
+import { useReceivables }   from '../../hooks/useReceivables'
+import { centsToReal, realToCents } from '../../lib/finUtils'
 
 const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
   const { accounts }           = useAccounts()
@@ -36,7 +38,7 @@ const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
   )
 }
 
-const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [], tasks = [], columns = [] }) => {
+const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [], clients = [], tasks = [], columns = [] }) => {
   const [form, setForm] = useState({
     title: '',
     status: defaultStatus || 'A Fazer',
@@ -51,6 +53,18 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
   })
 
   const [showTransactionForm, setShowTransactionForm] = useState(false)
+
+  const { listReceivables, invoiceReceivable } = useReceivables()
+  const { addTransaction } = useTransactions()
+
+  // Get the receivable for this specific task (null if none)
+  const taskReceivable = task ? (listReceivables({ taskId: Number(task.id) })[0] ?? null) : null
+
+  // Local state for invoice form
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false)
+  const [invoiceAmount, setInvoiceAmount] = useState('')
+  const [invoiceDate, setInvoiceDate] = useState('')
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
 
   useEffect(() => {
     if (task) {
@@ -96,6 +110,104 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
+          {/* Receivable status badge */}
+          {task && taskReceivable && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 12px',
+              background: taskReceivable.status === 'pending'
+                ? 'var(--warning-bg, #fef3c7)'
+                : 'var(--success-bg, #d1fae5)',
+              borderRadius: 6,
+              marginBottom: 12,
+            }}>
+              {taskReceivable.status === 'pending' ? (
+                <>
+                  <Clock size={14} style={{ color: '#d97706' }} />
+                  <span style={{ flex: 1, fontSize: 13, color: '#92400e', fontWeight: 500 }}>
+                    Aguardando Faturamento · {centsToReal(taskReceivable.amount)}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    onClick={() => {
+                      setInvoiceAmount((taskReceivable.amount / 100).toFixed(2).replace('.', ','))
+                      setInvoiceDate(new Date().toISOString().slice(0, 10))
+                      setShowInvoiceForm(true)
+                    }}
+                  >
+                    <CheckCircle size={13} /> Faturar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={14} style={{ color: '#059669' }} />
+                  <span style={{ fontSize: 13, color: '#065f46', fontWeight: 500 }}>
+                    Faturado ✓ · {centsToReal(taskReceivable.amount)}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Invoice confirmation form */}
+          {showInvoiceForm && taskReceivable && (
+            <div style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 8,
+              padding: '12px 16px',
+              marginBottom: 12,
+            }}>
+              <p style={{ margin: '0 0 10px', fontWeight: 500, fontSize: 14 }}>Confirmar Faturamento</p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: 12 }}>Valor recebido</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={invoiceAmount}
+                    onChange={e => setInvoiceAmount(e.target.value)}
+                    style={{ width: 120 }}
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: 12 }}>Data</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={invoiceDate}
+                    onChange={e => setInvoiceDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={async () => {
+                    const cents = realToCents(invoiceAmount)
+                    if (!cents || cents <= 0) return
+                    await invoiceReceivable(taskReceivable.id, cents, invoiceDate, addTransaction)
+                    setShowInvoiceForm(false)
+                  }}
+                >
+                  Confirmar
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setShowInvoiceForm(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label>Título *</label>
             <input
@@ -208,7 +320,52 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
           </div>
 
           <div className="modal-actions">
+            {/* Archive confirmation inline */}
+            {showArchiveConfirm && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 10px',
+                background: 'var(--danger-bg, #fee2e2)',
+                borderRadius: 6,
+                fontSize: 13,
+                width: '100%',
+                marginBottom: 8,
+              }}>
+                <span style={{ flex: 1 }}>Arquivar esta tarefa?</span>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ background: '#dc2626', fontSize: 12 }}
+                  onClick={() => { onArchive?.(task.id); onClose() }}
+                >
+                  Confirmar
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ fontSize: 12 }}
+                  onClick={() => setShowArchiveConfirm(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>
+
+            {task && !task.archived_at && onArchive && (
+              <button
+                type="button"
+                className="action-btn"
+                style={{ color: 'var(--text-secondary)' }}
+                onClick={() => setShowArchiveConfirm(true)}
+              >
+                <Archive size={14} style={{ marginRight: 4 }} /> Arquivar
+              </button>
+            )}
+
             <button type="button" className="action-btn" onClick={() => setShowTransactionForm(true)}>
               <DollarSign size={14} style={{ marginRight: 4 }} />Vincular Transação
             </button>
