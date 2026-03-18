@@ -7,11 +7,13 @@ import { usePayees }         from '../../hooks/usePayees'
 import { useFinCategories }  from '../../hooks/useFinCategories'
 import { useFinRules }       from '../../hooks/useFinRules'
 import { useTransactions }   from '../../hooks/useTransactions'
+import { useReceivables }    from '../../hooks/useReceivables'
 import AccountCard     from './AccountCard'
 import AccountForm     from './AccountForm'
 import TransactionList from './TransactionList'
 import TransactionForm from './TransactionForm'
-import RuleBuilder     from './RuleBuilder'
+import RuleBuilder        from './RuleBuilder'
+import ReceivablesList   from './ReceivablesList'
 
 const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const [activeTab, setActiveTab] = useState('extrato')
@@ -26,6 +28,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const { payees, addPayee }                                = usePayees()
   const { groups, categories }                              = useFinCategories()
   const { rules, addRule, updateRule, deleteRule }          = useFinRules()
+  const { listReceivables, invoiceReceivable, refresh: refreshReceivables } = useReceivables()
 
   // Estratégia de filtros:
   // - Contas/Regras: effectiveFilters = {} → carrega TODAS as transações → balances corretos
@@ -80,7 +83,8 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   }
 
   const activeAccounts = accounts.filter(a => a.is_active)
-  const tabs = ['extrato', 'contas', 'regras']
+  const tabs = ['extrato', 'contas', 'regras', 'receber']
+  const TAB_LABELS = { extrato: 'Extrato', contas: 'Contas', regras: 'Regras', receber: 'A Receber' }
 
   return (
     <div className="finance-view">
@@ -94,7 +98,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
                 className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {TAB_LABELS[tab]}
               </button>
             ))}
           </div>
@@ -244,6 +248,17 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
               </div>
             ))}
           </div>
+        )}
+
+        {/* TAB: A Receber */}
+        {activeTab === 'receber' && (
+          <ReceivablesList
+            receivables={listReceivables({ status: 'pending' })}
+            onInvoice={async (id, amount, date) => {
+              await invoiceReceivable(id, amount, date, addTransaction)
+              refreshReceivables()
+            }}
+          />
         )}
       </div>
 
