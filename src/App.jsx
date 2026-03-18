@@ -165,7 +165,7 @@ function App() {
 
     // Auto-create receivable when a Vendas task reaches the terminal column
     if (movingToTerminal) {
-      const existing = listReceivables({ taskId: id })
+      const existing = listReceivables({ taskId: Number(id) })
       if (shouldCreateReceivable(updatedTask, existing)) {
         // Fetch accounts directly — useAccounts lives in FinanceView scope, not here
         const { data: allAccounts } = await supabase.from('accounts').select('*').eq('is_active', true)
@@ -208,7 +208,11 @@ function App() {
       .eq('id', id)
       .select()
     if (error) { console.error('Error restoring task:', error); return }
-    setTasks(prev => [data[0], ...prev.filter(t => t.id !== id)])
+    if (data?.[0]) {
+      setTasks(prev => [data[0], ...prev.filter(t => t.id !== id)])
+    } else {
+      console.error('restoreTask: no data returned for task', id)
+    }
   }
 
   const addColumn = async (name) => {
