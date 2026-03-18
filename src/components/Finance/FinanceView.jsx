@@ -22,7 +22,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const [editingAccount, setEditingAccount]           = useState(null)
   const [editingRule, setEditingRule]                 = useState(null) // rule | 'new' | null
 
-  const { accounts, loading: acctLoading, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
+  const { accounts, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
   const { payees, addPayee }                                = usePayees()
   const { groups, categories }                              = useFinCategories()
   const { rules, addRule, updateRule, deleteRule }          = useFinRules()
@@ -57,9 +57,11 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
     const { category, ...rest } = formData
     let saved
     if (editingAccount) {
-      saved = await updateAccount(editingAccount.id, rest)
       if (category !== editingAccount.category) {
+        await updateAccount(editingAccount.id, rest)
         await setAccountCategory(editingAccount.id, category, demotedCategory)
+      } else {
+        await updateAccount(editingAccount.id, { ...rest, category })
       }
     } else {
       saved = await addAccount({ ...rest, category: 'extras' }) // temp category

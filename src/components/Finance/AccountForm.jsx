@@ -21,11 +21,12 @@ const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
-    if (form.category === 'principal' && existingPrincipal && existingPrincipal.id !== account?.id) {
+    const safeCategory = form.category === '__new__' ? 'extras' : form.category
+    if (safeCategory === 'principal' && existingPrincipal && existingPrincipal.id !== account?.id) {
       setShowDemoteConfirm(true)
       return
     }
-    onSave({ ...form, opening_balance: realToCents(balanceInput) }, undefined)
+    onSave({ ...form, category: safeCategory, opening_balance: realToCents(balanceInput) }, undefined)
   }
 
   return (
@@ -129,7 +130,7 @@ const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }
                   type="button"
                   className="btn-primary"
                   style={{ marginLeft: 'auto' }}
-                  onClick={() => { setShowDemoteConfirm(false); onSave({ ...form, opening_balance: realToCents(balanceInput) }, demotedCategory) }}
+                  onClick={() => { setShowDemoteConfirm(false); onSave({ ...form, category: form.category === '__new__' ? 'extras' : form.category, opening_balance: realToCents(balanceInput) }, demotedCategory) }}
                 >
                   Confirmar
                 </button>
