@@ -255,7 +255,11 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
           <ReceivablesList
             receivables={listReceivables({ status: 'pending' })}
             onInvoice={async (id, amount, date) => {
-              await invoiceReceivable(id, amount, date, addTransaction)
+              const result = await invoiceReceivable(id, amount, date, addTransaction)
+              if (!result) {
+                alert('Erro ao faturar. Tente novamente.')
+                return
+              }
               refreshReceivables()
             }}
           />

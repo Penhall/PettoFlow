@@ -5,27 +5,26 @@ import { centsToReal, realToCents } from '../../lib/finUtils'
 
 export default function ReceivablesList({ receivables, onInvoice }) {
   const [invoicingId, setInvoicingId] = useState(null)
-  const [invoiceAmount, setInvoiceAmount] = useState('')
-  const [invoiceDate, setInvoiceDate] = useState('')
-
-  const pending = receivables.filter(r => r.status === 'pending')
+  const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: '' })
 
   const openInvoice = (r) => {
     setInvoicingId(r.id)
-    setInvoiceAmount((r.amount / 100).toFixed(2).replace('.', ','))
-    setInvoiceDate(new Date().toISOString().slice(0, 10))
+    setInvoiceForm({
+      amount: (r.amount / 100).toFixed(2).replace('.', ','),
+      date: new Date().toISOString().slice(0, 10),
+    })
   }
 
   const handleConfirm = async () => {
-    const amountCents = realToCents(invoiceAmount)
+    const amountCents = realToCents(invoiceForm.amount)
     if (!amountCents || amountCents <= 0) return
-    await onInvoice(invoicingId, amountCents, invoiceDate)
+    if (!invoiceForm.date) return
+    await onInvoice(invoicingId, amountCents, invoiceForm.date)
     setInvoicingId(null)
-    setInvoiceAmount('')
-    setInvoiceDate('')
+    setInvoiceForm({ amount: '', date: '' })
   }
 
-  if (pending.length === 0) {
+  if (receivables.length === 0) {
     return (
       <p style={{ color: 'var(--text-secondary)', padding: '24px 0' }}>
         Nenhum valor a receber pendente.
@@ -35,7 +34,7 @@ export default function ReceivablesList({ receivables, onInvoice }) {
 
   return (
     <div className="receivables-list">
-      {pending.map(r => (
+      {receivables.map(r => (
         <div key={r.id} className="receivable-row" style={{
           display: 'flex',
           alignItems: 'center',
@@ -60,16 +59,16 @@ export default function ReceivablesList({ receivables, onInvoice }) {
               <input
                 type="text"
                 className="form-input"
-                value={invoiceAmount}
-                onChange={e => setInvoiceAmount(e.target.value)}
+                value={invoiceForm.amount}
+                onChange={e => setInvoiceForm(f => ({ ...f, amount: e.target.value }))}
                 style={{ width: 110 }}
                 placeholder="Valor"
               />
               <input
                 type="date"
                 className="form-input"
-                value={invoiceDate}
-                onChange={e => setInvoiceDate(e.target.value)}
+                value={invoiceForm.date}
+                onChange={e => setInvoiceForm(f => ({ ...f, date: e.target.value }))}
               />
               <button className="btn-primary" onClick={handleConfirm}>
                 Confirmar
