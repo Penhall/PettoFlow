@@ -11,6 +11,7 @@ import TimeView from './components/Team/TimeView'
 import ClientesView from './components/Clients/ClientesView'
 import ActivitiesView from './components/Activities/ActivitiesView'
 import FinanceView from './components/Finance/FinanceView'
+import ArchiveView from './components/Archive/ArchiveView'
 import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
@@ -271,6 +272,7 @@ function App() {
       case 'clientes': return 'Clientes'
       case 'atividades': return 'Atividades'
       case 'financas': return 'Finanças'
+      case 'arquivo': return 'Arquivo'
       default: return 'PettoFlow'
     }
   }
@@ -360,15 +362,16 @@ function App() {
 
             <div className="board-container">
               {viewType === 'kanban' && (
-                <KanbanView 
-                  tasks={filteredTasks} 
+                <KanbanView
+                  tasks={filteredTasks}
                   columns={columns}
-                  onAddTask={openAddModal} 
+                  onAddTask={openAddModal}
                   onUpdateTask={updateTask}
                   onDeleteTask={deleteTask}
                   onEditTask={(task) => { setSelectedTask(task); setShowEditModal(true) }}
                   onAddColumn={addColumn}
                   onDeleteColumn={deleteColumn}
+                  onArchive={archiveTask}
                 />
               )}
               {viewType === 'list' && (
@@ -396,6 +399,8 @@ function App() {
         return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} />
       case 'financas':
         return <FinanceView clients={clients} tasks={tasks} team={team} />
+      case 'arquivo':
+        return <ArchiveView restoreTask={restoreTask} />
       default:
         return null
     }

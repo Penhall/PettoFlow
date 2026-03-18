@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity, Wallet, Archive, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -11,6 +11,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'financas',   label: 'Finanças',   icon: Wallet   },
     { id: 'time',       label: 'Time',        icon: Users    },
     { id: 'clientes', label: 'Clientes', icon: UserCircle },
+    { id: 'arquivo',  label: 'Arquivo',  icon: Archive   },
   ];
 
   return (
