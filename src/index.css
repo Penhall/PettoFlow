@@ -1700,6 +1700,12 @@ body {
   border: 1px solid var(--border-color);
 }
 
+.profile-body {
+  display: flex;
+  gap: 24px;
+  height: 100%;
+}
+
 .profile-sidebar {
   width: 300px;
   display: flex;
@@ -1723,7 +1729,7 @@ body {
 
 .info-card h3, .related-tasks h3, .interaction-feed h3 {
   font-family: var(--font-serif);
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 400;
   color: var(--text-main);
   margin-bottom: 8px;
@@ -2266,7 +2272,7 @@ body {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 480px;
+  width: 760px;
   max-width: 95vw;
   background: var(--card-bg);
   border-left: var(--border-width) solid var(--border-color);
