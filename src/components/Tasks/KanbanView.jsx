@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, ArrowRight, GripVertical, Check, X } from 'lucide-react'
+import { Plus, Trash2, ArrowRight, GripVertical, Check, X, Archive } from 'lucide-react'
+import { isWithin30Days } from '../../lib/financeUtils'
 import {
   DndContext,
   closestCorners,
@@ -33,7 +34,7 @@ const TAG_CLASS = {
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
 const getTagClass = (tag) => TAG_CLASS[tag.toLowerCase()] ?? 'default-tag'
 
-const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, isOverlay, columns }) => {
+const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, onArchive, isOverlay, columns }) => {
   const {
     attributes,
     listeners,
@@ -76,9 +77,16 @@ const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, isOver
             <span key={tag} className={`tag ${getTagClass(tag)}`}>{tag}</span>
           ))}
         </div>
-        <button className="delete-task-btn" onClick={() => onDeleteTask(task.id)}>
-          <Trash2 size={14} />
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {!task.archived_at && onArchive && (
+            <button className="delete-task-btn" title="Arquivar tarefa" onClick={() => onArchive(task.id)}>
+              <Archive size={14} />
+            </button>
+          )}
+          <button className="delete-task-btn" onClick={() => onDeleteTask(task.id)}>
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
       <h4>{task.title}</h4>
       <div className="task-meta">
@@ -120,7 +128,7 @@ const DroppableColumn = ({ column, tasks, children }) => {
   )
 }
 
-const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onEditTask, onAddColumn, onDeleteColumn }) => {
+const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onEditTask, onAddColumn, onDeleteColumn, onArchive }) => {
   const [activeTask, setActiveTask] = useState(null)
   const [isAddingColumn, setIsAddingColumn] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
@@ -177,14 +185,19 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
     >
       <div className="kanban-board">
         {columns.map((column) => {
+          const terminalColId = columns.length > 0 ? columns[columns.length - 1].id : null
+          const isTerminal = column.id === terminalColId
           const columnTasks = tasks.filter(t => t.status === column.name)
+          const visibleTasks = isTerminal
+            ? columnTasks.filter(t => !t.archived_at && isWithin30Days(t.completed_at))
+            : columnTasks.filter(t => !t.archived_at)
           return (
             <div key={column.id} className="kanban-column">
               <div className="column-header">
                 <div className="header-label">
                   <div className="status-dot" style={{ backgroundColor: column.color }} />
                   <h3>{column.name}</h3>
-                  <span className="task-count">{columnTasks.length}</span>
+                  <span className="task-count">{visibleTasks.length}</span>
                 </div>
                 <div className="header-actions">
                   <button className="icon-btn sm" onClick={() => onAddTask(column.name)}>
@@ -212,30 +225,37 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                 </div>
               </div>
 
-              <DroppableColumn column={column} tasks={columnTasks}>
+              <DroppableColumn column={column} tasks={visibleTasks}>
                 <SortableContext
                   id={column.name}
-                  items={columnTasks.map(t => t.id)}
+                  items={visibleTasks.map(t => t.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <AnimatePresence>
-                    {columnTasks.map(task => (
-                      <SortableTaskCard 
-                        key={task.id} 
-                        task={task} 
+                    {visibleTasks.map(task => (
+                      <SortableTaskCard
+                        key={task.id}
+                        task={task}
                         columns={columns}
                         onUpdateTask={onUpdateTask}
                         onDeleteTask={onDeleteTask}
                         onEditTask={onEditTask}
+                        onArchive={onArchive}
                       />
                     ))}
                   </AnimatePresence>
                 </SortableContext>
 
-                {columnTasks.length === 0 && (
+                {visibleTasks.length === 0 && (
                   <div className="empty-column">
                     <p>Arraste aqui</p>
                   </div>
+                )}
+
+                {isTerminal && (
+                  <p style={{ fontSize: 11, color: 'var(--text-tertiary, #9ca3af)', textAlign: 'center', padding: '4px 0', margin: 0 }}>
+                    Exibindo tarefas dos últimos 30 dias
+                  </p>
                 )}
               </DroppableColumn>
             </div>
@@ -286,13 +306,14 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
 
       <DragOverlay dropAnimation={dropAnimation}>
         {activeTask ? (
-          <SortableTaskCard 
-            task={activeTask} 
+          <SortableTaskCard
+            task={activeTask}
             columns={columns}
-            isOverlay 
+            isOverlay
             onUpdateTask={onUpdateTask}
             onDeleteTask={onDeleteTask}
             onEditTask={onEditTask}
+            onArchive={onArchive}
           />
         ) : null}
       </DragOverlay>
