@@ -15,6 +15,8 @@ import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
 import { useCommandPalette } from './hooks/useCommandPalette'
+import { useReceivables } from './hooks/useReceivables'
+import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder } from 'lucide-react'
 import { supabase } from './lib/supabaseClient'
 
@@ -40,6 +42,7 @@ function App() {
 
   const { activities } = useActivities()
   const { isOpen: paletteOpen, query, setQuery, results, open: openPalette, close: closePalette } = useCommandPalette(tasks, clients, activities)
+  const { createReceivable, listReceivables } = useReceivables()
 
   // Fetch tasks from Supabase
   const fetchTasks = async () => {
@@ -47,6 +50,7 @@ function App() {
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -128,7 +132,22 @@ function App() {
   }
 
   const updateTask = async (id, updates) => {
-    const { related_to, ...cleanUpdates } = updates // Strip if it accidentally gets in
+    const { related_to, ...cleanUpdates } = updates
+
+    // Detect if task is moving to the terminal column for the first time
+    const terminalColumnName = columns[columns.length - 1]?.name
+    const task = tasks.find(t => t.id === id)
+    const movingToTerminal = (
+      terminalColumnName &&
+      cleanUpdates.status === terminalColumnName &&
+      task?.status !== terminalColumnName
+    )
+
+    // Set completed_at the first time a task enters the terminal column
+    if (movingToTerminal && !task?.completed_at) {
+      cleanUpdates.completed_at = new Date().toISOString()
+    }
+
     const { data, error } = await supabase
       .from('tasks')
       .update(cleanUpdates)
@@ -138,8 +157,25 @@ function App() {
     if (error) {
       console.error('Error updating task:', error)
       alert('Erro ao atualizar tarefa: ' + error.message)
-    } else {
-      setTasks(prev => prev.map(t => t.id === id ? data[0] : t))
+      return
+    }
+
+    const updatedTask = data[0]
+    setTasks(prev => prev.map(t => t.id === id ? updatedTask : t))
+
+    // Auto-create receivable when a Vendas task reaches the terminal column
+    if (movingToTerminal) {
+      const existing = listReceivables({ taskId: id })
+      if (shouldCreateReceivable(updatedTask, existing)) {
+        // Fetch accounts directly — useAccounts lives in FinanceView scope, not here
+        const { data: allAccounts } = await supabase.from('accounts').select('*').eq('is_active', true)
+        const principal = findPrincipal(allAccounts || [])
+        if (principal) {
+          await createReceivable(id, updatedTask.deal_value, principal.id)
+        } else {
+          alert('Nenhuma conta Principal definida. Acesse Finanças → Contas para definir uma conta como Principal.')
+        }
+      }
     }
   }
 
@@ -154,6 +190,25 @@ function App() {
     } else {
       setTasks(prev => prev.filter(t => t.id !== id))
     }
+  }
+
+  const archiveTask = async (id) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) { console.error('Error archiving task:', error); return }
+    setTasks(prev => prev.filter(t => t.id !== id))
+  }
+
+  const restoreTask = async (id) => {
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({ archived_at: null })
+      .eq('id', id)
+      .select()
+    if (error) { console.error('Error restoring task:', error); return }
+    setTasks(prev => [data[0], ...prev.filter(t => t.id !== id)])
   }
 
   const addColumn = async (name) => {
@@ -424,6 +479,7 @@ function App() {
             clients={clients}
             tasks={tasks}
             columns={columns}
+            onArchive={archiveTask}
           />
         )}
       </AnimatePresence>
