@@ -36,7 +36,7 @@ const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
   )
 }
 
-const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [], tasks = [] }) => {
+const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = [], tasks = [], columns = [] }) => {
   const [form, setForm] = useState({
     title: '',
     status: defaultStatus || 'A Fazer',
@@ -130,9 +130,17 @@ const TaskModal = ({ task, onSave, onClose, defaultStatus, team = [], clients = 
             <div className="form-group">
               <label>Status</label>
               <select value={form.status} onChange={e => change('status', e.target.value)}>
-                <option>A Fazer</option>
-                <option>Em Progresso</option>
-                <option>Concluído</option>
+                {columns.length > 0 ? (
+                  columns.map(col => (
+                    <option key={col.id || col.name} value={col.name}>{col.name}</option>
+                  ))
+                ) : (
+                  <>
+                    <option>A Fazer</option>
+                    <option>Em Progresso</option>
+                    <option>Concluído</option>
+                  </>
+                )}
               </select>
             </div>
             <div className="form-group">

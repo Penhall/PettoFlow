@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  useDroppable,
   defaultDropAnimationSideEffects,
 } from '@dnd-kit/core'
 import {
@@ -32,7 +33,7 @@ const TAG_CLASS = {
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
 const getTagClass = (tag) => TAG_CLASS[tag.toLowerCase()] ?? 'default-tag'
 
-const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, isOverlay }) => {
+const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, isOverlay, columns }) => {
   const {
     attributes,
     listeners,
@@ -48,10 +49,11 @@ const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, isOver
     opacity: isDragging ? 0.3 : 1,
   }
 
-  const STATUSES = ['A Fazer', 'Em Progresso', 'Concluído'] 
   const getNextStatus = (current) => {
-    const idx = STATUSES.indexOf(current)
-    return STATUSES[(idx + 1) % STATUSES.length]
+    if (!columns || !columns.length) return current
+    const idx = columns.findIndex(c => c.name === current)
+    if (idx === -1) return columns[0].name
+    return columns[(idx + 1) % columns.length].name
   }
 
   return (
@@ -102,6 +104,18 @@ const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, isOver
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+const DroppableColumn = ({ column, tasks, children }) => {
+  const { setNodeRef } = useDroppable({
+    id: column.name,
+  })
+
+  return (
+    <div ref={setNodeRef} className="column-content" id={column.name}>
+      {children}
     </div>
   )
 }
@@ -183,7 +197,7 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                 </div>
               </div>
 
-              <div className="column-content" id={column.name}>
+              <DroppableColumn column={column} tasks={columnTasks}>
                 <SortableContext
                   id={column.name}
                   items={columnTasks.map(t => t.id)}
@@ -194,6 +208,7 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                       <SortableTaskCard 
                         key={task.id} 
                         task={task} 
+                        columns={columns}
                         onUpdateTask={onUpdateTask}
                         onDeleteTask={onDeleteTask}
                         onEditTask={onEditTask}
@@ -207,7 +222,7 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                     <p>Arraste aqui</p>
                   </div>
                 )}
-              </div>
+              </DroppableColumn>
             </div>
           )
         })}
@@ -224,6 +239,7 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
         {activeTask ? (
           <SortableTaskCard 
             task={activeTask} 
+            columns={columns}
             isOverlay 
             onUpdateTask={onUpdateTask}
             onDeleteTask={onDeleteTask}

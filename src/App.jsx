@@ -112,14 +112,15 @@ function App() {
   }
 
   const addTask = async (task) => {
+    const { related_to, ...payload } = task // Stripped out to prevent Supabase PGRST204 errors
     const { data, error } = await supabase
       .from('tasks')
-      .insert([{ ...task, created_at: new Date() }])
+      .insert([{ ...payload, created_at: new Date() }])
       .select()
 
     if (error) {
       console.error('Error adding task:', error)
-      alert('Erro ao adicionar tarefa.')
+      alert('Erro ao adicionar tarefa: ' + error.message)
     } else {
       setTasks(prev => [data[0], ...prev])
       setShowAddModal(false)
@@ -127,14 +128,16 @@ function App() {
   }
 
   const updateTask = async (id, updates) => {
+    const { related_to, ...cleanUpdates } = updates // Strip if it accidentally gets in
     const { data, error } = await supabase
       .from('tasks')
-      .update(updates)
+      .update(cleanUpdates)
       .eq('id', id)
       .select()
 
     if (error) {
       console.error('Error updating task:', error)
+      alert('Erro ao atualizar tarefa: ' + error.message)
     } else {
       setTasks(prev => prev.map(t => t.id === id ? data[0] : t))
     }
@@ -160,8 +163,12 @@ function App() {
       .insert([{ name, order_index }])
       .select()
     
-    if (error) console.error('Error adding column:', error)
-    else setColumns(prev => [...prev, data[0]])
+    if (error) {
+      console.error('Error adding column:', error)
+      alert('Erro ao adicionar coluna Kanban: ' + error.message)
+    } else {
+      setColumns(prev => [...prev, data[0]])
+    }
   }
 
   const deleteColumn = async (id) => {
@@ -416,6 +423,7 @@ function App() {
             team={team}
             clients={clients}
             tasks={tasks}
+            columns={columns}
           />
         )}
       </AnimatePresence>
