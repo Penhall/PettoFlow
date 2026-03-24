@@ -10,6 +10,7 @@ const AddTaskModal = ({ onAdd, onClose, defaultStatus }) => {
     owner: '',
     tags: [],
     progress: 0,
+    due_date: '',
   })
 
   const change = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
@@ -100,6 +101,16 @@ const AddTaskModal = ({ onAdd, onClose, defaultStatus }) => {
               max="100"
               value={form.progress}
               onChange={e => change('progress', Number(e.target.value))}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Prazo (opcional)</label>
+            <input
+              type="date"
+              className="form-input"
+              value={form.due_date || ''}
+              onChange={e => change('due_date', e.target.value || null)}
             />
           </div>
 

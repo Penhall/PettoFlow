@@ -50,6 +50,7 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
     client_id: null,
     category: 'Operacional',
     related_to: [],
+    due_date: '',
   })
 
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -75,6 +76,9 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
         client_id: task.client_id || null,
         category: task.category || 'Operacional',
         related_to: task.related_to || [],
+        due_date: task?.due_date
+          ? new Date(task.due_date).toISOString().slice(0, 10)
+          : '',
       })
     }
   }, [task])
@@ -285,6 +289,16 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Prazo (opcional)</label>
+            <input
+              type="date"
+              className="form-input"
+              value={form.due_date || ''}
+              onChange={e => change('due_date', e.target.value || null)}
+            />
           </div>
 
           <div className="form-group">
