@@ -14,6 +14,7 @@ export function useReceivables() {
       .select(`
         *,
         tasks ( title, category, client_id ),
+        activities ( title, id ),
         accounts ( name )
       `)
       .order('created_at', { ascending: false })
@@ -40,6 +41,30 @@ export function useReceivables() {
   }
 
   /**
+   * Creates a receivable originated from an activity.
+   * @param {number} activityId
+   * @param {number} amount - in cents
+   * @param {number|null} targetAccountId
+   * @param {string|null} dueDate - YYYY-MM-DD
+   */
+  const createReceivableFromActivity = async (activityId, amount, targetAccountId, dueDate = null) => {
+    if (!supabase) return null
+    const { data, error } = await supabase
+      .from('receivables')
+      .insert([{
+        activity_id: activityId,
+        amount,
+        target_account_id: targetAccountId,
+        status: 'pending',
+        due_date: dueDate,
+      }])
+      .select()
+    if (error) { console.error('Error creating receivable from activity:', error); return null }
+    await fetch()
+    return data[0]
+  }
+
+  /**
    * Marks a receivable as invoiced and creates a real transaction.
    * Uses addTransaction from useTransactions for rules engine + needs_review logic.
    * @param {number} receivableId
@@ -53,12 +78,16 @@ export function useReceivables() {
     if (!rec) return null
 
     // Create the real transaction via the existing hook (gets rules engine + needs_review)
+    const sourceName = rec.tasks?.title ?? rec.activities?.title ?? 'lançamento'
+    const sourceLink = rec.task_id
+      ? { type: 'task', id: rec.task_id }
+      : { type: 'activity', id: rec.activity_id }
     const tx = await addTransaction({
       account_id: rec.target_account_id,
       amount: adjustedAmount,
       date,
-      notes: `Faturamento: ${rec.tasks?.title ?? 'tarefa'}`,
-      related_to: [{ type: 'task', id: rec.task_id }],
+      notes: `Faturamento: ${sourceName}`,
+      related_to: [sourceLink],
     })
     if (!tx) return null
 
@@ -85,5 +114,5 @@ export function useReceivables() {
     })
   }
 
-  return { receivables, loading, createReceivable, invoiceReceivable, listReceivables, refresh: fetch }
+  return { receivables, loading, createReceivable, createReceivableFromActivity, invoiceReceivable, listReceivables, refresh: fetch }
 }
