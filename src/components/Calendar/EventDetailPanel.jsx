@@ -36,6 +36,7 @@ export default function EventDetailPanel({
   principalAccountId,
 }) {
   const [innerModal, setInnerModal] = useState(null)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
   const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: new Date().toISOString().slice(0, 10) })
   const [receivableForm, setReceivableForm] = useState({ amount: '', dueDate: new Date().toISOString().slice(0, 10) })
 
@@ -155,6 +156,7 @@ export default function EventDetailPanel({
                 <Phone size={14} /> Follow-up
               </button>
               <button className="action-btn" onClick={() => {
+                setNewTaskTitle(`Cobrar: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`)
                 setInnerModal('newTask')
               }}>
                 <Plus size={14} /> Criar Tarefa
@@ -166,6 +168,7 @@ export default function EventDetailPanel({
           {type === 'transaction' && (
             <>
               <button className="action-btn" onClick={() => {
+                setNewTaskTitle('')
                 setInnerModal('newTask')
               }}>
                 <Plus size={14} /> Criar Tarefa
@@ -247,14 +250,11 @@ export default function EventDetailPanel({
               <input
                 className="form-input"
                 type="text"
-                defaultValue={
-                  type === 'receivable'
-                    ? `Cobrar: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`
-                    : ''
-                }
+                value={newTaskTitle}
+                onChange={e => setNewTaskTitle(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    onAddTask?.({ title: e.target.value, status: columns[0]?.name ?? 'A Fazer', priority: 'Média' })
+                  if (e.key === 'Enter' && newTaskTitle.trim()) {
+                    onAddTask?.({ title: newTaskTitle, status: columns[0]?.name ?? 'A Fazer', priority: 'Média' })
                     onClose()
                   }
                 }}
@@ -264,9 +264,9 @@ export default function EventDetailPanel({
               <button
                 type="button"
                 className="action-btn"
-                onClick={e => {
-                  const input = e.target.closest('[style]').querySelector('input')
-                  onAddTask?.({ title: input?.value ?? '', status: columns[0]?.name ?? 'A Fazer', priority: 'Média' })
+                onClick={() => {
+                  if (!newTaskTitle.trim()) return
+                  onAddTask?.({ title: newTaskTitle, status: columns[0]?.name ?? 'A Fazer', priority: 'Média' })
                   onClose()
                 }}
               >

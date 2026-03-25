@@ -18,6 +18,7 @@ import { getPrincipalAccount } from '../../lib/financeUtils'
 import ActivityForm from '../Activities/ActivityForm'
 
 const ALL_TYPES = ['task', 'activity', 'receivable', 'transaction']
+const EMPTY_FILTERS = {}
 
 export default function CalendarView({
   filterTypes,      // undefined = unified view; ['task'] = tasks only
@@ -35,7 +36,7 @@ export default function CalendarView({
   const { addActivity, updateActivity } = useActivities()
   const { invoiceReceivable, createReceivableFromActivity } = useReceivables()
   const { rules } = useFinRules()
-  const { addTransaction } = useTransactions({}, rules)
+  const { addTransaction } = useTransactions(EMPTY_FILTERS, rules)
   const { accounts } = useAccounts()
   const principalAccount = getPrincipalAccount(accounts)
 
