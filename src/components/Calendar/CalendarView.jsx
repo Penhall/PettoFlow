@@ -15,6 +15,7 @@ import { useTransactions } from '../../hooks/useTransactions'
 import { useFinRules } from '../../hooks/useFinRules'
 import { useAccounts } from '../../hooks/useAccounts'
 import { getPrincipalAccount } from '../../lib/financeUtils'
+import ActivityForm from '../Activities/ActivityForm'
 
 const ALL_TYPES = ['task', 'activity', 'receivable', 'transaction']
 
@@ -106,15 +107,18 @@ export default function CalendarView({
       {/* Date click → new activity */}
       <AnimatePresence>
         {dateClickDate && (
-          <div className="modal-overlay" onClick={() => setDateClickDate(null)}>
-            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
-              <p style={{ margin: '0 0 8px', fontWeight: 500 }}>Nova atividade em {dateClickDate}</p>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                Abra o módulo de Atividades para criar uma atividade nesta data.
-              </p>
-              <button className="action-btn" onClick={() => setDateClickDate(null)}>Fechar</button>
-            </div>
-          </div>
+          <ActivityForm
+            activity={{ scheduled_at: dateClickDate + 'T09:00' }}
+            clients={clients}
+            tasks={tasks}
+            team={team}
+            templates={[]}
+            onSave={async (form) => {
+              await addActivity(form)
+              setDateClickDate(null)
+            }}
+            onClose={() => setDateClickDate(null)}
+          />
         )}
       </AnimatePresence>
     </div>

@@ -1,7 +1,7 @@
 // src/components/Calendar/EventDetailPanel.jsx
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, CheckCircle, DollarSign, Phone, Plus } from 'lucide-react'
+import { X, CheckCircle, DollarSign, Phone, Plus, Edit } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { centsToReal, realToCents } from '../../lib/finUtils'
 
@@ -38,7 +38,6 @@ export default function EventDetailPanel({
   const [innerModal, setInnerModal] = useState(null)
   const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: new Date().toISOString().slice(0, 10) })
   const [receivableForm, setReceivableForm] = useState({ amount: '', dueDate: new Date().toISOString().slice(0, 10) })
-  const [newTaskTitle, setNewTaskTitle] = useState('')
 
   if (!event) return null
 
@@ -97,6 +96,9 @@ export default function EventDetailPanel({
           {/* TASK actions */}
           {type === 'task' && (
             <>
+              <button className="action-btn" onClick={() => setInnerModal('editTask')}>
+                <Edit size={14} /> Editar
+              </button>
               {!payload.completed_at && (
                 <button className="action-btn" onClick={() => {
                   onUpdateTask?.(payload.id, { status: columns[columns.length - 1]?.name ?? payload.status })
@@ -116,6 +118,9 @@ export default function EventDetailPanel({
           {/* ACTIVITY actions */}
           {type === 'activity' && (
             <>
+              <button className="action-btn" onClick={() => setInnerModal('editActivity')}>
+                <Edit size={14} /> Editar
+              </button>
               <button className="action-btn" onClick={() => setInnerModal('newTransaction')}>
                 <DollarSign size={14} /> Criar Transação
               </button>
@@ -150,7 +155,6 @@ export default function EventDetailPanel({
                 <Phone size={14} /> Follow-up
               </button>
               <button className="action-btn" onClick={() => {
-                setNewTaskTitle(`Cobrar: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`)
                 setInnerModal('newTask')
               }}>
                 <Plus size={14} /> Criar Tarefa
@@ -162,7 +166,6 @@ export default function EventDetailPanel({
           {type === 'transaction' && (
             <>
               <button className="action-btn" onClick={() => {
-                setNewTaskTitle('')
                 setInnerModal('newTask')
               }}>
                 <Plus size={14} /> Criar Tarefa
@@ -230,6 +233,13 @@ export default function EventDetailPanel({
             </div>
           )}
 
+          {/* Inline new transaction form for activity → Transaction */}
+          {innerModal === 'newTransaction' && (
+            <div style={{ marginTop: 8, padding: '10px 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+              Abra o módulo de Finanças para registrar uma transação vinculada a esta atividade.
+            </div>
+          )}
+
           {/* Inline new task form */}
           {innerModal === 'newTask' && (
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -237,20 +247,26 @@ export default function EventDetailPanel({
               <input
                 className="form-input"
                 type="text"
-                value={newTaskTitle}
-                onChange={e => setNewTaskTitle(e.target.value)}
+                defaultValue={
+                  type === 'receivable'
+                    ? `Cobrar: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`
+                    : ''
+                }
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    onAddTask?.({ title: e.target.value, status: columns[0]?.name ?? 'A Fazer', priority: 'Média' })
+                    onClose()
+                  }
+                }}
                 placeholder="Enter para confirmar"
                 autoFocus
               />
               <button
-                className="add-member-btn"
-                onClick={() => {
-                  if (!newTaskTitle.trim()) return
-                  onAddTask?.({
-                    title: newTaskTitle,
-                    status: columns[0]?.name ?? 'A Fazer',
-                    priority: 'Média',
-                  })
+                type="button"
+                className="action-btn"
+                onClick={e => {
+                  const input = e.target.closest('[style]').querySelector('input')
+                  onAddTask?.({ title: input?.value ?? '', status: columns[0]?.name ?? 'A Fazer', priority: 'Média' })
                   onClose()
                 }}
               >
