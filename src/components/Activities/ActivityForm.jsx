@@ -66,6 +66,7 @@ const ActivityForm = ({
       ? new Date(activity.scheduled_at).toISOString().slice(0, 16)
       : '',
   })
+  const [submitError, setSubmitError] = useState(null)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [finOpen, setFinOpen] = useState(false)
   const [finMode, setFinMode] = useState('transaction') // 'transaction' | 'receivable'
@@ -91,33 +92,43 @@ const ActivityForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return
+    setSubmitError(null)
+    try {
+      const savedActivity = await onSave({
+        ...form,
+        scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
+      })
 
-    const savedActivity = await onSave({
-      ...form,
-      scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
-    })
+      if (!savedActivity?.id) {
+        setSubmitError('Erro ao salvar atividade. Tente novamente.')
+        return
+      }
 
-    if (finOpen && finAmount && savedActivity?.id) {
-      const amountCents = realToCents(finAmount)
-      if (amountCents > 0) {
-        if (finMode === 'transaction' && addTransaction) {
-          if (!principalAccountId) {
-            alert('Nenhuma conta Principal definida. Acesse Finanças → Contas.')
-          } else {
-            await addTransaction({
-              account_id: principalAccountId,
-              amount: amountCents,
-              date: finDate,
-              notes: `Atividade: ${form.title}`,
-              related_to: [{ type: 'activity', id: savedActivity.id }],
-            })
+      if (finOpen && finAmount) {
+        const amountCents = realToCents(finAmount)
+        if (amountCents > 0) {
+          if (finMode === 'transaction' && addTransaction) {
+            if (!principalAccountId) {
+              alert('Nenhuma conta Principal definida. Acesse Finanças → Contas.')
+            } else {
+              await addTransaction({
+                account_id: principalAccountId,
+                amount: amountCents,
+                date: finDate,
+                notes: `Atividade: ${form.title}`,
+                related_to: [{ type: 'activity', id: savedActivity.id }],
+              })
+            }
+          } else if (finMode === 'receivable' && createReceivableFromActivity) {
+            await createReceivableFromActivity(
+              savedActivity.id, amountCents, principalAccountId ?? null, finDate
+            )
           }
-        } else if (finMode === 'receivable' && createReceivableFromActivity) {
-          await createReceivableFromActivity(
-            savedActivity.id, amountCents, principalAccountId ?? null, finDate
-          )
         }
       }
+    } catch (err) {
+      setSubmitError('Erro ao salvar. Tente novamente.')
+      console.error(err)
     }
   }
 
@@ -290,6 +301,10 @@ const ActivityForm = ({
               </div>
             )}
           </div>
+
+          {submitError && (
+            <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '4px 0 0' }}>{submitError}</p>
+          )}
 
           <div className="modal-actions">
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>

@@ -50,6 +50,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
     } else {
       saved = await addActivity(form)
     }
+    if (!saved) return null  // error already logged by the hook; don't close the form
     setShowForm(false)
     setEditingActivity(null)
     return saved
