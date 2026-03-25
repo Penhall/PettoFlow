@@ -8,6 +8,13 @@ import ptBrLocale from '@fullcalendar/core/locales/pt-br'
 import { AnimatePresence } from 'framer-motion'
 import { useCalendarEvents } from '../../hooks/useCalendarEvents'
 import CalendarFilters from './CalendarFilters'
+import EventDetailPanel from './EventDetailPanel'
+import { useActivities } from '../../hooks/useActivities'
+import { useReceivables } from '../../hooks/useReceivables'
+import { useTransactions } from '../../hooks/useTransactions'
+import { useFinRules } from '../../hooks/useFinRules'
+import { useAccounts } from '../../hooks/useAccounts'
+import { getPrincipalAccount } from '../../lib/financeUtils'
 
 const ALL_TYPES = ['task', 'activity', 'receivable', 'transaction']
 
@@ -22,6 +29,14 @@ export default function CalendarView({
 }) {
   const [activeTypes, setActiveTypes] = useState(filterTypes ?? ALL_TYPES)
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [dateClickDate, setDateClickDate] = useState(null)
+
+  const { addActivity, updateActivity } = useActivities()
+  const { invoiceReceivable, createReceivableFromActivity } = useReceivables()
+  const { rules } = useFinRules()
+  const { addTransaction } = useTransactions({}, rules)
+  const { accounts } = useAccounts()
+  const principalAccount = getPrincipalAccount(accounts)
 
   const { events, loading } = useCalendarEvents({
     tasks,
@@ -62,32 +77,43 @@ export default function CalendarView({
         }}
         events={fcEvents}
         eventClick={handleEventClick}
+        dateClick={({ dateStr }) => setDateClickDate(dateStr)}
         height="auto"
         editable={false}
       />
 
-      {/* EventDetailPanel — wired in Task 6 */}
+      {/* EventDetailPanel */}
       <AnimatePresence>
         {selectedEvent && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: 12,
-              background: 'var(--card-bg)',
-              borderRadius: 8,
-              border: '1px solid var(--border-color)',
-            }}
-          >
-            <strong>{selectedEvent.title}</strong>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-              {selectedEvent.type} · {selectedEvent.date}
-            </p>
-            <button
-              style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => setSelectedEvent(null)}
-            >
-              Fechar
-            </button>
+          <EventDetailPanel
+            event={selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            clients={clients}
+            tasks={tasks}
+            team={team}
+            columns={columns}
+            onUpdateTask={onUpdateTask}
+            onUpdateActivity={updateActivity}
+            onInvoice={(id, amount, date) => invoiceReceivable(id, amount, date, addTransaction)}
+            onAddActivity={addActivity}
+            onAddTask={onAddTask}
+            createReceivableFromActivity={createReceivableFromActivity}
+            principalAccountId={principalAccount?.id ?? null}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Date click → new activity */}
+      <AnimatePresence>
+        {dateClickDate && (
+          <div className="modal-overlay" onClick={() => setDateClickDate(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, padding: 24 }}>
+              <p style={{ margin: '0 0 8px', fontWeight: 500 }}>Nova atividade em {dateClickDate}</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                Abra o módulo de Atividades para criar uma atividade nesta data.
+              </p>
+              <button className="action-btn" onClick={() => setDateClickDate(null)}>Fechar</button>
+            </div>
           </div>
         )}
       </AnimatePresence>
