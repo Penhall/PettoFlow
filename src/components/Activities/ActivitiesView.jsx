@@ -3,14 +3,25 @@ import { AnimatePresence } from 'framer-motion'
 import { Plus } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
 import { useActivityTemplates } from '../../hooks/useActivityTemplates'
+import { useReceivables } from '../../hooks/useReceivables'
+import { useTransactions } from '../../hooks/useTransactions'
+import { useFinRules } from '../../hooks/useFinRules'
+import { useAccounts } from '../../hooks/useAccounts'
+import { getPrincipalAccount } from '../../lib/financeUtils'
 import ActivityTimeline from './ActivityTimeline'
 import ActivityForm from './ActivityForm'
 import TemplatesTab from './TemplatesTab'
 import ActivityTemplateForm from './ActivityTemplateForm'
 
+const EMPTY_FILTERS = {}
+
 const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' }) => {
   const { activities, loading, addActivity, updateActivity, deleteActivity } = useActivities()
   const { templates, createTemplate, updateTemplate, deleteTemplate, applyTemplate } = useActivityTemplates()
+  const { createReceivableFromActivity } = useReceivables()
+  const { rules } = useFinRules()
+  const { addTransaction } = useTransactions(EMPTY_FILTERS, rules)
+  const { accounts } = useAccounts()
 
   const [activeTab, setActiveTab] = useState('timeline')
   const [showForm, setShowForm] = useState(false)
@@ -32,14 +43,16 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
   }
 
   const handleSave = async (form) => {
+    let saved
     if (editingActivity) {
       const { id, ...updates } = form
-      await updateActivity(editingActivity.id, updates)
+      saved = await updateActivity(editingActivity.id, updates)
     } else {
-      await addActivity(form)
+      saved = await addActivity(form)
     }
     setShowForm(false)
     setEditingActivity(null)
+    return saved
   }
 
   const handleClose = () => {
@@ -163,6 +176,9 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
             team={team}
             templates={templates}
             onApplyTemplate={handleApplyTemplate}
+            addTransaction={addTransaction}
+            createReceivableFromActivity={createReceivableFromActivity}
+            principalAccountId={getPrincipalAccount(accounts)?.id ?? null}
           />
         )}
       </AnimatePresence>

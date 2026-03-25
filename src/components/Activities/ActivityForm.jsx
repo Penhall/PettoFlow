@@ -1,8 +1,9 @@
 // src/components/Activities/ActivityForm.jsx
 import { useRef, useState, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { X, Calendar, FileText } from 'lucide-react'
+import { X, Calendar, FileText, ChevronDown } from 'lucide-react'
 import RelationChips from './RelationChips'
+import { realToCents } from '../../lib/finUtils'
 
 // Lazy load do Tiptap — carrega ambos os pacotes juntos
 const TiptapEditor = lazy(() =>
@@ -45,7 +46,13 @@ const ACTIVITY_TYPES = [
   { value: 'task',     label: 'Tarefa' },
 ]
 
-const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], team = [], templates = [], onApplyTemplate }) => {
+const ActivityForm = ({
+  activity, onSave, onClose,
+  clients = [], tasks = [], team = [], templates = [], onApplyTemplate,
+  addTransaction,
+  createReceivableFromActivity,
+  principalAccountId,
+}) => {
   const [form, setForm] = useState({
     title: '',
     type: 'meeting',
@@ -60,6 +67,10 @@ const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], tea
       : '',
   })
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [finOpen, setFinOpen] = useState(false)
+  const [finMode, setFinMode] = useState('transaction') // 'transaction' | 'receivable'
+  const [finAmount, setFinAmount] = useState('')
+  const [finDate, setFinDate] = useState(new Date().toISOString().slice(0, 10))
 
   const change = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -77,13 +88,37 @@ const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], tea
     setShowTemplateSelector(false)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return
-    onSave({
+
+    const savedActivity = await onSave({
       ...form,
       scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
     })
+
+    if (finOpen && finAmount && savedActivity?.id) {
+      const amountCents = realToCents(finAmount)
+      if (amountCents > 0) {
+        if (finMode === 'transaction' && addTransaction) {
+          if (!principalAccountId) {
+            alert('Nenhuma conta Principal definida. Acesse Finanças → Contas.')
+          } else {
+            await addTransaction({
+              account_id: principalAccountId,
+              amount: amountCents,
+              date: finDate,
+              notes: `Atividade: ${form.title}`,
+              related_to: [{ type: 'activity', id: savedActivity.id }],
+            })
+          }
+        } else if (finMode === 'receivable' && createReceivableFromActivity) {
+          await createReceivableFromActivity(
+            savedActivity.id, amountCents, principalAccountId ?? null, finDate
+          )
+        }
+      }
+    }
   }
 
   return (
@@ -214,6 +249,46 @@ const ActivityForm = ({ activity, onSave, onClose, clients = [], tasks = [], tea
                 onChange={v => change('body', v)}
               />
             </Suspense>
+          </div>
+
+          <div className="form-group" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="action-btn"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'space-between' }}
+              onClick={() => setFinOpen(v => !v)}
+            >
+              <span>＋ Registrar valor financeiro</span>
+              <ChevronDown size={14} style={{ transform: finOpen ? 'rotate(180deg)' : 'none', transition: '0.15s' }} />
+            </button>
+
+            {finOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, padding: '12px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, cursor: 'pointer' }}>
+                    <input type="radio" value="transaction" checked={finMode === 'transaction'} onChange={() => setFinMode('transaction')} />
+                    Transação imediata
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, cursor: 'pointer' }}>
+                    <input type="radio" value="receivable" checked={finMode === 'receivable'} onChange={() => setFinMode('receivable')} />
+                    A Receber
+                  </label>
+                </div>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="Valor (ex: 1.500,00)"
+                  value={finAmount}
+                  onChange={e => setFinAmount(e.target.value)}
+                />
+                <input
+                  className="form-input"
+                  type="date"
+                  value={finDate}
+                  onChange={e => setFinDate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="modal-actions">
