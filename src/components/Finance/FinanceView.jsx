@@ -8,6 +8,7 @@ import { useFinCategories }  from '../../hooks/useFinCategories'
 import { useFinRules }       from '../../hooks/useFinRules'
 import { useTransactions }   from '../../hooks/useTransactions'
 import { useReceivables }    from '../../hooks/useReceivables'
+import { useActivities }    from '../../hooks/useActivities'
 import AccountCard     from './AccountCard'
 import AccountForm     from './AccountForm'
 import TransactionList from './TransactionList'
@@ -16,7 +17,7 @@ import RuleBuilder        from './RuleBuilder'
 import ReceivablesList   from './ReceivablesList'
 import FinanceSummary    from './FinanceSummary'
 
-const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
+const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask }) => {
   const [activeTab, setActiveTab] = useState('extrato')
   const [extractoFilters, setExtractoFilters] = useState({})
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -25,6 +26,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
   const [editingAccount, setEditingAccount]           = useState(null)
   const [editingRule, setEditingRule]                 = useState(null) // rule | 'new' | null
 
+  const { addActivity } = useActivities()
   const { accounts, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
   const { payees, addPayee }                                = usePayees()
   const { groups, categories }                              = useFinCategories()
@@ -297,6 +299,9 @@ const FinanceView = ({ clients = [], tasks = [], team = [] }) => {
             onSave={handleSaveTransaction}
             onClose={() => { setShowTransactionForm(false); setEditingTransaction(null) }}
             addPayee={addPayee}
+            addActivity={addActivity}
+            onCreateTask={onAddTask}
+            onUpdateTransaction={updateTransaction}
           />
         )}
       </AnimatePresence>

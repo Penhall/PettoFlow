@@ -1,7 +1,7 @@
 // src/components/Finance/TransactionForm.jsx
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, ChevronDown } from 'lucide-react'
 import { realToCents } from '../../lib/finUtils'
 import RelationChips from '../Activities/RelationChips'
 
@@ -19,7 +19,12 @@ const TransactionForm = ({
   onSave,
   onClose,
   addPayee,
+  addActivity,
+  onCreateTask,
+  onUpdateTransaction,
 }) => {
+  const [linkOpen, setLinkOpen] = useState(false)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
   const [form, setForm] = useState({
     account_id: '',
     amount: 0,
@@ -218,6 +223,71 @@ const TransactionForm = ({
               team={team}
             />
           </div>
+
+          {transaction?.id && (
+            <div className="form-group" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="action-btn"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'space-between' }}
+                onClick={() => setLinkOpen(v => !v)}
+              >
+                <span>＋ Criar Tarefa ou Atividade vinculada</span>
+                <ChevronDown size={14} style={{ transform: linkOpen ? 'rotate(180deg)' : 'none', transition: '0.15s' }} />
+              </button>
+
+              {linkOpen && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="Título da nova tarefa"
+                      value={newTaskTitle}
+                      onChange={e => setNewTaskTitle(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="action-btn"
+                      style={{ marginTop: 6 }}
+                      onClick={async () => {
+                        if (!newTaskTitle.trim() || !onCreateTask) return
+                        const newTask = await onCreateTask({
+                          title: newTaskTitle,
+                          status: 'A Fazer',
+                          priority: 'Média',
+                        })
+                        if (newTask?.id) {
+                          const updatedRelated = [...(transaction.related_to || []), { type: 'task', id: newTask.id }]
+                          onUpdateTransaction?.(transaction.id, { related_to: updatedRelated })
+                        }
+                        setNewTaskTitle('')
+                        setLinkOpen(false)
+                      }}
+                    >
+                      Criar Tarefa
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="action-btn"
+                    onClick={() => {
+                      addActivity?.({
+                        title: form.notes || 'Atividade vinculada',
+                        type: 'note',
+                        status: 'pending',
+                        scheduled_at: null,
+                        related_to: [{ type: 'transaction', id: transaction.id }],
+                      })
+                      setLinkOpen(false)
+                    }}
+                  >
+                    Criar Atividade
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="form-group">
             <label className="checkbox-label">

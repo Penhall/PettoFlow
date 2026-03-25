@@ -127,9 +127,11 @@ function App() {
     if (error) {
       console.error('Error adding task:', error)
       alert('Erro ao adicionar tarefa: ' + error.message)
+      return null
     } else {
       setTasks(prev => [data[0], ...prev])
       setShowAddModal(false)
+      return data[0]
     }
   }
 
@@ -418,7 +420,7 @@ function App() {
       case 'atividades':
         return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} />
       case 'financas':
-        return <FinanceView clients={clients} tasks={tasks} team={team} />
+        return <FinanceView clients={clients} tasks={tasks} team={team} onAddTask={addTask} columns={columns} />
       case 'arquivo':
         return <ArchiveView restoreTask={restoreTask} />
       case 'calendario':
