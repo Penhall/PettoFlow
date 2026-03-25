@@ -12,13 +12,14 @@ import ClientesView from './components/Clients/ClientesView'
 import ActivitiesView from './components/Activities/ActivitiesView'
 import FinanceView from './components/Finance/FinanceView'
 import ArchiveView from './components/Archive/ArchiveView'
+import CalendarView from './components/Calendar/CalendarView'
 import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
 import { useCommandPalette } from './hooks/useCommandPalette'
 import { useReceivables } from './hooks/useReceivables'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
-import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder } from 'lucide-react'
+import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder, CalendarDays } from 'lucide-react'
 import { supabase } from './lib/supabaseClient'
 
 const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
@@ -273,6 +274,7 @@ function App() {
       case 'atividades': return 'Atividades'
       case 'financas': return 'Finanças'
       case 'arquivo': return 'Arquivo'
+      case 'calendario': return 'Calendário'
       default: return 'PettoFlow'
     }
   }
@@ -313,6 +315,13 @@ function App() {
                 >
                   <Folder size={16} />
                   Arquivos
+                </button>
+                <button
+                  className={`tab-btn ${viewType === 'calendar' ? 'active' : ''}`}
+                  onClick={() => setViewType('calendar')}
+                >
+                  <CalendarDays size={16} />
+                  Calendário
                 </button>
               </div>
 
@@ -388,6 +397,17 @@ function App() {
                   <p>Nenhum arquivo anexado ao projeto ainda.</p>
                 </div>
               )}
+              {viewType === 'calendar' && (
+                <CalendarView
+                  filterTypes={['task']}
+                  tasks={filteredTasks}
+                  clients={clients}
+                  team={team}
+                  columns={columns}
+                  onUpdateTask={updateTask}
+                  onAddTask={addTask}
+                />
+              )}
             </div>
           </>
         )
@@ -401,6 +421,17 @@ function App() {
         return <FinanceView clients={clients} tasks={tasks} team={team} />
       case 'arquivo':
         return <ArchiveView restoreTask={restoreTask} />
+      case 'calendario':
+        return (
+          <CalendarView
+            tasks={filteredTasks}
+            clients={clients}
+            team={team}
+            columns={columns}
+            onUpdateTask={updateTask}
+            onAddTask={addTask}
+          />
+        )
       default:
         return null
     }
