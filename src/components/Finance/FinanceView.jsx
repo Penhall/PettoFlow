@@ -62,6 +62,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
     else await addTransaction(form)
     setShowTransactionForm(false)
     setEditingTransaction(null)
+    setCalendarClickDate(null)
   }
 
   const handleSaveAccount = async (formData, demotedCategory) => {
