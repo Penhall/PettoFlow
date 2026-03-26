@@ -12,6 +12,7 @@ import ActivityTimeline from './ActivityTimeline'
 import ActivityForm from './ActivityForm'
 import TemplatesTab from './TemplatesTab'
 import ActivityTemplateForm from './ActivityTemplateForm'
+import CalendarView from '../Calendar/CalendarView'
 
 const EMPTY_FILTERS = {}
 
@@ -143,6 +144,12 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
         >
           Modelos
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'calendario' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendario')}
+        >
+          📅 Calendário
+        </button>
       </div>
 
       <div className="board-container">
@@ -162,6 +169,19 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
             onNew={handleNewTemplate}
             onEdit={handleEditTemplate}
             onDelete={handleDeleteTemplate}
+          />
+        )}
+
+        {activeTab === 'calendario' && (
+          // columns e onAddTask omitidos intencionalmente:
+          // filterTypes=['activity'] nunca exibe eventos de task/receivable/transaction,
+          // portanto criação de tarefas não é acionada neste contexto.
+          <CalendarView
+            filterTypes={['activity']}
+            contextArea="atividades"
+            clients={clients}
+            tasks={tasks}
+            team={team}
           />
         )}
       </div>

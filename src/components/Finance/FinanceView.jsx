@@ -16,6 +16,7 @@ import TransactionForm from './TransactionForm'
 import RuleBuilder        from './RuleBuilder'
 import ReceivablesList   from './ReceivablesList'
 import FinanceSummary    from './FinanceSummary'
+import CalendarView from '../Calendar/CalendarView'
 
 const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns = [] }) => {
   const [activeTab, setActiveTab] = useState('extrato')
@@ -25,6 +26,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
   const [showAccountForm, setShowAccountForm]         = useState(false)
   const [editingAccount, setEditingAccount]           = useState(null)
   const [editingRule, setEditingRule]                 = useState(null) // rule | 'new' | null
+  const [calendarClickDate, setCalendarClickDate]     = useState(null)
 
   const { addActivity } = useActivities()
   const { accounts, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
@@ -60,6 +62,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
     else await addTransaction(form)
     setShowTransactionForm(false)
     setEditingTransaction(null)
+    setCalendarClickDate(null)
   }
 
   const handleSaveAccount = async (formData, demotedCategory) => {
@@ -89,8 +92,8 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
   }
 
   const activeAccounts = accounts.filter(a => a.is_active)
-  const tabs = ['extrato', 'contas', 'regras', 'receber']
-  const TAB_LABELS = { extrato: 'Extrato', contas: 'Contas', regras: 'Regras', receber: 'A Receber' }
+  const tabs = ['extrato', 'contas', 'regras', 'receber', 'calendario']
+  const TAB_LABELS = { extrato: 'Extrato', contas: 'Contas', regras: 'Regras', receber: 'A Receber', calendario: '📅 Calendário' }
 
   return (
     <div className="finance-view">
@@ -285,6 +288,24 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
             columns={columns}
           />
         )}
+
+        {/* TAB: Calendário */}
+        {activeTab === 'calendario' && (
+          <CalendarView
+            filterTypes={['receivable', 'transaction']}
+            contextArea="financas"
+            clients={clients}
+            tasks={tasks}
+            team={team}
+            columns={columns}
+            onAddTask={onAddTask}
+            onEmptyDateClick={(dateStr) => {
+              setEditingTransaction(null)
+              setCalendarClickDate(dateStr)
+              setShowTransactionForm(true)
+            }}
+          />
+        )}
       </div>
 
       {/* Modais */}
@@ -292,6 +313,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
         {showTransactionForm && (
           <TransactionForm
             transaction={editingTransaction}
+            initialDate={editingTransaction ? undefined : calendarClickDate}
             accounts={accounts}
             payees={payees}
             groups={groups}
@@ -300,7 +322,11 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
             tasks={tasks}
             team={team}
             onSave={handleSaveTransaction}
-            onClose={() => { setShowTransactionForm(false); setEditingTransaction(null) }}
+            onClose={() => {
+              setShowTransactionForm(false)
+              setEditingTransaction(null)
+              setCalendarClickDate(null)
+            }}
             addPayee={addPayee}
             addActivity={addActivity}
             onCreateTask={onAddTask}

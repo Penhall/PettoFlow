@@ -9,6 +9,7 @@ const today = () => new Date().toISOString().split('T')[0]
 
 const TransactionForm = ({
   transaction,
+  initialDate,          // string 'YYYY-MM-DD' — pré-preenche data para nova transação
   accounts,
   payees,
   groups,
@@ -60,9 +61,9 @@ const TransactionForm = ({
         : '')
       setPayeeSearch(payees.find(p => p.id === transaction.payee_id)?.name || '')
     } else if (accounts.length > 0) {
-      setForm(p => ({ ...p, account_id: accounts[0].id }))
+      setForm(p => ({ ...p, account_id: accounts[0].id, date: initialDate || today() }))
     }
-  }, [transaction, accounts, payees])
+  }, [transaction, accounts, payees, initialDate])
 
   const change = (field, value) => setForm(p => ({ ...p, [field]: value }))
 
