@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { CheckCircle } from 'lucide-react'
 import { centsToReal, realToCents } from '../../lib/finUtils'
 
-export default function ReceivablesList({ receivables, onInvoice }) {
+export default function ReceivablesList({ receivables, onInvoice, addActivity, onAddTask, columns = [] }) {
   const [invoicingId, setInvoicingId] = useState(null)
   const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: '' })
 
@@ -44,7 +44,7 @@ export default function ReceivablesList({ receivables, onInvoice }) {
           flexWrap: 'wrap',
         }}>
           <div style={{ flex: 1, minWidth: 180 }}>
-            <div style={{ fontWeight: 500 }}>{r.tasks?.title ?? '—'}</div>
+            <div style={{ fontWeight: 500 }}>{r.tasks?.title ?? r.activities?.title ?? '—'}</div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               {r.accounts?.name ?? '—'} · {new Date(r.created_at).toLocaleDateString('pt-BR')}
             </div>
@@ -81,13 +81,41 @@ export default function ReceivablesList({ receivables, onInvoice }) {
               </button>
             </div>
           ) : (
-            <button
-              className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-              onClick={() => openInvoice(r)}
-            >
-              <CheckCircle size={14} /> Faturar
-            </button>
+            <>
+              <button
+                className="btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={() => openInvoice(r)}
+              >
+                <CheckCircle size={14} /> Faturar
+              </button>
+
+              <button
+                className="action-btn"
+                style={{ fontSize: 13, padding: '4px 10px' }}
+                onClick={() => addActivity?.({
+                  title: `Follow-up: ${r.tasks?.title ?? r.activities?.title ?? ''}`,
+                  type: 'call',
+                  status: 'pending',
+                  scheduled_at: null,
+                  related_to: [{ type: 'receivable', id: r.id }],
+                })}
+              >
+                📞 Follow-up
+              </button>
+
+              <button
+                className="action-btn"
+                style={{ fontSize: 13, padding: '4px 10px' }}
+                onClick={() => onAddTask?.({
+                  title: `Cobrar: ${r.tasks?.title ?? r.activities?.title ?? ''}`,
+                  status: columns[0]?.name ?? 'A Fazer',
+                  priority: 'Média',
+                })}
+              >
+                + Tarefa
+              </button>
+            </>
           )}
         </div>
       ))}

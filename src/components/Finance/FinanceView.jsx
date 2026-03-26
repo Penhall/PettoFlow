@@ -17,7 +17,7 @@ import RuleBuilder        from './RuleBuilder'
 import ReceivablesList   from './ReceivablesList'
 import FinanceSummary    from './FinanceSummary'
 
-const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask }) => {
+const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns = [] }) => {
   const [activeTab, setActiveTab] = useState('extrato')
   const [extractoFilters, setExtractoFilters] = useState({})
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -280,6 +280,9 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask }) => {
               }
               refreshReceivables()
             }}
+            addActivity={addActivity}
+            onAddTask={onAddTask}
+            columns={columns}
           />
         )}
       </div>
