@@ -34,6 +34,7 @@ export default function EventDetailPanel({
   onAddTask,
   createReceivableFromActivity,
   principalAccountId,
+  contextArea,          // ← novo: 'global' | 'tarefas' | 'atividades' | 'financas' | undefined
 }) {
   const [innerModal, setInnerModal] = useState(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -143,48 +144,56 @@ export default function EventDetailPanel({
               <button className="action-btn" onClick={() => setInnerModal('invoice')}>
                 <DollarSign size={14} /> Faturar
               </button>
-              <button className="action-btn" onClick={() => {
-                onAddActivity?.({
-                  title: `Follow-up: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`,
-                  type: 'call',
-                  status: 'pending',
-                  scheduled_at: null,
-                  related_to: [{ type: 'receivable', id: payload.id }],
-                })
-                onClose()
-              }}>
-                <Phone size={14} /> Follow-up
-              </button>
-              <button className="action-btn" onClick={() => {
-                setNewTaskTitle(`Cobrar: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`)
-                setInnerModal('newTask')
-              }}>
-                <Plus size={14} /> Criar Tarefa
-              </button>
+              {contextArea !== 'financas' && (
+                <button className="action-btn" onClick={() => {
+                  onAddActivity?.({
+                    title: `Follow-up: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`,
+                    type: 'call',
+                    status: 'pending',
+                    scheduled_at: null,
+                    related_to: [{ type: 'receivable', id: payload.id }],
+                  })
+                  onClose()
+                }}>
+                  <Phone size={14} /> Follow-up
+                </button>
+              )}
+              {contextArea !== 'financas' && (
+                <button className="action-btn" onClick={() => {
+                  setNewTaskTitle(`Cobrar: ${payload.tasks?.title ?? payload.activities?.title ?? ''}`)
+                  setInnerModal('newTask')
+                }}>
+                  <Plus size={14} /> Criar Tarefa
+                </button>
+              )}
             </>
           )}
 
           {/* TRANSACTION actions */}
           {type === 'transaction' && (
             <>
-              <button className="action-btn" onClick={() => {
-                setNewTaskTitle('')
-                setInnerModal('newTask')
-              }}>
-                <Plus size={14} /> Criar Tarefa
-              </button>
-              <button className="action-btn" onClick={() => {
-                onAddActivity?.({
-                  title: payload.notes || 'Atividade vinculada',
-                  type: 'note',
-                  status: 'pending',
-                  scheduled_at: null,
-                  related_to: [{ type: 'transaction', id: payload.id }],
-                })
-                onClose()
-              }}>
-                <Plus size={14} /> Criar Atividade
-              </button>
+              {contextArea !== 'financas' && (
+                <button className="action-btn" onClick={() => {
+                  setNewTaskTitle('')
+                  setInnerModal('newTask')
+                }}>
+                  <Plus size={14} /> Criar Tarefa
+                </button>
+              )}
+              {contextArea !== 'financas' && (
+                <button className="action-btn" onClick={() => {
+                  onAddActivity?.({
+                    title: payload.notes || 'Atividade vinculada',
+                    type: 'note',
+                    status: 'pending',
+                    scheduled_at: null,
+                    related_to: [{ type: 'transaction', id: payload.id }],
+                  })
+                  onClose()
+                }}>
+                  <Plus size={14} /> Criar Atividade
+                </button>
+              )}
             </>
           )}
 
