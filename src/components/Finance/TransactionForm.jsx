@@ -9,7 +9,7 @@ const today = () => new Date().toISOString().split('T')[0]
 
 const TransactionForm = ({
   transaction,
-  initialDate,
+  initialDate,          // string 'YYYY-MM-DD' — pré-preenche data para nova transação
   accounts,
   payees,
   groups,
