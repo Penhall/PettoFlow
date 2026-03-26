@@ -29,7 +29,7 @@ export default function CalendarView({
   onUpdateTask,     // (id, updates) => void — from App.jsx
   onAddTask,        // (form) => void — from App.jsx
   onEmptyDateClick, // (dateStr: string) => void — substitui o padrão (ActivityForm)
-  contextArea,      // passado para EventDetailPanel
+  contextArea,      // 'global'|'tarefas'|'atividades'|'financas'|undefined — passado para EventDetailPanel
 }) {
   const [activeTypes, setActiveTypes] = useState(filterTypes ?? ALL_TYPES)
   const [selectedEvent, setSelectedEvent] = useState(null)
