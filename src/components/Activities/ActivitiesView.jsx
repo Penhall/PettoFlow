@@ -173,6 +173,9 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
         )}
 
         {activeTab === 'calendario' && (
+          // columns e onAddTask omitidos intencionalmente:
+          // filterTypes=['activity'] nunca exibe eventos de task/receivable/transaction,
+          // portanto criação de tarefas não é acionada neste contexto.
           <CalendarView
             filterTypes={['activity']}
             contextArea="atividades"
