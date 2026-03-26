@@ -40,6 +40,13 @@ describe('shouldCreateReceivable', () => {
     const existing = [{ task_id: 1, status: 'invoiced' }]
     expect(shouldCreateReceivable(task, existing)).toBe(true)
   })
+
+  it('shouldCreateReceivable returns true for Vendas task even if activity receivables exist (activity receivables are independent)', () => {
+    const task = { id: 5, category: 'Vendas', deal_value: 10000 }
+    // A receivable exists but it's linked to an activity, not this task
+    const existing = [{ task_id: null, activity_id: 99, status: 'pending' }]
+    expect(shouldCreateReceivable(task, existing)).toBe(true)
+  })
 })
 
 describe('getPrincipalAccount', () => {
