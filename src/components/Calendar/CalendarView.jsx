@@ -28,6 +28,8 @@ export default function CalendarView({
   columns = [],
   onUpdateTask,     // (id, updates) => void — from App.jsx
   onAddTask,        // (form) => void — from App.jsx
+  onEmptyDateClick, // (dateStr: string) => void — substitui o padrão (ActivityForm)
+  contextArea,      // passado para EventDetailPanel
 }) {
   const [activeTypes, setActiveTypes] = useState(filterTypes ?? ALL_TYPES)
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -79,7 +81,13 @@ export default function CalendarView({
         }}
         events={fcEvents}
         eventClick={handleEventClick}
-        dateClick={({ dateStr }) => setDateClickDate(dateStr)}
+        dateClick={({ dateStr }) => {
+          if (onEmptyDateClick) {
+            onEmptyDateClick(dateStr)
+          } else {
+            setDateClickDate(dateStr)
+          }
+        }}
         height="auto"
         editable={false}
       />
@@ -101,6 +109,7 @@ export default function CalendarView({
             onAddTask={onAddTask}
             createReceivableFromActivity={createReceivableFromActivity}
             principalAccountId={principalAccount?.id ?? null}
+            contextArea={contextArea}
           />
         )}
       </AnimatePresence>
