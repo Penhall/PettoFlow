@@ -19,6 +19,7 @@ import { centsToReal, realToCents } from '../../lib/finUtils'
  *   onAddTask                    - (form) => void — from App.jsx
  *   createReceivableFromActivity - (activityId, amount, accountId, dueDate) => Promise
  *   principalAccountId           - number|null
+ *   contextArea                  - 'global'|'tarefas'|'atividades'|'financas'|undefined — suppresses cross-module action buttons
  */
 export default function EventDetailPanel({
   event,

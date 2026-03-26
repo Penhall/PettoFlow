@@ -1,5 +1,4 @@
 // src/components/Calendar/EventDetailPanel.test.jsx
-// @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import EventDetailPanel from './EventDetailPanel'
