@@ -57,10 +57,19 @@ describe('useCalendarEvents', () => {
     expect(ev.date).toBe('2026-03-20')
   })
 
-  it('task without due_date or completed_at is not included', () => {
-    const tasks = [{ id: 3, title: 'T3' }]
+  it('task without due_date or completed_at falls back to created_at (blue)', () => {
+    const tasks = [{ id: 3, title: 'T3', created_at: '2026-03-15T08:00:00Z' }]
     const { result } = renderHook(() => useCalendarEvents({ tasks }))
-    expect(result.current.events.filter(e => e.sourceId === 3 && e.sourceType === 'task')).toHaveLength(0)
+    const ev = result.current.events.find(e => e.id === 'task-3')
+    expect(ev).toBeDefined()
+    expect(ev.color).toBe(TASK_BLUE)
+    expect(ev.date).toBe('2026-03-15')
+  })
+
+  it('task without due_date or completed_at or created_at is not included', () => {
+    const tasks = [{ id: 4, title: 'T4' }]
+    const { result } = renderHook(() => useCalendarEvents({ tasks }))
+    expect(result.current.events.filter(e => e.sourceId === 4 && e.sourceType === 'task')).toHaveLength(0)
   })
 
   it('activity with scheduled_at produces purple event', () => {

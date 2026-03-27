@@ -46,6 +46,18 @@ export function useCalendarEvents({ tasks = [], types, from, to } = {}) {
             sourceType: 'task',
             payload: t,
           })
+        } else if (!t.completed_at && t.created_at) {
+          // Fallback: tasks without due_date or completion show on their creation date
+          result.push({
+            id: `task-${t.id}`,
+            title: t.title,
+            date: toDateStr(t.created_at),
+            type: 'task',
+            color: COLORS.taskDue,
+            sourceId: t.id,
+            sourceType: 'task',
+            payload: t,
+          })
         }
         if (t.completed_at) {
           result.push({
