@@ -54,5 +54,13 @@ ALTER TABLE receivables ADD COLUMN IF NOT EXISTS activity_id BIGINT REFERENCES a
 ALTER TABLE receivables ADD COLUMN IF NOT EXISTS due_date DATE NULL;
 
 -- 5. receivables: at least one source must be set
-ALTER TABLE receivables ADD CONSTRAINT IF NOT EXISTS receivables_source_check
-  CHECK (task_id IS NOT NULL OR activity_id IS NOT NULL);
+-- Note: ADD CONSTRAINT IF NOT EXISTS is not supported in PostgreSQL < 17
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'receivables_source_check'
+  ) THEN
+    ALTER TABLE receivables ADD CONSTRAINT receivables_source_check
+      CHECK (task_id IS NOT NULL OR activity_id IS NOT NULL);
+  END IF;
+END $$;
