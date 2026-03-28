@@ -15,7 +15,18 @@ CREATE TABLE IF NOT EXISTS public.activities (
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (public access, consistent with other tables)
-CREATE POLICY "Enable read access for all users" ON public.activities FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users" ON public.activities FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update access for all users" ON public.activities FOR UPDATE USING (true);
-CREATE POLICY "Enable delete access for all users" ON public.activities FOR DELETE USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable read access for all users') THEN
+    CREATE POLICY "Enable read access for all users" ON public.activities FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable insert access for all users') THEN
+    CREATE POLICY "Enable insert access for all users" ON public.activities FOR INSERT WITH CHECK (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable update access for all users') THEN
+    CREATE POLICY "Enable update access for all users" ON public.activities FOR UPDATE USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable delete access for all users') THEN
+    CREATE POLICY "Enable delete access for all users" ON public.activities FOR DELETE USING (true);
+  END IF;
+END $$;

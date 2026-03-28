@@ -14,7 +14,14 @@ CREATE TABLE IF NOT EXISTS receivables (
   created_at        TIMESTAMPTZ DEFAULT now()
 );
 ALTER TABLE receivables ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public access" ON receivables FOR ALL USING (true) WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'receivables' AND policyname = 'public access'
+  ) THEN
+    CREATE POLICY "public access" ON receivables FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
 
 -- 2. Account categories
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'extras';
@@ -30,7 +37,14 @@ CREATE TABLE IF NOT EXISTS activity_templates (
   created_at           TIMESTAMPTZ DEFAULT now()
 );
 ALTER TABLE activity_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public access" ON activity_templates FOR ALL USING (true) WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'activity_templates' AND policyname = 'public access'
+  ) THEN
+    CREATE POLICY "public access" ON activity_templates FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
 
 -- 4. Task archiving + completion tracking
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
@@ -47,8 +61,8 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ NULL;
 -- 2. receivables: task_id becomes nullable (receivable can come from activity)
 ALTER TABLE receivables ALTER COLUMN task_id DROP NOT NULL;
 
--- 3. receivables: add activity_id FK (BIGINT to match activities.id BIGSERIAL)
-ALTER TABLE receivables ADD COLUMN IF NOT EXISTS activity_id BIGINT REFERENCES activities(id) NULL;
+-- 3. receivables: add activity_id FK (UUID to match activities.id)
+ALTER TABLE receivables ADD COLUMN IF NOT EXISTS activity_id UUID REFERENCES activities(id) NULL;
 
 -- 4. receivables: add due_date for calendar display
 ALTER TABLE receivables ADD COLUMN IF NOT EXISTS due_date DATE NULL;
