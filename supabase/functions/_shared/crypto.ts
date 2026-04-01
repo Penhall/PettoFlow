@@ -21,10 +21,15 @@ export async function encrypt(plaintext: string, encryptionKey: string): Promise
 }
 
 export async function decrypt(ciphertext: string, encryptionKey: string): Promise<string> {
-  const [ivB64, encB64] = ciphertext.split(':')
-  const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0))
-  const encrypted = Uint8Array.from(atob(encB64), (c) => c.charCodeAt(0))
-  const key = await getKey(encryptionKey)
-  const decrypted = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, encrypted)
-  return new TextDecoder().decode(decrypted)
+  try {
+    const [ivB64, encB64] = ciphertext.split(':')
+    if (!ivB64 || !encB64) throw new Error('Invalid ciphertext format')
+    const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0))
+    const encrypted = Uint8Array.from(atob(encB64), (c) => c.charCodeAt(0))
+    const key = await getKey(encryptionKey)
+    const decrypted = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, encrypted)
+    return new TextDecoder().decode(decrypted)
+  } catch (err) {
+    throw new Error(`Failed to decrypt value: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }

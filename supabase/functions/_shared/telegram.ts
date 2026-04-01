@@ -5,11 +5,15 @@ export async function sendMessage(
   chatId: string | number,
   text: string
 ): Promise<void> {
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
   })
+  if (!res.ok) {
+    const body = await res.text()
+    console.error(`sendMessage failed: ${res.status} ${body}`)
+  }
 }
 
 export async function registerWebhook(
