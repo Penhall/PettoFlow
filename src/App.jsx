@@ -13,6 +13,7 @@ import ActivitiesView from './components/Activities/ActivitiesView'
 import FinanceView from './components/Finance/FinanceView'
 import ArchiveView from './components/Archive/ArchiveView'
 import CalendarView from './components/Calendar/CalendarView'
+import SettingsView from './components/Settings/SettingsView'
 import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
@@ -277,6 +278,7 @@ function App() {
       case 'financas': return 'Finanças'
       case 'arquivo': return 'Arquivo'
       case 'calendario': return 'Calendário'
+      case 'settings': return 'Configurações'
       default: return 'PettoFlow'
     }
   }
@@ -434,6 +436,8 @@ function App() {
             onAddTask={addTask}
           />
         )
+      case 'settings':
+        return <SettingsView />
       default:
         return null
     }
