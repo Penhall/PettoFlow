@@ -47,12 +47,11 @@ CREATE TABLE IF NOT EXISTS public.bot_pending_confirmations (
   created_at     TIMESTAMPTZ DEFAULT now()
 );
 
--- Index para busca rápida por chat_id (apenas linhas não expiradas)
+-- Index para busca rápida por chat_id
 CREATE INDEX IF NOT EXISTS idx_bot_pending_chat_id ON public.bot_pending_confirmations(chat_id);
-CREATE INDEX IF NOT EXISTS idx_bot_pending_active ON public.bot_pending_confirmations(chat_id)
-  WHERE expires_at > now();
 
 -- Index para cleanup de linhas expiradas
+-- Nota: partial index com now() não é permitido em pg (funções devem ser IMMUTABLE)
 CREATE INDEX IF NOT EXISTS idx_bot_pending_expires ON public.bot_pending_confirmations(expires_at);
 
 -- RLS: apenas service_role acessa (Edge Functions usam service_role key)
