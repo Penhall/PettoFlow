@@ -35,7 +35,7 @@ export async function getPendingConfirmation(
     .not('action_type', 'eq', 'task_list_context')
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (!data) return null
   if (new Date(data.expires_at) < new Date()) {
