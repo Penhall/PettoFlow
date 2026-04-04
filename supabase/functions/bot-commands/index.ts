@@ -27,7 +27,8 @@ const DEFAULT_COMMANDS = [
 
 function authError() {
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-    status: 401, headers: { 'Content-Type': 'application/json' },
+    status: 401,
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
   })
 }
 
@@ -163,5 +164,8 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true })
   }
 
-  return new Response('Method not allowed', { status: 405 })
+  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+  })
 })
