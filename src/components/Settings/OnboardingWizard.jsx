@@ -1,6 +1,7 @@
 // src/components/Settings/OnboardingWizard.jsx
 import { useState } from 'react'
 import { saveBotConfig } from '../../lib/botConfig.js'
+import { seedDefaultCommands } from '../../lib/botCommands.js'
 
 export default function OnboardingWizard({ onConnected }) {
   const [step, setStep] = useState(1)
@@ -14,6 +15,7 @@ export default function OnboardingWizard({ onConnected }) {
     setError(null)
     try {
       await saveBotConfig({ telegramBotToken: token.trim() })
+      await seedDefaultCommands()
       onConnected()
     } catch (err) {
       setError(err.message)

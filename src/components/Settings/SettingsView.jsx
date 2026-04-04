@@ -1,8 +1,12 @@
 // src/components/Settings/SettingsView.jsx
 import { useState } from 'react'
 import TelegramSection from './TelegramSection.jsx'
+import CommandsSection from './CommandsSection.jsx'
 
-const TABS = [{ id: 'telegram', label: '🤖 Telegram' }]
+const TABS = [
+  { id: 'telegram', label: '🤖 Telegram' },
+  { id: 'commands', label: '⚡ Comandos' },
+]
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState('telegram')
@@ -35,6 +39,7 @@ export default function SettingsView() {
       </div>
 
       {activeTab === 'telegram' && <TelegramSection />}
+      {activeTab === 'commands' && <CommandsSection />}
     </div>
   )
 }
