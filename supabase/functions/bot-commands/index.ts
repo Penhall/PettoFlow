@@ -25,13 +25,6 @@ const DEFAULT_COMMANDS = [
   { trigger: '/fim-de-dia', description: 'Tarefas pendentes + extrato do dia', type: 'multi', actions: [{ action: 'tasks.list', params: {} }, { action: 'finance.list', params: {} }], examples: [], category: 'custom' },
 ]
 
-function authError() {
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-    status: 401,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-  })
-}
-
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -50,15 +43,29 @@ function corsHeaders() {
 }
 
 async function getBotConfigId(sb: ReturnType<typeof getSupabaseClient>): Promise<string | null> {
-  const { data } = await sb.from('bot_configs').select('id').limit(1).single()
+  const { data, error } = await sb.from('bot_configs').select('id').limit(1).single()
+  if (error && error.code !== 'PGRST116') {
+    throw new Error(`Failed to fetch bot config: ${error.message}`)
+  }
   return data?.id ?? null
+}
+
+async function parseJsonBody(req: Request): Promise<Record<string, unknown> | null> {
+  try {
+    return await req.json()
+  } catch {
+    return null
+  }
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return corsHeaders()
 
-  const configKey = req.headers.get('x-bot-config-key')
-  if (configKey !== Deno.env.get('BOT_CONFIG_SECRET')) return authError()
+  const secret = Deno.env.get('BOT_CONFIG_SECRET')
+  if (!secret) return json({ error: 'Server misconfiguration' }, 500)
+
+  const configKey = req.headers.get('x-bot-config-key') ?? ''
+  if (configKey !== secret) return json({ error: 'Unauthorized' }, 401)
 
   const sb = getSupabaseClient()
   const url = new URL(req.url)
@@ -67,105 +74,121 @@ Deno.serve(async (req: Request) => {
   const commandId = (lastSegment !== 'bot-commands' && lastSegment !== 'seed') ? lastSegment : null
   const isSeed = lastSegment === 'seed'
 
-  // GET — lista todos os comandos
-  if (req.method === 'GET') {
-    const botConfigId = await getBotConfigId(sb)
-    if (!botConfigId) return json([])
-    const { data, error } = await sb
-      .from('bot_commands')
-      .select('*')
-      .eq('bot_config_id', botConfigId)
-      .order('category')
-      .order('type')
-      .order('trigger')
-    if (error) return json({ error: error.message }, 500)
-    return json(data ?? [])
-  }
-
-  // POST /seed — insere os comandos padrão
-  if (req.method === 'POST' && isSeed) {
-    const botConfigId = await getBotConfigId(sb)
-    if (!botConfigId) return json({ error: 'Bot não configurado' }, 404)
-
-    const { count } = await sb
-      .from('bot_commands')
-      .select('id', { count: 'exact', head: true })
-      .eq('bot_config_id', botConfigId)
-
-    if ((count ?? 0) > 0) return json({ ok: true, skipped: true })
-
-    const rows = DEFAULT_COMMANDS.map((cmd) => ({ ...cmd, bot_config_id: botConfigId, is_default: true }))
-    const { error } = await sb.from('bot_commands').insert(rows)
-    if (error) return json({ error: error.message }, 500)
-    return json({ ok: true, seeded: rows.length })
-  }
-
-  // POST — cria um novo comando customizado
-  if (req.method === 'POST') {
-    const botConfigId = await getBotConfigId(sb)
-    if (!botConfigId) return json({ error: 'Bot não configurado' }, 404)
-
-    const body = await req.json()
-    const { trigger, description, type, actions, examples, category } = body
-
-    if (!trigger || !description || !type || !category) {
-      return json({ error: 'trigger, description, type e category são obrigatórios' }, 400)
-    }
-    if (!['shortcut', 'template', 'multi'].includes(type)) {
-      return json({ error: 'type deve ser shortcut, template ou multi' }, 400)
+  try {
+    // GET — lista todos os comandos
+    if (req.method === 'GET') {
+      const botConfigId = await getBotConfigId(sb)
+      if (!botConfigId) return json([])
+      const { data, error } = await sb
+        .from('bot_commands')
+        .select('*')
+        .eq('bot_config_id', botConfigId)
+        .order('category')
+        .order('type')
+        .order('trigger')
+      if (error) return json({ error: error.message }, 500)
+      return json(data ?? [])
     }
 
-    const { data, error } = await sb.from('bot_commands').insert({
-      bot_config_id: botConfigId,
-      trigger,
-      description,
-      type,
-      actions: actions ?? [],
-      examples: examples ?? [],
-      category,
-      is_default: false,
-    }).select().single()
+    // POST /seed — insere os comandos padrão
+    if (req.method === 'POST' && isSeed) {
+      const botConfigId = await getBotConfigId(sb)
+      if (!botConfigId) return json({ error: 'Bot não configurado' }, 404)
 
-    if (error) return json({ error: error.message }, 500)
-    return json(data, 201)
-  }
+      const { count } = await sb
+        .from('bot_commands')
+        .select('id', { count: 'exact', head: true })
+        .eq('bot_config_id', botConfigId)
 
-  // PATCH /:id — atualiza um comando
-  if (req.method === 'PATCH' && commandId) {
-    const body = await req.json()
-    const allowedFields = ['is_active', 'description', 'actions', 'examples', 'trigger']
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    for (const field of allowedFields) {
-      if (field in body) patch[field] = body[field]
+      if ((count ?? 0) > 0) return json({ ok: true, skipped: true })
+
+      const rows = DEFAULT_COMMANDS.map((cmd) => ({ ...cmd, bot_config_id: botConfigId, is_default: true }))
+      const { error } = await sb.from('bot_commands').insert(rows)
+      if (error) return json({ error: error.message }, 500)
+      return json({ ok: true, seeded: rows.length })
     }
-    const { data, error } = await sb
-      .from('bot_commands')
-      .update(patch)
-      .eq('id', commandId)
-      .select()
-      .single()
-    if (error) return json({ error: error.message }, 500)
-    return json(data)
+
+    // POST — cria um novo comando customizado
+    if (req.method === 'POST') {
+      const botConfigId = await getBotConfigId(sb)
+      if (!botConfigId) return json({ error: 'Bot não configurado' }, 404)
+
+      const body = await parseJsonBody(req)
+      if (!body) return json({ error: 'Invalid JSON body' }, 400)
+
+      const { trigger, description, type, actions, examples, category } = body
+
+      if (!trigger || !description || !type || !category) {
+        return json({ error: 'trigger, description, type e category são obrigatórios' }, 400)
+      }
+      if (!['shortcut', 'template', 'multi'].includes(type as string)) {
+        return json({ error: 'type deve ser shortcut, template ou multi' }, 400)
+      }
+
+      const { data, error } = await sb.from('bot_commands').insert({
+        bot_config_id: botConfigId,
+        trigger,
+        description,
+        type,
+        actions: actions ?? [],
+        examples: examples ?? [],
+        category,
+        is_default: false,
+      }).select().single()
+
+      if (error) return json({ error: error.message }, 500)
+      return json(data, 201)
+    }
+
+    // PATCH /:id — atualiza um comando
+    if (req.method === 'PATCH' && commandId) {
+      const botConfigId = await getBotConfigId(sb)
+      if (!botConfigId) return json({ error: 'Bot não configurado' }, 404)
+
+      const body = await parseJsonBody(req)
+      if (!body) return json({ error: 'Invalid JSON body' }, 400)
+
+      const allowedFields = ['is_active', 'description', 'actions', 'examples']
+      const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      for (const field of allowedFields) {
+        if (field in body) patch[field] = body[field]
+      }
+
+      const { data, error } = await sb
+        .from('bot_commands')
+        .update(patch)
+        .eq('id', commandId)
+        .eq('bot_config_id', botConfigId)
+        .select()
+        .single()
+      if (error) return json({ error: error.message }, 500)
+      if (!data) return json({ error: 'Comando não encontrado' }, 404)
+      return json(data)
+    }
+
+    // DELETE /:id — remove um comando (somente is_default = false)
+    if (req.method === 'DELETE' && commandId) {
+      const botConfigId = await getBotConfigId(sb)
+      if (!botConfigId) return json({ error: 'Bot não configurado' }, 404)
+
+      const { data: existing } = await sb
+        .from('bot_commands')
+        .select('is_default')
+        .eq('id', commandId)
+        .eq('bot_config_id', botConfigId)
+        .single()
+
+      if (!existing) return json({ error: 'Comando não encontrado' }, 404)
+      if (existing.is_default) return json({ error: 'Comandos padrão não podem ser deletados' }, 403)
+
+      const { error } = await sb.from('bot_commands').delete().eq('id', commandId)
+      if (error) return json({ error: error.message }, 500)
+      return json({ ok: true })
+    }
+
+    return json({ error: 'Method not allowed' }, 405)
+  } catch (err) {
+    console.error('[bot-commands] unhandled error:', err)
+    return json({ error: 'Internal server error' }, 500)
   }
-
-  // DELETE /:id — remove um comando (somente is_default = false)
-  if (req.method === 'DELETE' && commandId) {
-    const { data: existing } = await sb
-      .from('bot_commands')
-      .select('is_default')
-      .eq('id', commandId)
-      .single()
-
-    if (!existing) return json({ error: 'Comando não encontrado' }, 404)
-    if (existing.is_default) return json({ error: 'Comandos padrão não podem ser deletados' }, 403)
-
-    const { error } = await sb.from('bot_commands').delete().eq('id', commandId)
-    if (error) return json({ error: error.message }, 500)
-    return json({ ok: true })
-  }
-
-  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-  })
 })
