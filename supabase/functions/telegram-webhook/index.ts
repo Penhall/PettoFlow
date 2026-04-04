@@ -91,17 +91,6 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Carregar comandos ativos do banco
-  const { data: botCommands } = await sb
-    .from('bot_commands')
-    .select('trigger, type, actions, is_active')
-    .eq('bot_config_id', configRow.id)
-
-  const activeCommands = (botCommands ?? []).filter((c: { is_active: boolean }) => c.is_active)
-  const disabledBuiltins = (botCommands ?? []).filter(
-    (c: { type: string; is_active: boolean }) => c.type === 'builtin' && !c.is_active
-  )
-
   const chatId = String(body?.message?.chat?.id ?? '')
   const fromId = String(body?.message?.from?.id ?? '')
   const rawText = (body?.message?.text ?? '').trim()
@@ -139,27 +128,39 @@ Deno.serve(async (req: Request) => {
 
   if (!chatId || !text) return new Response('OK', { status: 200 })
 
-  // Bloquear built-ins desativados
-  for (const cmd of disabledBuiltins) {
-    if (text === cmd.trigger || text.startsWith(cmd.trigger + ' ')) {
-      return new Response('OK', { status: 200 })
-    }
-  }
+  // Carregar comandos ativos do banco (após validação de chatId/text para evitar query desnecessária)
+  const { data: botCommands } = await sb
+    .from('bot_commands')
+    .select('trigger, type, actions, is_active')
+    .eq('bot_config_id', configRow.id)
 
-  // Executar comandos customizados (shortcut / template / multi)
+  const activeCommands = (botCommands ?? []).filter((c: { is_active: boolean }) => c.is_active)
+  const disabledBuiltins = (botCommands ?? []).filter(
+    (c: { type: string; is_active: boolean }) => c.type === 'builtin' && !c.is_active
+  )
+
+  // Executar comandos customizados (shortcut / template / multi) — prioridade sobre built-ins
   const matchedCustom = activeCommands.find(
     (c: { type: string; trigger: string }) =>
       c.type !== 'builtin' && (text === c.trigger || text.startsWith(c.trigger + ' '))
   )
   if (matchedCustom) {
     try {
-      const result = await executeActions(sb, chatId, matchedCustom.actions)
+      const actions = Array.isArray(matchedCustom.actions) ? matchedCustom.actions : []
+      const result = await executeActions(sb, chatId, actions)
       await sendMessage(botToken, chatId, result || '✅ Concluído.')
     } catch (err) {
       console.error('[custom-cmd] error:', err)
       await sendMessage(botToken, chatId, '⚠️ Erro ao executar comando. Tente novamente.')
     }
     return new Response('OK', { status: 200 })
+  }
+
+  // Bloquear built-ins desativados (após custom commands para permitir override)
+  for (const cmd of disabledBuiltins) {
+    if (text === cmd.trigger || text.startsWith(cmd.trigger + ' ')) {
+      return new Response('OK', { status: 200 })
+    }
   }
 
   let responseText: string
