@@ -181,7 +181,7 @@ Deno.serve(async (req: Request) => {
       if (!existing) return json({ error: 'Comando não encontrado' }, 404)
       if (existing.is_default) return json({ error: 'Comandos padrão não podem ser deletados' }, 403)
 
-      const { error } = await sb.from('bot_commands').delete().eq('id', commandId)
+      const { error } = await sb.from('bot_commands').delete().eq('id', commandId).eq('bot_config_id', botConfigId)
       if (error) return json({ error: error.message }, 500)
       return json({ ok: true })
     }
