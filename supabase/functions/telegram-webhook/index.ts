@@ -14,6 +14,8 @@ import {
   getPendingConfirmation,
   clearPendingConfirmation,
 } from './utils/confirm.ts'
+import { transcribeVoice } from './utils/voice.ts'
+import { executeActions } from './utils/actions.ts'
 
 const HELP_TEXT = `🤖 <b>Comandos disponíveis:</b>
 
@@ -85,14 +87,80 @@ Deno.serve(async (req: Request) => {
       chat?: { id: number }
       from?: { id: number }
       text?: string
+      voice?: { file_id: string }
     }
   }
 
+  // Carregar comandos ativos do banco
+  const { data: botCommands } = await sb
+    .from('bot_commands')
+    .select('trigger, type, actions, is_active')
+    .eq('bot_config_id', configRow.id)
+
+  const activeCommands = (botCommands ?? []).filter((c: { is_active: boolean }) => c.is_active)
+  const disabledBuiltins = (botCommands ?? []).filter(
+    (c: { type: string; is_active: boolean }) => c.type === 'builtin' && !c.is_active
+  )
+
   const chatId = String(body?.message?.chat?.id ?? '')
   const fromId = String(body?.message?.from?.id ?? '')
-  const text = (body?.message?.text ?? '').trim()
+  const rawText = (body?.message?.text ?? '').trim()
+  const voiceFileId = body?.message?.voice?.file_id
+
+  let text = rawText
+
+  console.log(`[webhook] chatId=${chatId} rawText="${rawText}" voiceFileId=${voiceFileId ?? 'none'}`)
+
+  if (!rawText && voiceFileId) {
+    console.log('[webhook] voice message detected, attempting transcription')
+    if (configRow.llm_api_key && configRow.llm_provider === 'google') {
+      const llmKey = await decrypt(configRow.llm_api_key, encryptionKey)
+      let transcript: string | null = null
+      try {
+        transcript = await transcribeVoice(botToken, voiceFileId, llmKey)
+      } catch (voiceErr) {
+        const msg = voiceErr instanceof Error ? voiceErr.message : String(voiceErr)
+        if (chatId) await sendMessage(botToken, chatId, `🎤 Erro na transcrição: ${msg}`)
+        return new Response('OK', { status: 200 })
+      }
+      if (transcript) {
+        text = transcript
+        // Mostra a transcrição ao usuário para feedback
+        await sendMessage(botToken, chatId, `🎤 Ouvi: "<i>${transcript}</i>"`)
+      } else {
+        if (chatId) await sendMessage(botToken, chatId, '🎤 Não consegui transcrever o áudio. Tente falar mais claramente ou use texto.')
+        return new Response('OK', { status: 200 })
+      }
+    } else {
+      if (chatId) await sendMessage(botToken, chatId, '🎤 Mensagens de voz requerem a API do Google Gemini. Configure nas Configurações do PettoFlow.')
+      return new Response('OK', { status: 200 })
+    }
+  }
 
   if (!chatId || !text) return new Response('OK', { status: 200 })
+
+  // Bloquear built-ins desativados
+  for (const cmd of disabledBuiltins) {
+    if (text === cmd.trigger || text.startsWith(cmd.trigger + ' ')) {
+      return new Response('OK', { status: 200 })
+    }
+  }
+
+  // Executar comandos customizados (shortcut / template / multi)
+  const matchedCustom = activeCommands.find(
+    (c: { type: string; trigger: string }) =>
+      c.type !== 'builtin' && (text === c.trigger || text.startsWith(c.trigger + ' '))
+  )
+  if (matchedCustom) {
+    try {
+      const result = await executeActions(sb, chatId, matchedCustom.actions)
+      await sendMessage(botToken, chatId, result || '✅ Concluído.')
+    } catch (err) {
+      console.error('[custom-cmd] error:', err)
+      await sendMessage(botToken, chatId, '⚠️ Erro ao executar comando. Tente novamente.')
+    }
+    return new Response('OK', { status: 200 })
+  }
 
   let responseText: string
 
