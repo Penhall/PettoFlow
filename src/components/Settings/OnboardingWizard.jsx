@@ -15,11 +15,16 @@ export default function OnboardingWizard({ onConnected }) {
     setError(null)
     try {
       await saveBotConfig({ telegramBotToken: token.trim() })
-      await seedDefaultCommands()
-      onConnected()
     } catch (err) {
-      setError(err.message)
-    } finally {
+      setError(`Erro ao conectar: ${err.message}`)
+      return
+    }
+    try {
+      await seedDefaultCommands()
+    } catch (err) {
+      console.warn('Seed de comandos falhou (não crítico):', err)
+    }
+    onConnected() finally {
       setLoading(false)
     }
   }

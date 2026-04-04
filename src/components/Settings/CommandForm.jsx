@@ -77,6 +77,14 @@ export default function CommandForm({ command, onSave, onCancel }) {
       setError('Descrição é obrigatória')
       return
     }
+    if (type === 'shortcut' && (!shortcutAmount || parseFloat(shortcutAmount) <= 0)) {
+      setError('Valor deve ser maior que zero')
+      return
+    }
+    if (type === 'multi' && !multiActions.some((a) => a !== '')) {
+      setError('Selecione pelo menos uma ação')
+      return
+    }
 
     const actions = buildActions(
       type,
