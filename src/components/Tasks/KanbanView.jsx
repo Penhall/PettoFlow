@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, ArrowRight, GripVertical, Check, X, Archive } from 'lucide-react'
 import { isWithin30Days } from '../../lib/financeUtils'
 import {
@@ -116,7 +116,7 @@ const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, onArch
   )
 }
 
-const DroppableColumn = ({ column, tasks, children }) => {
+const DroppableColumn = ({ column, children }) => {
   const { setNodeRef } = useDroppable({
     id: column.name,
   })
@@ -144,24 +144,19 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
     setActiveTask(task)
   }
 
-  const handleDragOver = (event) => {
-    const { active, over } = event
-    if (!over) return
-
-    const activeId = active.id
-    const overId = over.id
-
-    if (activeId === overId) return
-
-    const activeTask = tasks.find(t => t.id === activeId)
-    const overColumn = columns.find(c => c.name === overId) || columns.find(c => c.name === tasks.find(t => t.id === overId)?.status)
-
-    if (overColumn && activeTask.status !== overColumn.name) {
-      onUpdateTask(activeId, { status: overColumn.name })
+  const handleDragEnd = ({ active, over }) => {
+    if (!over) {
+      setActiveTask(null)
+      return
     }
-  }
 
-  const handleDragEnd = (event) => {
+    const activeTaskData = tasks.find(t => t.id === active.id)
+    const overColumn = columns.find(c => c.name === over.id) || columns.find(c => c.name === tasks.find(t => t.id === over.id)?.status)
+
+    if (overColumn && activeTaskData && activeTaskData.status !== overColumn.name) {
+      onUpdateTask(active.id, { status: overColumn.name })
+    }
+
     setActiveTask(null)
   }
 
@@ -180,7 +175,6 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="kanban-board">

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import TelegramSection from './TelegramSection.jsx'
 import CommandsSection from './CommandsSection.jsx'
+import BotAdminGate from './BotAdminGate.jsx'
 
 const TABS = [
   { id: 'telegram', label: '🤖 Telegram' },
@@ -38,8 +39,10 @@ export default function SettingsView() {
         ))}
       </div>
 
-      {activeTab === 'telegram' && <TelegramSection />}
-      {activeTab === 'commands' && <CommandsSection />}
+      <BotAdminGate>
+        {activeTab === 'telegram' && <TelegramSection />}
+        {activeTab === 'commands' && <CommandsSection />}
+      </BotAdminGate>
     </div>
   )
 }

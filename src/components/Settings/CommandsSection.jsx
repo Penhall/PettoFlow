@@ -156,7 +156,7 @@ export default function CommandsSection() {
         <div style={{ display: 'grid', gap: 6 }}>
           {customs.length === 0 && (
             <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 0' }}>
-              Nenhum comando personalizado ainda.<br />Clique em "+ Novo" para criar.
+              Nenhum comando personalizado ainda.<br />Clique em &quot;+ Novo&quot; para criar.
             </p>
           )}
           {customs.map((cmd) => (

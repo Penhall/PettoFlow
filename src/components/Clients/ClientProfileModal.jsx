@@ -1,22 +1,31 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Building2, Phone, Mail, Plus, MessageSquare } from 'lucide-react'
-import { supabase } from '../../lib/supabaseClient'
 import RecordSidebar from '../shared/RecordSidebar'
 import { useTransactions }  from '../../hooks/useTransactions'
 import { useAccounts }      from '../../hooks/useAccounts'
 import { usePayees }        from '../../hooks/usePayees'
 import { useFinCategories } from '../../hooks/useFinCategories'
+import {
+  listInteractionLogRecords,
+  createInteractionLogRecord,
+} from '../../lib/workspaceCore'
 import TransactionList      from '../Finance/TransactionList'
+
+const normalizeLogType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
 const ClientTransactions = ({ clientId }) => {
   const { transactions: clientTxs, loading: txLoading } = useTransactions({ relatedTo: { type: 'client', id: clientId } })
-  const { accounts }   = useAccounts()
-  const { payees }     = usePayees()
+  const { accounts } = useAccounts()
+  const { payees } = usePayees()
   const { categories } = useFinCategories()
 
   return (
     <div className="client-transactions-section">
-      <h3>Transações Vinculadas</h3>
+      <h3>Transacoes Vinculadas</h3>
       <TransactionList
         transactions={clientTxs}
         accounts={accounts}
@@ -33,34 +42,40 @@ const ClientTransactions = ({ clientId }) => {
 
 const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) => {
   const [logs, setLogs] = useState([])
-  const [newLog, setNewLog] = useState({ type: 'Ligação', notes: '' })
+  const [newLog, setNewLog] = useState({ type: 'Ligacao', notes: '' })
   const [loadingLogs, setLoadingLogs] = useState(false)
+
+  const fetchLogs = useCallback(async () => {
+    if (!client?.id) return
+    setLoadingLogs(true)
+    try {
+      const data = await listInteractionLogRecords(client.id)
+      setLogs(data || [])
+    } catch (error) {
+      console.error('Error fetching interaction logs:', error)
+    } finally {
+      setLoadingLogs(false)
+    }
+  }, [client?.id])
 
   useEffect(() => {
     if (client?.id) fetchLogs()
-  }, [client?.id])
-
-  const fetchLogs = async () => {
-    setLoadingLogs(true)
-    const { data, error } = await supabase
-      .from('interaction_logs')
-      .select('*')
-      .eq('client_id', client.id)
-      .order('created_at', { ascending: false })
-    if (!error) setLogs(data || [])
-    setLoadingLogs(false)
-  }
+  }, [client?.id, fetchLogs])
 
   const handleAddLog = async (e) => {
     e.preventDefault()
-    if (!newLog.notes.trim()) return
-    const { data, error } = await supabase
-      .from('interaction_logs')
-      .insert([{ client_id: client.id, type: newLog.type, notes: newLog.notes }])
-      .select()
-    if (!error && data) {
-      setLogs([data[0], ...logs])
-      setNewLog({ type: 'Ligação', notes: '' })
+    if (!newLog.notes.trim() || !client?.id) return
+
+    try {
+      const created = await createInteractionLogRecord({
+        client_id: client.id,
+        type: newLog.type,
+        notes: newLog.notes,
+      })
+      setLogs(prev => [created, ...prev])
+      setNewLog({ type: 'Ligacao', notes: '' })
+    } catch (error) {
+      console.error('Error adding interaction log:', error)
     }
   }
 
@@ -80,7 +95,7 @@ const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) =>
               <p><Phone size={14} /> {client.phone || 'Sem telefone'}</p>
             </div>
             <div className="info-card">
-              <h3>Negócios</h3>
+              <h3>Negocios</h3>
               <p>Receita Est.: <strong>{client.revenue || 'R$ 0'}</strong></p>
               <p>Projetos Ativos: <strong>{client.projects || 0}</strong></p>
             </div>
@@ -93,7 +108,7 @@ const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) =>
                   (clientTasks || []).map(t => (
                     <div key={t.id} className="task-mini-card">
                       <span className="task-mini-title">{t.title}</span>
-                      <span className={`status-badge ${t.status === 'Concluído' ? 'done' : 'progress'}`}>{t.status}</span>
+                      <span className={`status-badge ${t.status === 'Concluido' ? 'done' : 'progress'}`}>{t.status}</span>
                     </div>
                   ))
                 )}
@@ -106,10 +121,10 @@ const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) =>
           </div>
 
           <div className="interaction-feed">
-            <h3>Histórico de Interações</h3>
+            <h3>Historico de Interacoes</h3>
             <form onSubmit={handleAddLog} className="add-log-form">
               <div className="log-type-selector">
-                {['Ligação', 'Email', 'Reunião', 'WhatsApp', 'Outro'].map(type => (
+                {['Ligacao', 'Email', 'Reuniao', 'WhatsApp', 'Outro'].map(type => (
                   <button
                     key={type}
                     type="button"
@@ -123,7 +138,7 @@ const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) =>
               <div className="log-input-row">
                 <input
                   type="text"
-                  placeholder="Registro de reunião, detalhes da ligação..."
+                  placeholder="Registro de reuniao, detalhes da ligacao..."
                   value={newLog.notes}
                   onChange={e => setNewLog({ ...newLog, notes: e.target.value })}
                 />
@@ -135,18 +150,18 @@ const ClientProfileModal = ({ isOpen, client, clientTasks, onEdit, onClose }) =>
 
             <div className="logs-list">
               {loadingLogs ? (
-                <p className="loading-text">Carregando histórico...</p>
+                <p className="loading-text">Carregando historico...</p>
               ) : logs.length === 0 ? (
                 <div className="empty-log">
                   <MessageSquare size={32} />
-                  <p>Nenhuma interação registrada ainda.</p>
-                  <span>Mantenha o histórico de contatos atualizado para vender mais.</span>
+                  <p>Nenhuma interacao registrada ainda.</p>
+                  <span>Mantenha o historico de contatos atualizado para vender mais.</span>
                 </div>
               ) : (
                 logs.map(log => (
                   <div key={log.id} className="log-item">
                     <div className="log-header">
-                      <span className={`log-type-badge type-${log.type.toLowerCase().replace('ç', 'c').replace('ã', 'a')}`}>
+                      <span className={`log-type-badge type-${normalizeLogType(log.type)}`}>
                         {log.type}
                       </span>
                       <span className="log-date">

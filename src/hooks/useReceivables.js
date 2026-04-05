@@ -1,43 +1,43 @@
 // src/hooks/useReceivables.js
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  listReceivableRecords,
+  createReceivableRecord,
+  updateReceivableRecord,
+} from '../lib/workspaceCore'
 
 export function useReceivables() {
   const [receivables, setReceivables] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const fetch = async () => {
-    if (!supabase) { setLoading(false); return }
+  const fetch = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('receivables')
-      .select(`
-        *,
-        tasks ( title, category, client_id ),
-        activities ( title, id ),
-        accounts ( name )
-      `)
-      .order('created_at', { ascending: false })
-    if (error) console.error('Error fetching receivables:', error)
-    else setReceivables(data || [])
-    setLoading(false)
-  }
+    try {
+      const data = await listReceivableRecords()
+      setReceivables(data || [])
+    } catch (error) {
+      console.error('Error fetching receivables:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  useEffect(() => { fetch() }, [])
+  useEffect(() => { fetch() }, [fetch])
 
-  /**
-   * Creates a receivable for a completed Vendas task.
-   * Callers MUST run shouldCreateReceivable() before calling this.
-   */
   const createReceivable = async (taskId, amount, targetAccountId) => {
-    if (!supabase) return null
-    const { data, error } = await supabase
-      .from('receivables')
-      .insert([{ task_id: taskId, amount, target_account_id: targetAccountId, status: 'pending' }])
-      .select()
-    if (error) { console.error('Error creating receivable:', error); return null }
-    await fetch()
-    return data[0]
+    try {
+      const created = await createReceivableRecord({
+        task_id: taskId,
+        amount,
+        target_account_id: targetAccountId,
+        status: 'pending',
+      })
+      await fetch()
+      return created
+    } catch (error) {
+      console.error('Error creating receivable:', error)
+      return null
+    }
   }
 
   /**
@@ -48,20 +48,20 @@ export function useReceivables() {
    * @param {string|null} dueDate - YYYY-MM-DD
    */
   const createReceivableFromActivity = async (activityId, amount, targetAccountId, dueDate = null) => {
-    if (!supabase) return null
-    const { data, error } = await supabase
-      .from('receivables')
-      .insert([{
+    try {
+      const created = await createReceivableRecord({
         activity_id: activityId,
         amount,
         target_account_id: targetAccountId,
         status: 'pending',
         due_date: dueDate,
-      }])
-      .select()
-    if (error) { console.error('Error creating receivable from activity:', error); return null }
-    await fetch()
-    return data[0]
+      })
+      await fetch()
+      return created
+    } catch (error) {
+      console.error('Error creating receivable from activity:', error)
+      return null
+    }
   }
 
   /**
@@ -73,15 +73,14 @@ export function useReceivables() {
    * @param {Function} addTransaction - from useTransactions hook
    */
   const invoiceReceivable = async (receivableId, adjustedAmount, date, addTransaction) => {
-    if (!supabase) return null
     const rec = receivables.find(r => r.id === receivableId)
     if (!rec) return null
 
-    // Create the real transaction via the existing hook (gets rules engine + needs_review)
-    const sourceName = rec.tasks?.title ?? rec.activities?.title ?? 'lançamento'
+    const sourceName = rec.tasks?.title ?? rec.activities?.title ?? 'lancamento'
     const sourceLink = rec.task_id
       ? { type: 'task', id: rec.task_id }
       : { type: 'activity', id: rec.activity_id }
+
     const tx = await addTransaction({
       account_id: rec.target_account_id,
       amount: adjustedAmount,
@@ -91,21 +90,20 @@ export function useReceivables() {
     })
     if (!tx) return null
 
-    // Mark receivable as invoiced
-    const { data, error } = await supabase
-      .from('receivables')
-      .update({ status: 'invoiced', transaction_id: tx.id, invoiced_at: new Date().toISOString() })
-      .eq('id', receivableId)
-      .select()
-    if (error) { console.error('Error invoicing receivable:', error); return null }
-    setReceivables(prev => prev.map(r => r.id === receivableId ? { ...r, ...data[0] } : r))
-    return data[0]
+    try {
+      const updated = await updateReceivableRecord(receivableId, {
+        status: 'invoiced',
+        transaction_id: tx.id,
+        invoiced_at: new Date().toISOString(),
+      })
+      setReceivables(prev => prev.map(r => r.id === receivableId ? { ...r, ...updated } : r))
+      return updated
+    } catch (error) {
+      console.error('Error invoicing receivable:', error)
+      return null
+    }
   }
 
-  /**
-   * Returns receivables filtered by optional status and/or taskId.
-   * @param {{ status?: string, taskId?: number }} options
-   */
   const listReceivables = ({ status, taskId } = {}) => {
     return receivables.filter(r => {
       if (status && r.status !== status) return false

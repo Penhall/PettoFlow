@@ -1,6 +1,6 @@
 // supabase/functions/telegram-webhook/index.ts
 import { getSupabaseClient } from '../_shared/supabase.ts'
-import { sendMessage } from '../_shared/telegram.ts'
+import { sendMessage, escapeHtml } from '../_shared/telegram.ts'
 import { decrypt } from '../_shared/crypto.ts'
 import { validateRequest } from './middleware/auth.ts'
 import { parseSlash } from './parser/slash.ts'
@@ -47,7 +47,6 @@ Deno.serve(async (req: Request) => {
   const sb = getSupabaseClient()
   const encryptionKey = Deno.env.get('ENCRYPTION_KEY')!
 
-  // Carregar config do bot
   const { data: configRow } = await sb
     .from('bot_configs')
     .select('*')
@@ -58,7 +57,6 @@ Deno.serve(async (req: Request) => {
     return new Response('Bot not configured', { status: 503 })
   }
 
-  // Descriptografar campos sensíveis
   const webhookSecret = await decrypt(configRow.webhook_secret, encryptionKey)
   const botToken = await decrypt(configRow.telegram_bot_token, encryptionKey)
 
@@ -68,7 +66,6 @@ Deno.serve(async (req: Request) => {
     is_active: configRow.is_active as boolean,
   }
 
-  // Validar segurança (3 camadas)
   const auth = await validateRequest(req, config)
 
   if (!auth.valid) {
@@ -109,13 +106,12 @@ Deno.serve(async (req: Request) => {
         transcript = await transcribeVoice(botToken, voiceFileId, llmKey)
       } catch (voiceErr) {
         const msg = voiceErr instanceof Error ? voiceErr.message : String(voiceErr)
-        if (chatId) await sendMessage(botToken, chatId, `🎤 Erro na transcrição: ${msg}`)
+        if (chatId) await sendMessage(botToken, chatId, `🎤 Erro na transcrição: ${escapeHtml(msg)}`)
         return new Response('OK', { status: 200 })
       }
       if (transcript) {
         text = transcript
-        // Mostra a transcrição ao usuário para feedback
-        await sendMessage(botToken, chatId, `🎤 Ouvi: "<i>${transcript}</i>"`)
+        await sendMessage(botToken, chatId, `🎤 Ouvi: "<i>${escapeHtml(transcript)}</i>"`)
       } else {
         if (chatId) await sendMessage(botToken, chatId, '🎤 Não consegui transcrever o áudio. Tente falar mais claramente ou use texto.')
         return new Response('OK', { status: 200 })
@@ -128,7 +124,6 @@ Deno.serve(async (req: Request) => {
 
   if (!chatId || !text) return new Response('OK', { status: 200 })
 
-  // Carregar comandos ativos do banco (após validação de chatId/text para evitar query desnecessária)
   const { data: botCommands } = await sb
     .from('bot_commands')
     .select('trigger, type, actions, is_active')
@@ -139,7 +134,6 @@ Deno.serve(async (req: Request) => {
     (c: { type: string; is_active: boolean }) => c.type === 'builtin' && !c.is_active
   )
 
-  // Executar comandos customizados (shortcut / template / multi) — prioridade sobre built-ins
   const matchedCustom = activeCommands.find(
     (c: { type: string; trigger: string }) =>
       c.type !== 'builtin' && (text === c.trigger || text.startsWith(c.trigger + ' '))
@@ -156,7 +150,6 @@ Deno.serve(async (req: Request) => {
     return new Response('OK', { status: 200 })
   }
 
-  // Bloquear built-ins desativados (após custom commands para permitir override)
   for (const cmd of disabledBuiltins) {
     if (text === cmd.trigger || text.startsWith(cmd.trigger + ' ')) {
       return new Response('OK', { status: 200 })
@@ -166,7 +159,6 @@ Deno.serve(async (req: Request) => {
   let responseText: string
 
   try {
-    // Verificar se há confirmação pendente e o usuário respondeu SIM/NÃO
     const upperText = text.toUpperCase()
     if (upperText === 'SIM' || upperText === 'NÃO' || upperText === 'NAO') {
       const pending = await getPendingConfirmation(sb, chatId)
@@ -183,7 +175,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Parse do comando
     let parsed = parseSlash(text)
 
     if (!parsed && configRow.llm_api_key) {
@@ -228,7 +219,7 @@ Deno.serve(async (req: Request) => {
             chatId,
             'finance.record',
             params as Record<string, unknown>,
-            `Confirmar ${dirLabel} de R$ ${amount.toFixed(2).replace('.', ',')} em "${params.description}"?`
+            `Confirmar ${dirLabel} de R$ ${amount.toFixed(2).replace('.', ',')} em "${escapeHtml(String(params.description ?? ''))}"?`
           )
         } else {
           responseText = await recordTransaction(

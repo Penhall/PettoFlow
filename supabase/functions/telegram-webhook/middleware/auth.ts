@@ -25,7 +25,13 @@ export async function validateRequest(
   const body = await req.json()
 
   const fromId = String(body?.message?.from?.id ?? body?.callback_query?.from?.id ?? '')
-  if (!config.allowed_telegram_ids.includes(fromId)) {
+  const text = (body?.message?.text ?? '').trim()
+  const isStart = text === '/start' || text.startsWith('/start ')
+
+  // Bootstrap: se a allowlist está vazia, apenas /start é permitido (para o dono se registrar)
+  const allowlistEmpty = config.allowed_telegram_ids.length === 0
+  const inAllowlist = config.allowed_telegram_ids.includes(fromId)
+  if (!inAllowlist && !(allowlistEmpty && isStart)) {
     return { valid: false, status: 200 } // silêncio
   }
 

@@ -1,45 +1,52 @@
 // src/hooks/usePayees.js
-// Nota: deletePayee não existe — payee_id usa ON DELETE SET NULL; deletar quebraria histórico.
+// Nota: deletePayee nao existe - payee_id usa ON DELETE SET NULL; deletar quebraria historico.
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { listPayeeRecords, savePayeeRecord } from '../lib/workspaceCore'
 
 export function usePayees() {
   const [payees, setPayees] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!supabase) { setLoading(false); return }
     let cancelled = false
     setLoading(true)
-    supabase
-      .from('payees')
-      .select('*')
-      .order('name', { ascending: true })
-      .then(({ data, error }) => {
+
+    listPayeeRecords()
+      .then((data) => {
         if (cancelled) return
-        if (error) console.error('Error fetching payees:', error)
-        else setPayees(data || [])
-        setLoading(false)
+        setPayees(data || [])
       })
+      .catch((error) => {
+        if (cancelled) return
+        console.error('Error fetching payees:', error)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
     return () => { cancelled = true }
   }, [])
 
-  // Cria payee e retorna o objeto criado imediatamente.
-  // TransactionForm usa o ID retornado para pré-selecionar o novo payee antes de salvar.
   const addPayee = async (name) => {
-    if (!supabase) return null
-    const { data, error } = await supabase.from('payees').insert([{ name }]).select()
-    if (error) { console.error('Error adding payee:', error); return null }
-    setPayees(prev => [...prev, data[0]].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
-    return data[0]
+    try {
+      const created = await savePayeeRecord({ name })
+      setPayees(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
+      return created
+    } catch (error) {
+      console.error('Error adding payee:', error)
+      return null
+    }
   }
 
   const updatePayee = async (id, updates) => {
-    if (!supabase) return null
-    const { data, error } = await supabase.from('payees').update(updates).eq('id', id).select()
-    if (error) { console.error('Error updating payee:', error); return null }
-    setPayees(prev => prev.map(p => p.id === id ? data[0] : p))
-    return data[0]
+    try {
+      const updated = await savePayeeRecord({ id, ...updates })
+      setPayees(prev => prev.map(p => p.id === id ? updated : p))
+      return updated
+    } catch (error) {
+      console.error('Error updating payee:', error)
+      return null
+    }
   }
 
   return { payees, loading, addPayee, updatePayee }

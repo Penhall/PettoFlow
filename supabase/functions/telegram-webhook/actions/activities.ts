@@ -1,5 +1,6 @@
 // supabase/functions/telegram-webhook/actions/activities.ts
 import { SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { escapeHtml } from '../../_shared/telegram.ts'
 
 function makeTiptapBody(text: string) {
   return {
@@ -33,7 +34,7 @@ export async function logActivity(
     scheduled_at: new Date().toISOString(),
   })
   if (error) throw error
-  return `✅ ${TYPE_LABELS[type] ?? type} registrada: <b>${title}</b>`
+  return `✅ ${TYPE_LABELS[type] ?? type} registrada: <b>${escapeHtml(title)}</b>`
 }
 
 export async function listActivities(sb: SupabaseClient): Promise<string> {
@@ -52,7 +53,7 @@ export async function listActivities(sb: SupabaseClient): Promise<string> {
     const date = a.scheduled_at
       ? new Date(a.scheduled_at).toLocaleDateString('pt-BR')
       : '—'
-    lines.push(`• ${label}: ${a.title} <i>(${date})</i>`)
+    lines.push(`• ${label}: ${escapeHtml(a.title)} <i>(${date})</i>`)
   }
   return lines.join('\n')
 }

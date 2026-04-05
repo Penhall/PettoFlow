@@ -28,14 +28,12 @@ export async function parseWithLLM(
   provider: string
 ): Promise<ParsedCommand | null> {
   try {
-    const url = provider === 'openai'
-      ? 'https://api.openai.com/v1/chat/completions'
-      : 'https://api.anthropic.com/v1/messages'
-
+    let url: string
     let body: string
     let headers: Record<string, string>
 
     if (provider === 'openai') {
+      url = 'https://api.openai.com/v1/chat/completions'
       headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
@@ -48,8 +46,17 @@ export async function parseWithLLM(
         ],
         max_tokens: 200,
       })
+    } else if (provider === 'google') {
+      url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+      headers = { 'Content-Type': 'application/json' }
+      body = JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { maxOutputTokens: 200, temperature: 0 },
+      })
     } else {
       // Anthropic (padrão)
+      url = 'https://api.anthropic.com/v1/messages'
       headers = {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
@@ -67,13 +74,24 @@ export async function parseWithLLM(
     if (!res.ok) return null
 
     const data = await res.json()
-    const text = provider === 'openai'
-      ? data.choices?.[0]?.message?.content
-      : data.content?.[0]?.text
+    let text: string | undefined
+    if (provider === 'openai') {
+      text = data.choices?.[0]?.message?.content
+    } else if (provider === 'google') {
+      text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    } else {
+      text = data.content?.[0]?.text
+    }
 
     if (!text) return null
 
-    const parsed = JSON.parse(text.trim()) as ParsedCommand
+    // Gemini às vezes envolve o JSON em blocos markdown ```json ... ```
+    let jsonText = text.trim()
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
+    }
+
+    const parsed = JSON.parse(jsonText) as ParsedCommand
     if (!isAllowed(parsed.action)) return null
     return parsed
   } catch {

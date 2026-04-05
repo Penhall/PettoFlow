@@ -10,12 +10,16 @@ export default function TelegramSection() {
   const [newId, setNewId] = useState('')
   const [showLlmKey, setShowLlmKey] = useState(false)
   const [llmKey, setLlmKey] = useState('')
+  const [llmProvider, setLlmProvider] = useState('anthropic')
 
   const loadConfig = useCallback(async () => {
     try {
       const data = await getBotConfig()
       setConfig(data)
-      if (data) setThreshold(String(data.confirmation_threshold ?? 500))
+      if (data) {
+        setThreshold(String(data.confirmation_threshold ?? 500))
+        if (data.llm_provider) setLlmProvider(data.llm_provider)
+      }
     } catch {
       setConfig(null)
     }
@@ -74,7 +78,8 @@ export default function TelegramSection() {
     if (!llmKey.trim()) return
     setSaving(true)
     try {
-      await updateBotConfig({ llm_api_key: llmKey.trim() })
+      await updateBotConfig({ llm_api_key: llmKey.trim(), llm_provider: llmProvider })
+      setConfig((prev) => ({ ...prev, llm_provider: llmProvider }))
       setLlmKey('')
       setShowLlmKey(false)
     } finally {
@@ -177,9 +182,24 @@ export default function TelegramSection() {
           <button onClick={() => setShowLlmKey((v) => !v)}>{showLlmKey ? 'Fechar ▲' : 'Configurar ▾'}</button>
         </div>
         {showLlmKey && (
-          <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-            <input type="password" value={llmKey} onChange={(e) => setLlmKey(e.target.value)} placeholder="sk-ant-... ou sk-..." style={{ flex: 1 }} />
-            <button onClick={saveLlmKey} disabled={!llmKey.trim() || saving}>Salvar</button>
+          <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Provider:</span>
+              <select value={llmProvider} onChange={(e) => setLlmProvider(e.target.value)} style={{ flex: 1 }}>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="google">Google (Gemini)</option>
+                <option value="openai">OpenAI (GPT)</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input type="password" value={llmKey} onChange={(e) => setLlmKey(e.target.value)} placeholder={llmProvider === 'google' ? 'AIza...' : llmProvider === 'openai' ? 'sk-...' : 'sk-ant-...'} style={{ flex: 1 }} />
+              <button onClick={saveLlmKey} disabled={!llmKey.trim() || saving}>Salvar</button>
+            </div>
+            {config.llm_provider && (
+              <p style={{ margin: 0, fontSize: '0.8em', color: 'var(--text-secondary)' }}>
+                Provider atual: <strong>{config.llm_provider}</strong>
+              </p>
+            )}
           </div>
         )}
       </div>

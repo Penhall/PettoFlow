@@ -1,5 +1,3 @@
--- supabase/migrations/20260403000001_bot_commands_fix.sql
-
 -- Fix RLS policy: scope to service_role only
 drop policy if exists "service role full access" on bot_commands;
 create policy "service role full access"
@@ -12,4 +10,4 @@ create policy "service role full access"
 alter table bot_commands alter column is_default set default false;
 
 -- Add updated_at
-alter table bot_commands add column if not exists updated_at timestamptz default now() not null;
+alter table bot_commands add column if not exists updated_at timestamptz default now() not null;;

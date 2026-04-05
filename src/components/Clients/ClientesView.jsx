@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Building2, Plus, Trash2, X } from 'lucide-react'
-import { supabase } from '../../lib/supabaseClient'
+import { saveClientRecord, deleteClientRecord } from '../../lib/workspaceCore'
 import ClientProfileModal from './ClientProfileModal'
 
 const ClientModal = ({ client, onSave, onClose }) => {
@@ -83,27 +83,24 @@ const ClientesView = ({ clients, tasks, onRefresh, searchQuery }) => {
   const [showEditModal, setShowEditModal] = useState(false)
 
   const handleSave = async (form) => {
-    const { id, ...payload } = form
-    let error
-    if (id) {
-      ({ error } = await supabase.from('clients').update(payload).eq('id', id))
-    } else {
-      ({ error } = await supabase.from('clients').insert([payload]))
-    }
-    
-    if (error) console.error('Error saving client:', error)
-    else {
+    try {
+      await saveClientRecord(form)
       setShowEditModal(false)
       setEditingClient(null)
       onRefresh()
+    } catch (error) {
+      console.error('Error saving client:', error)
     }
   }
 
   const handleDelete = async (id) => {
     if (!confirm('Deseja excluir este cliente?')) return
-    const { error } = await supabase.from('clients').delete().eq('id', id)
-    if (error) console.error('Error deleting client:', error)
-    else onRefresh()
+    try {
+      await deleteClientRecord(id)
+      onRefresh()
+    } catch (error) {
+      console.error('Error deleting client:', error)
+    }
   }
 
   return (

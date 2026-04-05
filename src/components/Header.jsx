@@ -1,4 +1,4 @@
-import { Search, Bell, Download, ChevronRight, Palette } from 'lucide-react'
+import { Search, Bell, Download, Palette } from 'lucide-react'
 import { useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
 

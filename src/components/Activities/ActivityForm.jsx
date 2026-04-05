@@ -58,7 +58,6 @@ const ActivityForm = ({
     type: 'meeting',
     body: null,
     status: 'pending',
-    scheduled_at: '',
     created_by: '',
     related_to: [],
     ...(activity || {}),

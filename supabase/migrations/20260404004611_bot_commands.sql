@@ -10,8 +10,7 @@ create table if not exists bot_commands (
   examples      text[] default '{}',
   category      text not null check (category in ('tasks', 'activities', 'finance', 'custom')),
   is_active     boolean default true not null,
-  is_default    boolean default false not null,
-  updated_at    timestamptz default now() not null,
+  is_default    boolean default true not null,
   created_at    timestamptz default now() not null
 );
 
@@ -19,6 +18,5 @@ alter table bot_commands enable row level security;
 
 create policy "service role full access"
   on bot_commands
-  to service_role
   using (true)
-  with check (true);
+  with check (true);;

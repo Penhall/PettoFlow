@@ -29,7 +29,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
   const [calendarClickDate, setCalendarClickDate]     = useState(null)
 
   const { addActivity } = useActivities()
-  const { accounts, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
+  const { accounts, addAccount, updateAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
   const { payees, addPayee }                                = usePayees()
   const { groups, categories }                              = useFinCategories()
   const { rules, addRule, updateRule, deleteRule }          = useFinRules()

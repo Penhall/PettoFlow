@@ -1,5 +1,13 @@
 // supabase/functions/_shared/telegram.ts
 
+export function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 export async function sendMessage(
   botToken: string,
   chatId: string | number,

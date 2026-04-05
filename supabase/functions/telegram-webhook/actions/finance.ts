@@ -1,7 +1,12 @@
 // supabase/functions/telegram-webhook/actions/finance.ts
 import { SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { escapeHtml } from '../../_shared/telegram.ts'
 
-async function getPrincipalAccountId(sb: SupabaseClient): Promise<string | null> {
+function formatCentsBRL(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+async function getPrincipalAccountId(sb: SupabaseClient): Promise<number | null> {
   const { data } = await sb
     .from('accounts')
     .select('id, category')
@@ -9,7 +14,7 @@ async function getPrincipalAccountId(sb: SupabaseClient): Promise<string | null>
 
   if (!data || data.length === 0) return null
 
-  const principal = data.find((a: { id: string; category: string }) => a.category === 'principal')
+  const principal = data.find((a: { id: number; category: string }) => a.category === 'principal')
   return principal?.id ?? data[0].id
 }
 
@@ -22,7 +27,8 @@ export async function recordTransaction(
   const accountId = await getPrincipalAccountId(sb)
   if (!accountId) return '❌ Nenhuma conta encontrada. Crie uma conta no PettoFlow antes de usar este comando.'
 
-  const signedAmount = direction === 'out' ? -Math.abs(amount) : Math.abs(amount)
+  const amountCents = Math.round(Math.abs(amount) * 100)
+  const signedAmount = direction === 'out' ? -amountCents : amountCents
   const { error } = await sb.from('transactions').insert({
     account_id: accountId,
     amount: signedAmount,
@@ -35,13 +41,13 @@ export async function recordTransaction(
   if (error) throw error
   const emoji = direction === 'out' ? '💸' : '💰'
   const label = direction === 'out' ? 'Saída' : 'Entrada'
-  return `${emoji} ${label} registrada: <b>${description}</b> — R$ ${amount.toFixed(2).replace('.', ',')}`
+  return `${emoji} ${label} registrada: <b>${escapeHtml(description)}</b> — ${formatCentsBRL(amountCents)}`
 }
 
 export async function getBalance(sb: SupabaseClient): Promise<string> {
   const { data, error } = await sb
     .from('accounts')
-    .select('name, opening_balance')
+    .select('id, name, opening_balance')
     .eq('is_active', true)
 
   if (error) throw error
@@ -56,7 +62,7 @@ export async function getBalance(sb: SupabaseClient): Promise<string> {
 
     const total = (txs ?? []).reduce((sum: number, t: { amount: number }) => sum + (t.amount ?? 0), 0)
     const balance = (account.opening_balance ?? 0) + total
-    lines.push(`• ${account.name}: R$ ${balance.toFixed(2).replace('.', ',')}`)
+    lines.push(`• ${escapeHtml(account.name)}: ${formatCentsBRL(balance)}`)
   }
   return lines.join('\n')
 }
@@ -74,9 +80,9 @@ export async function listTransactions(sb: SupabaseClient): Promise<string> {
   const lines = ['📋 <b>Últimas transações:</b>']
   for (const t of data) {
     const emoji = (t.amount ?? 0) < 0 ? '💸' : '💰'
-    const value = Math.abs(t.amount ?? 0).toFixed(2).replace('.', ',')
+    const value = formatCentsBRL(Math.abs(t.amount ?? 0))
     const date = t.date ? new Date(t.date).toLocaleDateString('pt-BR') : '—'
-    lines.push(`${emoji} R$ ${value} — ${t.notes ?? '(sem descrição)'} <i>(${date})</i>`)
+    lines.push(`${emoji} ${value} — ${escapeHtml(t.notes ?? '(sem descrição)')} <i>(${date})</i>`)
   }
   return lines.join('\n')
 }

@@ -4,27 +4,35 @@ import { saveBotConfig } from '../../lib/botConfig.js'
 import { seedDefaultCommands } from '../../lib/botCommands.js'
 
 export default function OnboardingWizard({ onConnected }) {
-  const [step, setStep] = useState(1)
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const hasToken = token.trim().length > 0
+
   async function handleConnect() {
-    if (!token.trim()) return
+    const trimmedToken = token.trim()
+    if (!trimmedToken) return
+
     setLoading(true)
     setError(null)
+
     try {
-      await saveBotConfig({ telegramBotToken: token.trim() })
-    } catch (err) {
-      setError(`Erro ao conectar: ${err.message}`)
-      return
-    }
-    try {
-      await seedDefaultCommands()
-    } catch (err) {
-      console.warn('Seed de comandos falhou (não crítico):', err)
-    }
-    onConnected() finally {
+      try {
+        await saveBotConfig({ telegramBotToken: trimmedToken })
+      } catch (err) {
+        setError(`Erro ao conectar: ${err.message}`)
+        return
+      }
+
+      try {
+        await seedDefaultCommands()
+      } catch (err) {
+        console.warn('Seed de comandos falhou (nao critico):', err)
+      }
+
+      await onConnected?.()
+    } finally {
       setLoading(false)
     }
   }
@@ -35,7 +43,7 @@ export default function OnboardingWizard({ onConnected }) {
         <div style={{ fontSize: '2em', marginBottom: 8 }}>🤖</div>
         <h2 style={{ margin: 0 }}>Conectar Bot Telegram</h2>
         <p style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
-          Siga os passos — leva menos de 2 minutos
+          Siga os passos - leva menos de 2 minutos
         </p>
       </div>
 
@@ -45,11 +53,11 @@ export default function OnboardingWizard({ onConnected }) {
           title: 'Abra o Telegram e busque @BotFather',
           body: (
             <p>
-              Envie o comando <code>/newbot</code> e siga as instruções para criar seu bot
+              Envie o comando <code>/newbot</code> e siga as instrucoes para criar seu bot
               pessoal do PettoFlow.
             </p>
           ),
-          done: step > 1,
+          done: hasToken,
         },
         {
           n: 2,
@@ -59,7 +67,7 @@ export default function OnboardingWizard({ onConnected }) {
               Parece com: <code>1234567890:ABCDEFghijklmno...</code>
             </p>
           ),
-          done: step > 2,
+          done: hasToken,
         },
         {
           n: 3,
@@ -75,21 +83,23 @@ export default function OnboardingWizard({ onConnected }) {
                   style={{ flex: 1 }}
                   disabled={loading}
                 />
-                <button onClick={handleConnect} disabled={!token.trim() || loading}>
-                  {loading ? 'Conectando...' : 'Conectar →'}
+                <button onClick={handleConnect} disabled={!hasToken || loading}>
+                  {loading ? 'Conectando...' : 'Conectar ->'}
                 </button>
               </div>
-              {error && <p style={{ color: 'var(--color-error, #ef4444)', margin: 0 }}>❌ {error}</p>}
+              {error && (
+                <p style={{ color: 'var(--color-error, #ef4444)', margin: 0 }}>X {error}</p>
+              )}
             </div>
           ),
           done: false,
         },
         {
           n: 4,
-          title: 'Autorize seu Telegram (automático)',
+          title: 'Autorize seu Telegram (automatico)',
           body: (
             <p>
-              Após conectar, envie <code>/start</code> ao bot. Ele detectará seu ID Telegram
+              Apos conectar, envie <code>/start</code> ao bot. Ele detectara seu ID Telegram
               automaticamente.
             </p>
           ),
@@ -124,7 +134,7 @@ export default function OnboardingWizard({ onConnected }) {
               flexShrink: 0,
             }}
           >
-            {done ? '✓' : n}
+            {done ? 'OK' : n}
           </div>
           <div style={{ flex: 1 }}>
             <strong>{title}</strong>
