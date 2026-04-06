@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
-import { clearWorkspaceSecret, hasWorkspaceSecret, setWorkspaceSecret } from '../lib/workspaceAccess.js'
+import {
+  clearWorkspaceSecret,
+  hasWorkspaceEnvSecret,
+  hasWorkspaceSecret,
+  setWorkspaceSecret,
+} from '../lib/workspaceAccess.js'
 import { fetchWorkspaceBootstrap } from '../lib/workspaceCore.js'
 
 export default function WorkspaceGate({ children }) {
+  const usesEnvSecret = hasWorkspaceEnvSecret()
   const [status, setStatus] = useState(hasWorkspaceSecret() ? 'checking' : 'locked')
   const [secret, setSecret] = useState('')
   const [error, setError] = useState('')
@@ -23,7 +29,12 @@ export default function WorkspaceGate({ children }) {
         clearWorkspaceSecret()
         if (!cancelled) {
           setStatus('locked')
-          setError(err?.message ?? 'Não foi possível validar a chave do workspace.')
+          setError(
+            err?.message
+              ?? (usesEnvSecret
+                ? 'Nao foi possivel validar a chave do workspace configurada no .env.'
+                : 'Nao foi possivel validar a chave do workspace.'),
+          )
         }
       }
     }
@@ -32,7 +43,7 @@ export default function WorkspaceGate({ children }) {
     return () => {
       cancelled = true
     }
-  }, [status])
+  }, [status, usesEnvSecret])
 
   function handleUnlock() {
     const trimmedSecret = secret.trim()
@@ -82,7 +93,9 @@ export default function WorkspaceGate({ children }) {
           <div>
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Acesso do Workspace</h1>
             <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)' }}>
-              Esta fase de desenvolvimento usa uma chave única de workspace por sessão do navegador.
+              {usesEnvSecret
+                ? 'O acesso do workspace esta usando a chave configurada no arquivo .env.'
+                : 'Defina VITE_WORKSPACE_ACCESS_SECRET no .env para liberar o workspace automaticamente ou informe a chave manualmente.'}
             </p>
           </div>
 
@@ -91,7 +104,7 @@ export default function WorkspaceGate({ children }) {
               type="password"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
-              placeholder="Cole a chave do workspace"
+              placeholder={usesEnvSecret ? 'Sobrescrever com outra chave' : 'Cole a chave do workspace'}
               style={{ flex: 1 }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUnlock()
@@ -124,8 +137,8 @@ export default function WorkspaceGate({ children }) {
           fontSize: '0.9em',
         }}
       >
-        <span>Workspace liberado nesta sessão do navegador.</span>
-        <button onClick={handleResetAccess}>Trocar chave</button>
+        <span>{usesEnvSecret ? 'Workspace liberado pela chave do .env.' : 'Workspace liberado nesta sessao do navegador.'}</span>
+        <button onClick={handleResetAccess}>{usesEnvSecret ? 'Usar outra chave' : 'Trocar chave'}</button>
       </div>
       {children}
     </div>

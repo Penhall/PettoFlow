@@ -1,12 +1,23 @@
 const STORAGE_KEY = 'pettoflow_workspace_secret'
+const ENV_SECRET = import.meta.env.VITE_WORKSPACE_ACCESS_SECRET ?? ''
 
-export function getWorkspaceSecret() {
+function getSessionWorkspaceSecret() {
   if (typeof window === 'undefined') return ''
   return window.sessionStorage.getItem(STORAGE_KEY) ?? ''
 }
 
+export function getWorkspaceSecret() {
+  const envSecret = String(ENV_SECRET).trim()
+  if (envSecret) return envSecret
+  return getSessionWorkspaceSecret()
+}
+
 export function hasWorkspaceSecret() {
   return getWorkspaceSecret().trim().length > 0
+}
+
+export function hasWorkspaceEnvSecret() {
+  return String(ENV_SECRET).trim().length > 0
 }
 
 export function setWorkspaceSecret(secret) {
@@ -27,7 +38,7 @@ export function clearWorkspaceSecret() {
 function buildWorkspaceHeaders(contentType = true) {
   const secret = getWorkspaceSecret().trim()
   if (!secret) {
-    const error = new Error('Chave do workspace não configurada para esta sessão.')
+    const error = new Error('Chave do workspace nao configurada.')
     error.code = 'WORKSPACE_SECRET_MISSING'
     throw error
   }
