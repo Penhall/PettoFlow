@@ -10,6 +10,8 @@ function getConfiguredOrigins(): string[] {
 }
 
 function originAllowed(requestOrigin: string, allowedOrigins: string[]): boolean {
+  // Always allow Vercel deployment and preview URLs
+  if (requestOrigin.endsWith('.vercel.app')) return true
   return allowedOrigins.some((pattern) => {
     if (pattern === '*') return true
     if (pattern.startsWith('*.')) return requestOrigin.endsWith(pattern.slice(1))
@@ -21,7 +23,7 @@ export function getCorsHeaders(req: Request, methods = DEFAULT_METHODS) {
   const requestOrigin = req.headers.get('origin')
   const allowedOrigins = getConfiguredOrigins()
 
-  if (!requestOrigin || allowedOrigins.length === 0 || !originAllowed(requestOrigin, allowedOrigins)) {
+  if (!requestOrigin || !originAllowed(requestOrigin, allowedOrigins)) {
     return null
   }
 
