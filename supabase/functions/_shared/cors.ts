@@ -1,18 +1,27 @@
 const DEFAULT_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS'
 const DEFAULT_HEADERS = 'Content-Type, X-Bot-Config-Key, X-Workspace-Key'
 
-function getConfiguredOrigin() {
-  return Deno.env.get('ALLOWED_APP_ORIGIN')
+function getConfiguredOrigins(): string[] {
+  const raw = Deno.env.get('ALLOWED_APP_ORIGIN')
     ?? Deno.env.get('APP_ORIGIN')
     ?? Deno.env.get('SITE_URL')
     ?? ''
+  return raw.split(',').map((s) => s.trim()).filter(Boolean)
+}
+
+function originAllowed(requestOrigin: string, allowedOrigins: string[]): boolean {
+  return allowedOrigins.some((pattern) => {
+    if (pattern === '*') return true
+    if (pattern.startsWith('*.')) return requestOrigin.endsWith(pattern.slice(1))
+    return requestOrigin === pattern
+  })
 }
 
 export function getCorsHeaders(req: Request, methods = DEFAULT_METHODS) {
   const requestOrigin = req.headers.get('origin')
-  const allowedOrigin = getConfiguredOrigin()
+  const allowedOrigins = getConfiguredOrigins()
 
-  if (!requestOrigin || !allowedOrigin || requestOrigin !== allowedOrigin) {
+  if (!requestOrigin || allowedOrigins.length === 0 || !originAllowed(requestOrigin, allowedOrigins)) {
     return null
   }
 
