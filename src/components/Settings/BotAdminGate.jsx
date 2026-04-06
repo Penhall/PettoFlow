@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { clearBotAdminSecret, hasBotAdminSecret, setBotAdminSecret } from '../../lib/botAdmin.js'
+import { clearBotAdminSecret, hasBotAdminEnvSecret, hasBotAdminSecret, setBotAdminSecret } from '../../lib/botAdmin.js'
 import { getBotConfig } from '../../lib/botConfig.js'
 
 export default function BotAdminGate({ children }) {
+  const usesEnvSecret = hasBotAdminEnvSecret()
   const [status, setStatus] = useState(hasBotAdminSecret() ? 'checking' : 'locked')
   const [secret, setSecret] = useState('')
   const [error, setError] = useState('')
@@ -73,7 +74,9 @@ export default function BotAdminGate({ children }) {
         <div>
           <strong>Acesso administrativo do bot</strong>
           <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.9em' }}>
-            Informe a chave `BOT_CONFIG_SECRET` para liberar a configuração do Telegram nesta sessão.
+            {usesEnvSecret
+              ? 'A chave administrativa esta configurada no .env. Clique em Liberar para continuar.'
+              : 'Informe a chave `BOT_CONFIG_SECRET` para liberar a configuração do Telegram nesta sessão.'}
           </p>
         </div>
 
@@ -82,13 +85,15 @@ export default function BotAdminGate({ children }) {
             type="password"
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder="Cole a chave administrativa"
+            placeholder={usesEnvSecret ? 'Sobrescrever com outra chave' : 'Cole a chave administrativa'}
             style={{ flex: 1 }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleUnlock()
             }}
           />
-          <button onClick={handleUnlock}>Liberar</button>
+          <button onClick={usesEnvSecret && !secret ? () => setStatus('checking') : handleUnlock}>
+            Liberar
+          </button>
         </div>
 
         {error && (
@@ -114,9 +119,9 @@ export default function BotAdminGate({ children }) {
         }}
       >
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.9em' }}>
-          Acesso administrativo liberado nesta sessao do navegador.
+          {usesEnvSecret ? 'Acesso administrativo liberado pela chave do .env.' : 'Acesso administrativo liberado nesta sessao do navegador.'}
         </span>
-        <button onClick={handleResetAccess}>Trocar chave</button>
+        <button onClick={handleResetAccess}>{usesEnvSecret ? 'Usar outra chave' : 'Trocar chave'}</button>
       </div>
       {children}
     </div>

@@ -1,8 +1,18 @@
 const STORAGE_KEY = 'pettoflow_bot_admin_secret'
+const ENV_SECRET = String(import.meta.env.VITE_BOT_CONFIG_SECRET ?? '').trim()
 
-export function getBotAdminSecret() {
+export function hasBotAdminEnvSecret() {
+  return ENV_SECRET.length > 0
+}
+
+function getSessionBotAdminSecret() {
   if (typeof window === 'undefined') return ''
   return window.sessionStorage.getItem(STORAGE_KEY) ?? ''
+}
+
+export function getBotAdminSecret() {
+  if (ENV_SECRET) return ENV_SECRET
+  return getSessionBotAdminSecret()
 }
 
 export function hasBotAdminSecret() {
