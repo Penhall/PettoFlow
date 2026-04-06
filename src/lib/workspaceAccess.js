@@ -1,5 +1,7 @@
+/* global __WORKSPACE_ACCESS_SECRET__ */
+
 const STORAGE_KEY = 'pettoflow_workspace_secret'
-const ENV_SECRET = import.meta.env.VITE_WORKSPACE_ACCESS_SECRET ?? ''
+const ENV_SECRET = String(__WORKSPACE_ACCESS_SECRET__ ?? '').trim()
 
 function getSessionWorkspaceSecret() {
   if (typeof window === 'undefined') return ''
@@ -7,8 +9,7 @@ function getSessionWorkspaceSecret() {
 }
 
 export function getWorkspaceSecret() {
-  const envSecret = String(ENV_SECRET).trim()
-  if (envSecret) return envSecret
+  if (ENV_SECRET) return ENV_SECRET
   return getSessionWorkspaceSecret()
 }
 
@@ -17,7 +18,7 @@ export function hasWorkspaceSecret() {
 }
 
 export function hasWorkspaceEnvSecret() {
-  return String(ENV_SECRET).trim().length > 0
+  return ENV_SECRET.length > 0
 }
 
 export function setWorkspaceSecret(secret) {
