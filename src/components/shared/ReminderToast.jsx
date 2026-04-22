@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/components/shared/ReminderToast.jsx
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'

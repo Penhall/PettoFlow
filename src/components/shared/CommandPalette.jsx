@@ -55,9 +55,9 @@ const CommandPalette = ({ isOpen, query, setQuery, results, onClose, onSelect, o
               <div className="palette-results">
                 {results.length === 0 ? (
                   <div className="palette-empty">
-                    <p>Nenhum resultado para "{query}"</p>
+                    <p>Nenhum resultado para &quot;{query}&quot;</p>
                     <button className="palette-action-btn" onClick={() => { onCreateActivity(); onClose() }}>
-                      <Plus size={14} /> Criar nova atividade "{query}"
+                      <Plus size={14} /> Criar nova atividade &quot;{query}&quot;
                     </button>
                   </div>
                 ) : (

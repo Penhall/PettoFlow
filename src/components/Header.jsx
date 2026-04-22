@@ -1,14 +1,23 @@
-import { Search, Bell, Download, ChevronRight, Palette } from 'lucide-react'
+import { Search, Bell, Download, Palette, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
 
-const Header = ({ title, searchQuery, onSearch, onExport }) => {
+const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
   const { theme, setTheme, themes } = useTheme()
   const [showThemeMenu, setShowThemeMenu] = useState(false)
 
   return (
     <header className="top-header">
       <div className="header-left">
+        {/* Hambúrguer — visível apenas em mobile via CSS (.hamburger-btn) */}
+        <button
+          className="hamburger-btn"
+          onClick={onMenuToggle}
+          aria-label="Abrir menu de navegação"
+        >
+          <Menu size={22} />
+        </button>
+
         <h1 className="page-title">{title}</h1>
       </div>
 
@@ -25,7 +34,7 @@ const Header = ({ title, searchQuery, onSearch, onExport }) => {
             <button className="clear-search" onClick={() => onSearch('')}>✕</button>
           )}
         </div>
-        
+
         <div className="dropdown-wrapper" style={{ position: 'relative' }}>
           <button className="icon-btn" onClick={() => setShowThemeMenu(!showThemeMenu)} title="Alternar Tema">
             <Palette size={20} />
@@ -33,9 +42,9 @@ const Header = ({ title, searchQuery, onSearch, onExport }) => {
           {showThemeMenu && (
             <div className="dropdown-menu theme-menu" style={{ right: 0, top: '40px' }} onClick={(e) => e.stopPropagation()}>
               {themes.map(t => (
-                <button 
-                  key={t.id} 
-                  className={theme === t.id ? 'selected' : ''} 
+                <button
+                  key={t.id}
+                  className={theme === t.id ? 'selected' : ''}
                   onClick={() => { setTheme(t.id); setShowThemeMenu(false); }}
                 >
                   {t.name}

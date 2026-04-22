@@ -46,8 +46,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
   const handleSave = async (form) => {
     let saved
     if (editingActivity) {
-      const { id, ...updates } = form
-      saved = await updateActivity(editingActivity.id, updates)
+      saved = await updateActivity(editingActivity.id, form)
     } else {
       saved = await addActivity(form)
     }

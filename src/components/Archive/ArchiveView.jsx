@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Archive, RotateCcw } from 'lucide-react'
-import { supabase } from '../../lib/supabaseClient'
+import { listArchivedTaskRecords } from '../../lib/workspaceCore'
 
 const PAGE_SIZE = 50
 
@@ -8,35 +8,27 @@ export default function ArchiveView({ restoreTask }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
-  const [page, setPage] = useState(0) // 0-indexed
+  const [page, setPage] = useState(0)
   const [filters, setFilters] = useState({ category: '', tag: '', dateFrom: '', dateTo: '' })
 
-  const fetchArchived = async (pageIndex = 0, f = filters) => {
-    if (!supabase) { setLoading(false); return }
+  const fetchArchived = useCallback(async (pageIndex = 0, currentFilters = filters) => {
     setLoading(true)
-
-    let query = supabase
-      .from('tasks')
-      .select('*', { count: 'exact' })
-      .not('archived_at', 'is', null)
-      .order('archived_at', { ascending: false })
-      .range(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE - 1)
-
-    if (f.category) query = query.eq('category', f.category)
-    if (f.tag)      query = query.contains('tags', [f.tag])
-    if (f.dateFrom) query = query.gte('archived_at', f.dateFrom)
-    if (f.dateTo)   query = query.lte('archived_at', f.dateTo + 'T23:59:59')
-
-    const { data, error, count } = await query
-    if (error) console.error('Error fetching archived tasks:', error)
-    else {
-      setTasks(data || [])
-      setTotalCount(count || 0)
+    try {
+      const data = await listArchivedTaskRecords({
+        page: pageIndex,
+        pageSize: PAGE_SIZE,
+        ...currentFilters,
+      })
+      setTasks(data?.items || [])
+      setTotalCount(data?.totalCount || 0)
+    } catch (error) {
+      console.error('Error fetching archived tasks:', error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-  }
+  }, [filters])
 
-  useEffect(() => { fetchArchived(0, filters) }, []) // initial load
+  useEffect(() => { fetchArchived(0, filters) }, [fetchArchived, filters])
 
   const applyFilters = () => {
     setPage(0)
@@ -68,7 +60,6 @@ export default function ArchiveView({ restoreTask }) {
         </span>
       </div>
 
-      {/* Filters */}
       <div className="finance-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <select
           value={filters.category}
@@ -107,7 +98,6 @@ export default function ArchiveView({ restoreTask }) {
         )}
       </div>
 
-      {/* Task list */}
       {loading ? (
         <div className="empty-state" style={{ padding: 32 }}>Carregando...</div>
       ) : tasks.length === 0 ? (
@@ -131,8 +121,8 @@ export default function ArchiveView({ restoreTask }) {
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                   {task.category}
-                  {task.archived_at && ` · Arquivado em ${new Date(task.archived_at).toLocaleDateString('pt-BR')}`}
-                  {task.tags?.length > 0 && ` · ${task.tags.join(' ')}`}
+                  {task.archived_at && ` • Arquivado em ${new Date(task.archived_at).toLocaleDateString('pt-BR')}`}
+                  {task.tags?.length > 0 && ` • ${task.tags.join(' ')}`}
                 </div>
               </div>
               <button
@@ -148,7 +138,6 @@ export default function ArchiveView({ restoreTask }) {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, alignItems: 'center' }}>
           <button
@@ -163,7 +152,7 @@ export default function ArchiveView({ restoreTask }) {
             ← Anterior
           </button>
           <span style={{ fontSize: 13 }}>
-            Página {page + 1} de {totalPages}
+            Pagina {page + 1} de {totalPages}
           </span>
           <button
             className="action-btn"
@@ -174,7 +163,7 @@ export default function ArchiveView({ restoreTask }) {
               fetchArchived(newPage, filters)
             }}
           >
-            Próxima →
+            Proxima →
           </button>
         </div>
       )}

@@ -77,12 +77,26 @@ ALTER TABLE public.fin_categories  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fin_rules       ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public accounts"        ON public.accounts        FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public payees"          ON public.payees          FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public category_groups" ON public.category_groups FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public fin_categories"  ON public.fin_categories  FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public transactions"    ON public.transactions    FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public fin_rules"       ON public.fin_rules       FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service role full access" ON public.accounts;
+DROP POLICY IF EXISTS "service role full access" ON public.payees;
+DROP POLICY IF EXISTS "service role full access" ON public.category_groups;
+DROP POLICY IF EXISTS "service role full access" ON public.fin_categories;
+DROP POLICY IF EXISTS "service role full access" ON public.transactions;
+DROP POLICY IF EXISTS "service role full access" ON public.fin_rules;
+
+DROP POLICY IF EXISTS "Public accounts" ON public.accounts;
+DROP POLICY IF EXISTS "Public payees" ON public.payees;
+DROP POLICY IF EXISTS "Public category_groups" ON public.category_groups;
+DROP POLICY IF EXISTS "Public fin_categories" ON public.fin_categories;
+DROP POLICY IF EXISTS "Public transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Public fin_rules" ON public.fin_rules;
+
+CREATE POLICY "service role full access" ON public.accounts        FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service role full access" ON public.payees          FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service role full access" ON public.category_groups FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service role full access" ON public.fin_categories  FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service role full access" ON public.transactions    FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "service role full access" ON public.fin_rules       FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- 4. SEED DATA
 

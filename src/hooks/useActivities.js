@@ -1,66 +1,72 @@
 // src/hooks/useActivities.js
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import {
+  listActivityRecords,
+  saveActivityRecord,
+  deleteActivityRecord,
+} from '../lib/workspaceCore'
 
 export function useActivities() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!supabase) { setLoading(false); return }
     let cancelled = false
     setLoading(true)
-    supabase
-      .from('activities')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
+
+    listActivityRecords()
+      .then((data) => {
         if (cancelled) return
-        if (error) console.error('Error fetching activities:', error)
-        else setActivities(data || [])
-        setLoading(false)
+        setActivities(data || [])
       })
+      .catch((error) => {
+        if (cancelled) return
+        console.error('Error fetching activities:', error)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
     return () => { cancelled = true }
   }, [])
 
   const addActivity = async (activity) => {
-    if (!supabase) return null
-    const { data, error } = await supabase
-      .from('activities')
-      .insert([activity])
-      .select()
-    if (error) { console.error('Error adding activity:', error); return null }
-    setActivities(prev => [data[0], ...prev])
-    return data[0]
+    try {
+      const created = await saveActivityRecord(activity)
+      setActivities(prev => [created, ...prev])
+      return created
+    } catch (error) {
+      console.error('Error adding activity:', error)
+      return null
+    }
   }
 
   const updateActivity = async (id, updates) => {
-    if (!supabase) return null
-    const { data, error } = await supabase
-      .from('activities')
-      .update(updates)
-      .eq('id', id)
-      .select()
-    if (error) { console.error('Error updating activity:', error); return null }
-    setActivities(prev => prev.map(a => a.id === id ? data[0] : a))
-    return data[0]
+    try {
+      const updated = await saveActivityRecord({ id, ...updates })
+      setActivities(prev => prev.map(a => a.id === id ? updated : a))
+      return updated
+    } catch (error) {
+      console.error('Error updating activity:', error)
+      return null
+    }
   }
 
   const deleteActivity = async (id) => {
-    if (!supabase) return false
-    const { error } = await supabase
-      .from('activities')
-      .delete()
-      .eq('id', id)
-    if (error) { console.error('Error deleting activity:', error); return false }
-    setActivities(prev => prev.filter(a => a.id !== id))
-    return true
+    try {
+      await deleteActivityRecord(id)
+      setActivities(prev => prev.filter(a => a.id !== id))
+      return true
+    } catch (error) {
+      console.error('Error deleting activity:', error)
+      return false
+    }
   }
 
   const getActivitiesFor = (type, id) =>
     activities.filter(a =>
       Array.isArray(a.related_to) &&
-      a.related_to.some(r => r.type === type && r.id === String(id))
+      a.related_to.some(r => r.type === type && String(r.id) === String(id))
     )
 
   return { activities, loading, addActivity, updateActivity, deleteActivity, getActivitiesFor }

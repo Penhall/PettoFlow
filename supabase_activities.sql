@@ -14,19 +14,19 @@ CREATE TABLE IF NOT EXISTS public.activities (
 -- Enable RLS
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 
--- Create policies (public access, consistent with other tables)
+-- Restrict access to service_role only; frontend should go through trusted functions.
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable read access for all users') THEN
-    CREATE POLICY "Enable read access for all users" ON public.activities FOR SELECT USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable insert access for all users') THEN
-    CREATE POLICY "Enable insert access for all users" ON public.activities FOR INSERT WITH CHECK (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable update access for all users') THEN
-    CREATE POLICY "Enable update access for all users" ON public.activities FOR UPDATE USING (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'activities' AND policyname = 'Enable delete access for all users') THEN
-    CREATE POLICY "Enable delete access for all users" ON public.activities FOR DELETE USING (true);
-  END IF;
+  DROP POLICY IF EXISTS "Enable read access for all users" ON public.activities;
+  DROP POLICY IF EXISTS "Enable insert access for all users" ON public.activities;
+  DROP POLICY IF EXISTS "Enable update access for all users" ON public.activities;
+  DROP POLICY IF EXISTS "Enable delete access for all users" ON public.activities;
+  DROP POLICY IF EXISTS "service role full access" ON public.activities;
+
+  CREATE POLICY "service role full access"
+    ON public.activities
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
 END $$;

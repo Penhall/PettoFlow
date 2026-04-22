@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, CheckCircle, DollarSign, Phone, Plus, Edit } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
 import { centsToReal, realToCents } from '../../lib/finUtils'
 
 /**
@@ -24,9 +23,6 @@ import { centsToReal, realToCents } from '../../lib/finUtils'
 export default function EventDetailPanel({
   event,
   onClose,
-  clients = [],
-  tasks = [],
-  team = [],
   columns = [],
   onUpdateTask,
   onUpdateActivity,
@@ -131,7 +127,7 @@ export default function EventDetailPanel({
                 <Plus size={14} /> Criar A Receber
               </button>
               <button className="action-btn" onClick={() => {
-                onUpdateActivity?.(payload.id, { status: 'done' })
+                onUpdateActivity?.(payload.id, { status: 'completed' })
                 onClose()
               }}>
                 <CheckCircle size={14} /> Concluir

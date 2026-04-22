@@ -13,14 +13,25 @@ import ActivitiesView from './components/Activities/ActivitiesView'
 import FinanceView from './components/Finance/FinanceView'
 import ArchiveView from './components/Archive/ArchiveView'
 import CalendarView from './components/Calendar/CalendarView'
+import SettingsView from './components/Settings/SettingsView'
 import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
 import { useCommandPalette } from './hooks/useCommandPalette'
 import { useReceivables } from './hooks/useReceivables'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
+import {
+  fetchWorkspaceBootstrap,
+  createTaskRecord,
+  updateTaskRecord,
+  deleteTaskRecord,
+  archiveTaskRecord,
+  restoreTaskRecord,
+  createColumnRecord,
+  deleteColumnRecord,
+  listActiveAccounts,
+} from './lib/workspaceCore'
 import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder, CalendarDays } from 'lucide-react'
-import { supabase } from './lib/supabaseClient'
 
 const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
 
@@ -41,51 +52,47 @@ function App() {
   const [addModalStatus, setAddModalStatus] = useState('A Fazer')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const { activities } = useActivities()
-  const { isOpen: paletteOpen, query, setQuery, results, open: openPalette, close: closePalette } = useCommandPalette(tasks, clients, activities)
+  const { isOpen: paletteOpen, query, setQuery, results, close: closePalette } = useCommandPalette(tasks, clients, activities)
   const { createReceivable, listReceivables } = useReceivables()
 
-  // Fetch tasks from Supabase
-  const fetchTasks = async () => {
+  const fetchWorkspaceData = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .is('archived_at', null)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching tasks:', error)
-    } else {
-      setTasks(data || [])
+    try {
+      const data = await fetchWorkspaceBootstrap()
+      setTasks(data.tasks || [])
+      setTeam(data.team || [])
+      setClients(data.clients || [])
+      setColumns(data.columns || [])
+    } catch (error) {
+      console.error('Error fetching workspace data:', error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const fetchTeam = async () => {
-    const { data, error } = await supabase.from('team').select('*')
-    if (error) console.error('Error fetching team:', error)
-    else setTeam(data || [])
+    try {
+      const data = await fetchWorkspaceBootstrap()
+      setTeam(data.team || [])
+    } catch (error) {
+      console.error('Error fetching team:', error)
+    }
   }
 
   const fetchClients = async () => {
-    const { data, error } = await supabase.from('clients').select('*').order('name')
-    if (error) console.error('Error fetching clients:', error)
-    else setClients(data || [])
-  }
-
-  const fetchColumns = async () => {
-    const { data, error } = await supabase.from('kanban_columns').select('*').order('order_index')
-    if (error) console.error('Error fetching columns:', error)
-    else setColumns(data || [])
+    try {
+      const data = await fetchWorkspaceBootstrap()
+      setClients(data.clients || [])
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+    }
   }
 
   useEffect(() => {
-    fetchTasks()
-    fetchTeam()
-    fetchClients()
-    fetchColumns()
+    fetchWorkspaceData()
   }, [])
 
   const allTags = useMemo(() => [...new Set((tasks || []).flatMap(t => t.tags || []))], [tasks])
@@ -118,25 +125,23 @@ function App() {
   }
 
   const addTask = async (task) => {
-    const { related_to, ...payload } = task // Stripped out to prevent Supabase PGRST204 errors
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert([{ ...payload, created_at: new Date() }])
-      .select()
-
-    if (error) {
+    const payload = { ...task }
+    delete payload.related_to // tasks.related_to does not exist in the current schema
+    try {
+      const created = await createTaskRecord({ ...payload, created_at: new Date().toISOString() })
+      setTasks(prev => [created, ...prev])
+      setShowAddModal(false)
+      return created
+    } catch (error) {
       console.error('Error adding task:', error)
       alert('Erro ao adicionar tarefa: ' + error.message)
       return null
-    } else {
-      setTasks(prev => [data[0], ...prev])
-      setShowAddModal(false)
-      return data[0]
     }
   }
 
   const updateTask = async (id, updates) => {
-    const { related_to, ...cleanUpdates } = updates
+    const cleanUpdates = { ...updates }
+    delete cleanUpdates.related_to
 
     // Detect if task is moving to the terminal column for the first time
     const terminalColumnName = columns[columns.length - 1]?.name
@@ -146,25 +151,29 @@ function App() {
       cleanUpdates.status === terminalColumnName &&
       task?.status !== terminalColumnName
     )
+    const leavingTerminal = (
+      terminalColumnName &&
+      task?.status === terminalColumnName &&
+      cleanUpdates.status &&
+      cleanUpdates.status !== terminalColumnName
+    )
 
     // Set completed_at the first time a task enters the terminal column
     if (movingToTerminal && !task?.completed_at) {
       cleanUpdates.completed_at = new Date().toISOString()
+    } else if (leavingTerminal) {
+      cleanUpdates.completed_at = null
     }
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .update(cleanUpdates)
-      .eq('id', id)
-      .select()
-
-    if (error) {
+    let updatedTask
+    try {
+      updatedTask = await updateTaskRecord(id, cleanUpdates)
+    } catch (error) {
       console.error('Error updating task:', error)
       alert('Erro ao atualizar tarefa: ' + error.message)
       return
     }
 
-    const updatedTask = data[0]
     setTasks(prev => prev.map(t => t.id === id ? updatedTask : t))
 
     // Auto-create receivable when a Vendas task reaches the terminal column
@@ -172,7 +181,7 @@ function App() {
       const existing = listReceivables({ taskId: Number(id) })
       if (shouldCreateReceivable(updatedTask, existing)) {
         // Fetch accounts directly — useAccounts lives in FinanceView scope, not here
-        const { data: allAccounts } = await supabase.from('accounts').select('*').eq('is_active', true)
+        const allAccounts = await listActiveAccounts()
         const principal = findPrincipal(allAccounts || [])
         if (principal) {
           await createReceivable(id, updatedTask.deal_value, principal.id)
@@ -184,64 +193,54 @@ function App() {
   }
 
   const deleteTask = async (id) => {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error deleting task:', error)
-    } else {
+    try {
+      await deleteTaskRecord(id)
       setTasks(prev => prev.filter(t => t.id !== id))
+    } catch (error) {
+      console.error('Error deleting task:', error)
     }
   }
 
   const archiveTask = async (id) => {
-    const { error } = await supabase
-      .from('tasks')
-      .update({ archived_at: new Date().toISOString() })
-      .eq('id', id)
-    if (error) { console.error('Error archiving task:', error); return }
-    setTasks(prev => prev.filter(t => t.id !== id))
+    try {
+      await archiveTaskRecord(id)
+      setTasks(prev => prev.filter(t => t.id !== id))
+    } catch (error) {
+      console.error('Error archiving task:', error)
+    }
   }
 
   const restoreTask = async (id) => {
-    const { data, error } = await supabase
-      .from('tasks')
-      .update({ archived_at: null })
-      .eq('id', id)
-      .select()
-    if (error) { console.error('Error restoring task:', error); return }
-    if (data?.[0]) {
-      setTasks(prev => [data[0], ...prev.filter(t => t.id !== id)])
-    } else {
-      console.error('restoreTask: no data returned for task', id)
+    try {
+      const restored = await restoreTaskRecord(id)
+      if (restored) {
+        setTasks(prev => [restored, ...prev.filter(t => t.id !== id)])
+      } else {
+        console.error('restoreTask: no data returned for task', id)
+      }
+    } catch (error) {
+      console.error('Error restoring task:', error)
     }
   }
 
   const addColumn = async (name) => {
     const order_index = columns.length > 0 ? Math.max(...columns.map(c => c.order_index)) + 1 : 1
-    const { data, error } = await supabase
-      .from('kanban_columns')
-      .insert([{ name, order_index }])
-      .select()
-    
-    if (error) {
+    try {
+      const created = await createColumnRecord({ name, order_index })
+      setColumns(prev => [...prev, created])
+    } catch (error) {
       console.error('Error adding column:', error)
       alert('Erro ao adicionar coluna Kanban: ' + error.message)
-    } else {
-      setColumns(prev => [...prev, data[0]])
     }
   }
 
   const deleteColumn = async (id) => {
-    const { error } = await supabase
-      .from('kanban_columns')
-      .delete()
-      .eq('id', id)
-    
-    if (error) console.error('Error deleting column:', error)
-    else setColumns(prev => prev.filter(c => c.id !== id))
+    try {
+      await deleteColumnRecord(id)
+      setColumns(prev => prev.filter(c => c.id !== id))
+    } catch (error) {
+      console.error('Error deleting column:', error)
+    }
   }
 
   const openAddModal = (status = 'A Fazer') => {
@@ -277,6 +276,7 @@ function App() {
       case 'financas': return 'Finanças'
       case 'arquivo': return 'Arquivo'
       case 'calendario': return 'Calendário'
+      case 'settings': return 'Configurações'
       default: return 'PettoFlow'
     }
   }
@@ -434,28 +434,23 @@ function App() {
             onAddTask={addTask}
           />
         )
+      case 'settings':
+        return <SettingsView />
       default:
         return null
     }
-  }
-
-  if (!supabase) {
-    return (
-      <div className="loading-screen" style={{ color: '#ef4444' }}>
-        <h2>Configuração Necessária</h2>
-        <p>As variáveis de ambiente do Supabase não foram encontradas.</p>
-        <p style={{ fontSize: '0.9rem', marginTop: '10px', color: '#64748b' }}>
-          Certifique-se de que VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão configuradas no Vercel.
-        </p>
-      </div>
-    )
   }
 
   if (loading) return <div className="loading-screen">Carregando PettoFlow...</div>
 
   return (
     <div className="app-container" onClick={closeMenus}>
-      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={handleTabChange}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+      />
 
       <main className="content">
         <Header
@@ -463,6 +458,7 @@ function App() {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           onExport={exportCSV}
+          onMenuToggle={() => setMobileSidebarOpen(prev => !prev)}
         />
 
         <AnimatePresence mode="wait">

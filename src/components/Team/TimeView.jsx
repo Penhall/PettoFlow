@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Plus, Trash2, X } from 'lucide-react'
-import { supabase } from '../../lib/supabaseClient'
+import { saveTeamMemberRecord, deleteTeamMemberRecord } from '../../lib/workspaceCore'
 
 const MemberModal = ({ member, onSave, onClose }) => {
   const [form, setForm] = useState(member || {
@@ -74,27 +74,30 @@ const TimeView = ({ tasks, team, onRefresh, searchQuery }) => {
   })
 
   const handleSave = async (form) => {
-    const { id, initials: _i, memberTasks: _m, done: _d, ...payload } = form
-    let error
-    if (id) {
-      ({ error } = await supabase.from('team').update(payload).eq('id', id))
-    } else {
-      ({ error } = await supabase.from('team').insert([payload]))
-    }
-    
-    if (error) console.error('Error saving member:', error)
-    else {
+    const payload = { ...form }
+    const { id } = payload
+    delete payload.initials
+    delete payload.memberTasks
+    delete payload.done
+
+    try {
+      await saveTeamMemberRecord({ ...payload, id })
       setShowModal(false)
       setEditingMember(null)
       onRefresh()
+    } catch (error) {
+      console.error('Error saving member:', error)
     }
   }
 
   const handleDelete = async (id) => {
     if (!confirm('Deseja remover este membro do time?')) return
-    const { error } = await supabase.from('team').delete().eq('id', id)
-    if (error) console.error('Error deleting member:', error)
-    else onRefresh()
+    try {
+      await deleteTeamMemberRecord(id)
+      onRefresh()
+    } catch (error) {
+      console.error('Error deleting member:', error)
+    }
   }
 
   return (

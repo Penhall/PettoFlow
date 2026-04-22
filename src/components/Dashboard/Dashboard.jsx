@@ -1,4 +1,4 @@
-import { TrendingUp, CheckCircle, Clock, AlertCircle, BarChart, PieChart, Users, DollarSign } from 'lucide-react'
+import { TrendingUp, Clock, AlertCircle, BarChart, PieChart, Users, DollarSign } from 'lucide-react'
 
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 
@@ -7,7 +7,6 @@ const Dashboard = ({ tasks, columns = [] }) => {
   const firstColumnName = columns.length > 0 ? columns[0].name : 'A Fazer'
 
   const activeTasks = tasks.filter(t => t.status !== doneColumnName).length
-  const completedTasks = tasks.filter(t => t.status === doneColumnName).length
   const lateTasks = tasks.filter(t => t.status === firstColumnName && t.progress === 0).length
   const totalMembers = [...new Set(tasks.map(t => t.owner).filter(Boolean))].length
 
