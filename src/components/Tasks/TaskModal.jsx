@@ -91,6 +91,12 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
     onSave(form)
   }
 
+  // Em telas mobile, o modal vira bottom sheet com animação de slide-up
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const sheetVariants = isMobile
+    ? { hidden: { y: 80, opacity: 0 }, visible: { y: 0, opacity: 1 }, exit: { y: 80, opacity: 0 } }
+    : { hidden: { scale: 0.95, opacity: 0 }, visible: { scale: 1, opacity: 1 }, exit: { scale: 0.95, opacity: 0 } }
+
   return (
     <>
     <motion.div
@@ -102,10 +108,11 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
     >
       <motion.div
         className="modal"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        variants={sheetVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
         onClick={e => e.stopPropagation()}
       >
         <div className="modal-header">

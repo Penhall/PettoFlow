@@ -60,8 +60,29 @@ export default function CalendarView({
     setSelectedEvent(event.extendedProps.calendarEvent)
   }
 
+  // Em mobile: view inicial lista (mais legível), toolbar simplificada
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  const calendarProps = isMobile
+    ? {
+        initialView: 'listMonth',
+        headerToolbar: {
+          left: 'prev,next',
+          center: 'title',
+          right: 'today',
+        },
+      }
+    : {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,listMonth',
+        },
+      }
+
   return (
-    <div style={{ padding: '0 0 24px' }}>
+    <div className="calendar-view-wrapper">
       {!filterTypes && (
         <CalendarFilters active={activeTypes} onChange={setActiveTypes} />
       )}
@@ -73,12 +94,7 @@ export default function CalendarView({
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
         locale={ptBrLocale}
-        initialView="dayGridMonth"
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,listMonth',
-        }}
+        {...calendarProps}
         events={fcEvents}
         eventClick={handleEventClick}
         dateClick={({ dateStr }) => {

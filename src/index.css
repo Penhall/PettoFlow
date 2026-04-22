@@ -142,24 +142,86 @@
   --bg-column:        #212121; /* Clean Twenty gray */
 }
 
+/* ─── Mobile Design Tokens ──────────────────────────────────────────────────── */
+:root {
+  /* Responsive spacing — sobrescrito em breakpoints menores */
+  --space-page:   32px;
+  --space-card:   20px;
+  --space-compact: 12px;
+  --space-gap:    24px;
+
+  /* Touch targets */
+  --touch-target:    44px;
+  --touch-target-sm: 36px;
+
+  /* Fluid type scale via clamp */
+  --text-display:    clamp(1.5rem, 5vw, 2.5rem);
+  --text-heading:    clamp(1.125rem, 3.5vw, 1.75rem);
+  --text-subheading: clamp(1rem, 2.5vw, 1.25rem);
+  --text-body:       clamp(0.875rem, 2vw, 1rem);
+  --text-small:      clamp(0.75rem, 1.5vw, 0.875rem);
+
+  /* Safe area insets para notch / home indicator */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+
+  /* Largura da sidebar (usada para offset do conteúdo) */
+  --sidebar-w:          250px;
+  --sidebar-w-collapsed: 80px;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --space-page: 24px;
+    --space-gap:  20px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --space-page:    16px;
+    --space-card:    16px;
+    --space-compact: 8px;
+    --space-gap:     16px;
+    --sidebar-w:     0px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --space-page:    12px;
+    --space-card:    12px;
+    --space-compact: 6px;
+    --space-gap:     12px;
+  }
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Elimina delay de 300ms em cliques em dispositivos touch */
+button, a, [role="button"], input, select, textarea, label {
+  touch-action: manipulation;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-main);
   color: var(--text-main);
-  min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -332,10 +394,11 @@ body {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 32px;
+  padding: var(--space-page);
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-gap);
+  padding-bottom: calc(var(--space-page) + var(--safe-bottom));
 }
 
 .top-header {
@@ -360,10 +423,16 @@ body {
 
 .page-title {
   font-family: var(--font-serif);
-  font-size: 2.5rem;
+  font-size: var(--text-display);
   font-weight: 400;
   letter-spacing: -0.02em;
   color: var(--text-main);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .header-right {
@@ -751,23 +820,23 @@ body {
 .dashboard-view {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-gap);
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-gap);
 }
 
 .stat-card {
   background: var(--bg-sidebar);
-  padding: 24px;
+  padding: var(--space-card);
   border-radius: var(--radius-md);
   border: var(--border-width) solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   position: relative;
   box-shadow: var(--shadow-sm);
   transition: all 0.2s;
@@ -813,8 +882,8 @@ body {
 
 .stat-trend {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: var(--space-card);
+  right: var(--space-card);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -826,18 +895,18 @@ body {
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 24px;
+  gap: var(--space-gap);
 }
 
 .chart-card {
   background: var(--bg-sidebar);
-  padding: 24px;
+  padding: var(--space-card);
   border-radius: var(--radius-md);
   border: var(--border-width) solid var(--border-color);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-compact);
 }
 
 .card-header {
@@ -1329,6 +1398,7 @@ body {
 .form-group select,
 .form-group textarea {
   padding: 12px 14px;
+  font-size: 1rem; /* ≥16px previne zoom automático em iOS Safari */
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-sidebar);
@@ -1406,7 +1476,7 @@ body {
 .dashboard-section {
   background: var(--card-bg);
   border-radius: var(--radius-md);
-  padding: 24px;
+  padding: var(--space-card);
   border: var(--border-width) solid var(--border-color);
   box-shadow: var(--shadow-sm);
 }
@@ -1585,13 +1655,24 @@ body {
   color: #94A3B8;
   display: flex;
   align-items: center;
-  padding: 2px;
+  justify-content: center;
+  /* Área de toque mínima — padding + margin negativo para não empurrar layout */
+  padding: 6px 4px;
+  margin: -6px -4px;
   border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  transition: color 0.2s, background 0.2s;
+  /* Impede que o browser tente fazer scroll ao segurar o handle */
+  touch-action: none;
+  flex-shrink: 0;
 }
 
 .drag-handle:hover {
   background: var(--primary-light);
+  color: var(--primary);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
   color: var(--primary);
 }
 
@@ -2282,10 +2363,6 @@ body {
   overflow: hidden;
 }
 
-@media (max-width: 768px) {
-  .record-sidebar { width: 100vw; }
-}
-
 .record-sidebar-header {
   display: flex;
   align-items: flex-start;
@@ -2661,6 +2738,887 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE STYLES
+   Breakpoints: 1024px (tablet landscape) | 768px (tablet/mobile) | 480px (small phone)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Sidebar mobile: drawer lateral ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Sidebar vira drawer fora da tela por padrão */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    bottom: 0;
+    height: 100dvh;
+    width: 260px !important;  /* ignora collapsed no mobile */
+    z-index: 300;
+    transition: left 0.28s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.28s;
+    box-shadow: none;
+    padding-top: calc(32px + var(--safe-top));
+    padding-bottom: calc(24px + var(--safe-bottom));
+  }
+
+  /* Sidebar aberta via classe JS */
+  .sidebar.mobile-open {
+    left: 0;
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Overlay escuro atrás do drawer */
+  .sidebar-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 17, 16, 0.55);
+    z-index: 299;
+    cursor: pointer;
+    animation: overlayFadeIn 0.22s ease forwards;
+  }
+
+  /* Botão collapse não existe em mobile */
+  .collapse-btn { display: none; }
+
+  /* Conteúdo ocupa tela inteira — sem margem de sidebar */
+  .content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Header: hambúrguer visível apenas em mobile ──────────────────────────── */
+.hamburger-btn {
+  display: none; /* oculto por padrão em desktop */
+}
+
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--touch-target);
+    height: var(--touch-target);
+    background: var(--bg-main);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    color: var(--text-main);
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .hamburger-btn:hover,
+  .hamburger-btn:active {
+    background: var(--primary);
+    color: var(--bg-main);
+  }
+
+  /* Header compacto em mobile */
+  .top-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 16px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .page-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Search bar: encolhe em mobile */
+  .search-bar {
+    width: 100%;
+    max-width: 100%;
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  /* Ocultar botão de exportar no header em telas menores */
+  .export-btn span { display: none; }
+  .export-btn { padding: 12px; gap: 0; }
+}
+
+@media (max-width: 480px) {
+  /* Search bar vai para segunda linha */
+  .header-right {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ─── Touch targets mínimos (44px) ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* icon-btn.sm: mantém visual pequeno mas expande área de toque */
+  .icon-btn.sm,
+  .action-icon-btn.sm {
+    width: var(--touch-target);
+    height: var(--touch-target);
+    padding: 10px;
+  }
+
+  /* Tiptap toolbar: botões de formatação */
+  .tiptap-toolbar button {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    padding: 10px 12px;
+  }
+
+  /* Type buttons em ActivityForm */
+  .type-btn {
+    min-height: var(--touch-target);
+    padding: 10px 14px;
+  }
+
+  /* Nav items já têm tamanho adequado, mas garantir */
+  .nav-item {
+    min-height: var(--touch-target);
+  }
+
+  /* Chips de remoção */
+  .chip-remove,
+  [class*="chip"] button {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* ─── Kanban: layout responsivo mobile ──────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Board vira coluna vertical — chega ao fim do scroll normal da página */
+  .kanban-board {
+    flex-direction: column;
+    gap: 16px;
+    overflow-x: hidden;
+    min-height: unset;
+    padding-bottom: 16px;
+  }
+
+  /* Cada coluna ocupa toda a largura disponível */
+  .kanban-column {
+    min-width: unset;
+    width: 100%;
+    flex: none;
+    padding: 16px;
+  }
+
+  /* Header da coluna mais compacto */
+  .column-header {
+    padding: 6px 0 14px 0;
+    margin-bottom: 0;
+  }
+
+  .column-header h3 {
+    font-size: 0.9rem;
+  }
+
+  /* Cards empilhados sem scroll interno — a página inteira scrolla */
+  .column-content {
+    overflow-y: visible;
+    min-height: 48px;
+    padding: 12px 0 0 0;
+    gap: 10px;
+  }
+
+  /* Card mais compacto em mobile */
+  .task-card {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+
+  /* Título do card: escala de 1.5rem (desktop) → 1.1rem (mobile) */
+  .task-card h4 {
+    font-size: 1.1rem;
+    line-height: 1.3;
+  }
+
+  /* Drag handle: área de toque 44px (sobrescreve a regra geral do handle) */
+  .drag-handle {
+    padding: 12px 10px;
+    margin: -12px -10px;
+  }
+
+  /* Botão "Nova Coluna" ocupa largura inteira */
+  .add-column-card {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    height: 52px;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  /* Empty column placeholder menor */
+  .empty-column {
+    padding: 16px;
+  }
+
+  /* Linha de hint (30 dias) menor */
+  .kanban-board p[style] {
+    font-size: 10px !important;
+  }
+
+  /* DragOverlay: sombra mais visível em touch para confirmar o drag */
+  .task-card.overlay {
+    transform: scale(1.03) rotate(1.5deg);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+  }
+}
+
+/* Tablet landscape (769–1024px): colunas um pouco mais estreitas, ainda horizontais */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .kanban-board {
+    gap: 20px;
+  }
+
+  .kanban-column {
+    min-width: 260px;
+    padding: 18px;
+  }
+
+  .task-card h4 {
+    font-size: 1.25rem;
+  }
+}
+
+/* ─── Dashboard: grid responsivo ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Coluna lateral de tags vai para baixo do gráfico */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stat card: ícone menor, sem hover transform que fica estranho no touch */
+  .stat-card {
+    gap: 12px;
+  }
+
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  /* Trend badge: menos destaque em mobile */
+  .stat-trend {
+    display: none;
+  }
+
+  /* Barras de progresso no dashboard: label menor */
+  .chart-bar-label {
+    min-width: 60px;
+    font-size: 0.75rem;
+  }
+
+  /* Legenda de tags: texto menor */
+  .bar-row > span:first-child {
+    min-width: 80px;
+    font-size: 0.8rem;
+  }
+
+  /* Tarefas recentes: avatar menor */
+  .recent-task-row {
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .recent-task-title {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Em telas muito pequenas, stat cards em coluna única */
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stat cards horizontais em coluna única ficam mais limpos */
+  .stat-card {
+    padding: 12px 14px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+/* ─── Modais: bottom sheet em mobile ────────────────────────────────────────── */
+
+/* Indicador visual "grab" para o bottom sheet — pseudo-element no topo */
+.modal::before {
+  content: '';
+  display: none; /* oculto por padrão em desktop */
+}
+
+@media (max-width: 768px) {
+  /* Overlay empurra modal para o fundo */
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  /* Bottom sheet principal */
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* Padding: deixar espaço para o grab handle no topo */
+    padding: 24px var(--space-page) 0;
+    padding-bottom: calc(20px + var(--safe-bottom));
+    max-height: 92dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin: 0;
+  }
+
+  /* Grab handle visual (pastilha cinza no topo) */
+  .modal::before {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: -12px auto 20px;
+    opacity: 0.6;
+  }
+
+  /* Header: fonte menor, menos margem inferior */
+  .modal-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .modal-header h2 {
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+  }
+
+  /* Formulário: gap menor entre grupos */
+  .modal-form {
+    gap: 14px;
+  }
+
+  /* form-row: duas colunas em mobile grande, uma coluna em telas pequenas */
+  .form-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .form-row .form-group {
+    flex: 1 1 140px; /* mínimo 140px; dois campos cabem acima de ~300px */
+    min-width: 0;
+  }
+
+  /* Botões de ação: empilhados, largura inteira, ordem invertida (primário em cima) */
+  .modal-actions {
+    justify-content: stretch;
+    flex-direction: column-reverse;
+    gap: 8px;
+    padding-top: 14px;
+  }
+
+  .modal-actions button,
+  .modal-actions .action-btn,
+  .modal-actions .add-member-btn {
+    width: 100%;
+    min-height: var(--touch-target);
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Inputs e selects: altura mínima para touch confortável */
+  .modal .form-group input,
+  .modal .form-group select,
+  .modal .form-group textarea {
+    min-height: 44px;
+    font-size: 1rem; /* evita zoom automático no iOS (precisa ≥16px) */
+  }
+
+  /* Range slider: mais fácil de arrastar */
+  .modal .form-group input[type="range"] {
+    height: 28px;
+  }
+
+  /* Modal "wide" (ex: ClientProfileModal) ocupa mais altura */
+  .modal-wide {
+    max-width: 100%;
+    width: 100%;
+    max-height: 96dvh;
+  }
+
+  /* Profile modal usa RecordSidebar — já tem 100vw no mobile, deixar liso */
+  .profile-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+}
+
+/* ─── Tabelas de Finance: scroll horizontal ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .transaction-table-wrapper,
+  .finance-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Taskbar: empilhar tabs em mobile */
+  .taskbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px var(--space-page);
+  }
+
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+}
+
+/* ─── Tablet landscape (1024px) ──────────────────────────────────────────────── */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .sidebar {
+    width: 220px;
+  }
+}
+
+/* ─── record-sidebar (já existia, mantida aqui centralizada) ─────────────────── */
+@media (max-width: 768px) {
+  .record-sidebar { width: 100vw; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FASE 3 — FULLCALENDAR + FINANÇAS + POLIMENTO FINAL
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── FullCalendar: theming e overrides globais ─────────────────────────────── */
+
+/* Wrapper para controlar overflow no mobile */
+.calendar-view-wrapper {
+  padding: 0 0 24px;
+}
+
+/* Integrar cores do tema no FullCalendar */
+.fc {
+  --fc-border-color: var(--border-color);
+  --fc-button-bg-color: var(--bg-sidebar);
+  --fc-button-border-color: var(--border-color);
+  --fc-button-text-color: var(--text-main);
+  --fc-button-hover-bg-color: var(--primary);
+  --fc-button-hover-border-color: var(--primary);
+  --fc-button-hover-text-color: var(--bg-main);
+  --fc-button-active-bg-color: var(--primary);
+  --fc-button-active-border-color: var(--primary);
+  --fc-button-active-text-color: var(--bg-main);
+  --fc-page-bg-color: var(--bg-main);
+  --fc-neutral-bg-color: var(--bg-sidebar);
+  --fc-today-bg-color: rgba(17,17,16, 0.04);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+
+/* Botões do toolbar: respeitam touch targets */
+.fc .fc-button {
+  border-radius: var(--radius-sm) !important;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  min-height: 36px;
+  padding: 6px 12px !important;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: none !important;
+}
+
+.fc .fc-button:focus { outline: none; box-shadow: none !important; }
+
+/* Título do calendário */
+.fc .fc-toolbar-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+/* Toolbar: alinhar e deixar compacto */
+.fc .fc-toolbar {
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px !important;
+}
+
+/* Cabeçalho de dias: fonte menor e limpa */
+.fc .fc-col-header-cell {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 4px;
+}
+
+/* Número do dia: limpo */
+.fc .fc-daygrid-day-number {
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  color: var(--text-secondary);
+}
+
+/* Evento: respeita tema */
+.fc .fc-event {
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  padding: 1px 4px;
+  border: none !important;
+  cursor: pointer;
+}
+
+/* List view: linhas com espaçamento generoso */
+.fc .fc-list-event td {
+  padding: 10px 12px;
+}
+
+.fc .fc-list-day-cushion {
+  background: var(--bg-sidebar) !important;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+}
+
+/* ─── FullCalendar mobile ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  .calendar-view-wrapper {
+    padding: 0 0 16px;
+  }
+
+  /* Toolbar compacta: empilha se necessário */
+  .fc .fc-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 12px !important;
+  }
+
+  /* Botões de navegação: touch target 44px */
+  .fc .fc-button {
+    min-height: var(--touch-target) !important;
+    min-width: var(--touch-target) !important;
+    padding: 10px 12px !important;
+    font-size: 0.75rem;
+  }
+
+  /* Título menor em mobile */
+  .fc .fc-toolbar-title {
+    font-size: 1.1rem;
+  }
+
+  /* Dias do mês: menor para caber */
+  .fc .fc-daygrid-day-number {
+    font-size: 0.78rem;
+    padding: 2px 4px;
+  }
+
+  /* Cabeçalho: sigla de 1 letra (Seg → S) */
+  .fc .fc-col-header-cell-cushion {
+    font-size: 0.72rem;
+  }
+
+  /* Eventos no mês: texto curto */
+  .fc .fc-event-title {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+
+  /* List view: mais espaço vertical por item */
+  .fc .fc-list-event td {
+    padding: 12px 8px;
+  }
+
+  .fc .fc-list-event-title {
+    font-size: 0.875rem;
+  }
+
+  .fc .fc-list-event-time {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+
+  /* Linha de filter chips acima do calendário */
+  .calendar-filters {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-bottom: 12px;
+  }
+}
+
+/* ─── Finanças: tabelas com scroll horizontal ────────────────────────────────── */
+
+/* A .transaction-list já é o container da tabela — aplicar scroll direto */
+@media (max-width: 768px) {
+
+  /* Scroll horizontal na tabela sem wrapper extra no JSX */
+  .transaction-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mínimo de largura para a tabela caber com scroll */
+  .tx-table {
+    min-width: 520px;
+  }
+
+  /* Em telas muito pequenas: ocultar coluna menos crítica */
+}
+
+@media (max-width: 480px) {
+  /* Ocultar "Conta" (menos crítica) para dar espaço */
+  .tx-table .tx-account,
+  .tx-table th:nth-child(4) {
+    display: none;
+  }
+
+  .tx-table {
+    min-width: 420px;
+  }
+}
+
+/* ─── Finanças: filtros e header responsivos ─────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Finance view: header com tabs scrollável */
+  .finance-view .view-header {
+    gap: 8px;
+  }
+
+  .finance-view .view-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Tabs de finanças: scroll horizontal (5 abas = muito largo para mobile) */
+  .finance-view .tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    flex-wrap: nowrap;
+  }
+
+  .finance-view .tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* Filtros de extrato: empilhar em coluna */
+  .finance-filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .finance-filters select,
+  .finance-filters input[type="date"] {
+    width: 100%;
+    min-width: unset;
+    min-height: var(--touch-target);
+    font-size: 1rem;
+  }
+
+  /* AccountCard: compacto em mobile */
+  .account-card {
+    padding: 14px;
+  }
+
+  .account-card-header {
+    gap: 8px;
+  }
+
+  /* Summary cards de finanças: 2 colunas */
+  .finance-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* Review banner: scroll se necessário */
+  .review-banner {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+}
+
+/* ─── Tiptap editor: touch-friendly ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Toolbar já tem botões de 44px (Fase 1), mas melhorar o wrapping */
+  .tiptap-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  /* Conteúdo: fonte mínima 16px para evitar zoom iOS */
+  .tiptap-content {
+    font-size: 1rem;
+    padding: 14px;
+    min-height: 120px;
+  }
+}
+
+/* ─── Polimento final: tipografia fluida em títulos de seção ─────────────────── */
+
+/* View-level headings (Finance, Activities, etc.) */
+.view-header h3,
+.finance-view h3,
+.dashboard-section h3 {
+  font-size: var(--text-subheading);
+}
+
+/* Títulos de cards */
+.chart-card .card-header h3,
+.info-card h3 {
+  font-size: var(--text-small);
+}
+
+/* Stat value: já usa clamp em mobile, mas garantir linha de base */
+.stat-value {
+  line-height: 1.1;
+}
+
+/* ─── Safe area: bottom para dispositivos com home indicator ─────────────────── */
+
+/* Toasts: acima do home indicator */
+.toast-stack {
+  bottom: calc(16px + var(--safe-bottom));
+}
+
+/* ReminderToast específico */
+.reminder-toast,
+[class*="toast"] {
+  bottom: calc(16px + var(--safe-bottom));
+}
+
+/* Sidebar mobile aberta: padding superior para notch */
+@media (max-width: 768px) {
+  .sidebar {
+    padding-left: calc(20px + var(--safe-left));
+  }
+}
+
+/* ─── View header genérico: actions responsivas ──────────────────────────────── */
+@media (max-width: 768px) {
+  .view-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .view-header h3 {
+    font-size: var(--text-heading);
+  }
+
+  .view-controls {
+    width: 100%;
+  }
+
+  /* "Nova Transação", "Novo Cliente" etc: ocupar linha inteira */
+  .view-controls .actions {
+    width: 100%;
+  }
+
+  .view-controls .actions .add-member-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--touch-target);
+  }
+}
+
+/* ─── Taskbar de tarefas: mais compacto e scrollável ────────────────────────── */
+@media (max-width: 768px) {
+  /* Tab buttons: menor padding, sem uppercase forçado */
+  .tab-btn {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* Action buttons: ícone + texto compacto */
+  .action-btn {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+
+  /* Actions no taskbar de tarefas: scroll horizontal */
+  .taskbar .actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+}
+
+/* ─── Inputs globais: garantir 44px mínimo em mobile ────────────────────────── */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="date"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 1rem; /* previne zoom iOS em qualquer input da app */
+  }
+
+  input[type="range"] {
+    min-height: 28px; /* range não precisa de 44px, mas precisa ser tocável */
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: unset; /* não aplicar 44px em checkboxes */
+    width: auto;
+  }
 }
 
 /* --- Shared helpers (Finance scope) --- */

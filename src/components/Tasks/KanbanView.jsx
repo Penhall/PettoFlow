@@ -7,6 +7,7 @@ import {
   closestCorners,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -135,7 +136,10 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
   const [deletingColumn, setDeletingColumn] = useState(null)
   
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Mouse/stylus: distância mínima de 8px para evitar drag acidental
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    // Touch: delay de 250ms + tolerância de 8px para não conflitar com scroll
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 

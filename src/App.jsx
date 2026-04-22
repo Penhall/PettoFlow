@@ -52,6 +52,7 @@ function App() {
   const [addModalStatus, setAddModalStatus] = useState('A Fazer')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const { activities } = useActivities()
   const { isOpen: paletteOpen, query, setQuery, results, close: closePalette } = useCommandPalette(tasks, clients, activities)
@@ -444,7 +445,12 @@ function App() {
 
   return (
     <div className="app-container" onClick={closeMenus}>
-      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={handleTabChange}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+      />
 
       <main className="content">
         <Header
@@ -452,6 +458,7 @@ function App() {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           onExport={exportCSV}
+          onMenuToggle={() => setMobileSidebarOpen(prev => !prev)}
         />
 
         <AnimatePresence mode="wait">
