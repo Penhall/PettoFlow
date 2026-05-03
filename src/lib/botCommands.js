@@ -1,6 +1,5 @@
 // src/lib/botCommands.js
-
-import { botAdminFetch } from './botAdmin.js'
+import { authenticatedFetch } from './apiFetch.js'
 
 const BOT_COMMANDS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bot-commands`
 
@@ -20,12 +19,12 @@ async function parseResponse(res, fallbackMessage) {
 }
 
 export async function listCommands() {
-  const res = await botAdminFetch(BOT_COMMANDS_URL, { method: 'GET' })
+  const res = await authenticatedFetch(BOT_COMMANDS_URL, { method: 'GET' })
   return parseResponse(res, `Erro ao listar comandos: ${res.status}`)
 }
 
 export async function createCommand(command) {
-  const res = await botAdminFetch(BOT_COMMANDS_URL, {
+  const res = await authenticatedFetch(BOT_COMMANDS_URL, {
     method: 'POST',
     body: JSON.stringify(command),
   })
@@ -33,7 +32,7 @@ export async function createCommand(command) {
 }
 
 export async function updateCommand(id, patch) {
-  const res = await botAdminFetch(`${BOT_COMMANDS_URL}/${id}`, {
+  const res = await authenticatedFetch(`${BOT_COMMANDS_URL}/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
@@ -45,14 +44,14 @@ export async function toggleCommand(id, isActive) {
 }
 
 export async function deleteCommand(id) {
-  const res = await botAdminFetch(`${BOT_COMMANDS_URL}/${id}`, {
+  const res = await authenticatedFetch(`${BOT_COMMANDS_URL}/${id}`, {
     method: 'DELETE',
   })
   return parseResponse(res, `Erro ${res.status}`)
 }
 
 export async function seedDefaultCommands() {
-  const res = await botAdminFetch(`${BOT_COMMANDS_URL}/seed`, {
+  const res = await authenticatedFetch(`${BOT_COMMANDS_URL}/seed`, {
     method: 'POST',
   })
   return parseResponse(res, `Erro ao seedar comandos: ${res.status}`)

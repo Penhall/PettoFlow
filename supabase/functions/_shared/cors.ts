@@ -1,5 +1,5 @@
 const DEFAULT_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS'
-const DEFAULT_HEADERS = 'Content-Type, X-Bot-Config-Key, X-Workspace-Key'
+const DEFAULT_HEADERS = 'Content-Type, Authorization, X-Tenant-Id'
 
 function getConfiguredOrigins(): string[] {
   const raw = Deno.env.get('ALLOWED_APP_ORIGIN')

@@ -256,7 +256,7 @@ function App() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'pettoflow-tarefas.csv'
+    a.download = 'nexuscrm-tarefas.csv'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -277,7 +277,7 @@ function App() {
       case 'arquivo': return 'Arquivo'
       case 'calendario': return 'Calendário'
       case 'settings': return 'Configurações'
-      default: return 'PettoFlow'
+      default: return 'NexusCRM'
     }
   }
 
@@ -441,7 +441,7 @@ function App() {
     }
   }
 
-  if (loading) return <div className="loading-screen">Carregando PettoFlow...</div>
+  if (loading) return <div className="loading-screen">Carregando NexusCRM...</div>
 
   return (
     <div className="app-container" onClick={closeMenus}>

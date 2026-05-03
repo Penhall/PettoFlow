@@ -25,7 +25,7 @@ export async function recordTransaction(
   amount: number
 ): Promise<string> {
   const accountId = await getPrincipalAccountId(sb)
-  if (!accountId) return '❌ Nenhuma conta encontrada. Crie uma conta no PettoFlow antes de usar este comando.'
+  if (!accountId) return '❌ Nenhuma conta encontrada. Crie uma conta no NexusCRM antes de usar este comando.'
 
   const amountCents = Math.round(Math.abs(amount) * 100)
   const signedAmount = direction === 'out' ? -amountCents : amountCents

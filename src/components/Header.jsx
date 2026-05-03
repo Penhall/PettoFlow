@@ -1,19 +1,30 @@
-import { Search, Bell, Download, Palette, Menu } from 'lucide-react'
+import { Search, Bell, Download, Palette, Menu, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../hooks/useAuth.js'
+import TenantSwitcher from './tenant/TenantSwitcher.jsx'
 
 const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
   const { theme, setTheme, themes } = useTheme()
+  const { user, signOut } = useAuth()
   const [showThemeMenu, setShowThemeMenu] = useState(false)
+
+  async function handleSignOut() {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Erro ao encerrar sessao:', error)
+      alert('Nao foi possivel sair do NexusCRM agora.')
+    }
+  }
 
   return (
     <header className="top-header">
       <div className="header-left">
-        {/* Hambúrguer — visível apenas em mobile via CSS (.hamburger-btn) */}
         <button
           className="hamburger-btn"
           onClick={onMenuToggle}
-          aria-label="Abrir menu de navegação"
+          aria-label="Abrir menu de navegacao"
         >
           <Menu size={22} />
         </button>
@@ -22,6 +33,8 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
       </div>
 
       <div className="header-right">
+        <TenantSwitcher />
+
         <div className="search-bar">
           <Search size={18} />
           <input
@@ -31,12 +44,12 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
             onChange={e => onSearch(e.target.value)}
           />
           {searchQuery && (
-            <button className="clear-search" onClick={() => onSearch('')}>✕</button>
+            <button className="clear-search" onClick={() => onSearch('')}>x</button>
           )}
         </div>
 
         <div className="dropdown-wrapper" style={{ position: 'relative' }}>
-          <button className="icon-btn" onClick={() => setShowThemeMenu(!showThemeMenu)} title="Alternar Tema">
+          <button className="icon-btn" onClick={() => setShowThemeMenu(!showThemeMenu)} title="Alternar tema">
             <Palette size={20} />
           </button>
           {showThemeMenu && (
@@ -45,7 +58,7 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
                 <button
                   key={t.id}
                   className={theme === t.id ? 'selected' : ''}
-                  onClick={() => { setTheme(t.id); setShowThemeMenu(false); }}
+                  onClick={() => { setTheme(t.id); setShowThemeMenu(false) }}
                 >
                   {t.name}
                 </button>
@@ -55,9 +68,17 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
         </div>
 
         <button className="icon-btn"><Bell size={20} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            {user?.email || 'Usuario autenticado'}
+          </span>
+          <button className="icon-btn" onClick={handleSignOut} title="Sair do NexusCRM" aria-label="Sair do NexusCRM">
+            <LogOut size={18} />
+          </button>
+        </div>
         <button className="export-btn" onClick={onExport}>
           <Download size={16} />
-          <span>Exportar Dados</span>
+          <span>Exportar dados</span>
         </button>
       </div>
     </header>

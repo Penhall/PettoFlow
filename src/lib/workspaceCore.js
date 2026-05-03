@@ -1,4 +1,5 @@
-import { workspaceFetch } from './workspaceAccess.js'
+import { authenticatedFetch } from './apiFetch.js'
+import { getRequiredActiveTenantId } from './activeTenant.js'
 
 const WORKSPACE_CORE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/workspace-core`
 
@@ -28,12 +29,19 @@ function buildUrl(path, query = null) {
   return url.toString()
 }
 
-async function request(path, { method = 'GET', body, query, fallbackMessage } = {}) {
-  const res = await workspaceFetch(buildUrl(path, query), {
+export async function workspaceCoreRequest(path, { method = 'GET', body, query, fallbackMessage, tenantId } = {}) {
+  const resolvedTenantId = tenantId ?? getRequiredActiveTenantId()
+  const res = await authenticatedFetch(buildUrl(path, query), {
     method,
     body: body === undefined ? undefined : JSON.stringify(body),
+    tenantId: resolvedTenantId,
+    requireTenant: true,
   })
   return parseResponse(res, fallbackMessage ?? `Erro na requisição: ${res.status}`)
+}
+
+async function request(path, options = {}) {
+  return workspaceCoreRequest(path, options)
 }
 
 export async function fetchWorkspaceBootstrap() {

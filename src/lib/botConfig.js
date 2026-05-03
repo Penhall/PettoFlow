@@ -1,6 +1,5 @@
 // src/lib/botConfig.js
-
-import { botAdminFetch } from './botAdmin.js'
+import { authenticatedFetch } from './apiFetch.js'
 
 const BOT_CONFIG_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bot-config`
 
@@ -20,13 +19,13 @@ async function parseResponse(res, fallbackMessage) {
 }
 
 export async function getBotConfig() {
-  const res = await botAdminFetch(BOT_CONFIG_URL, { method: 'GET' })
+  const res = await authenticatedFetch(BOT_CONFIG_URL, { method: 'GET' })
   if (res.status === 404 || res.status === 204) return null
   return parseResponse(res, `Erro ao buscar config: ${res.status}`)
 }
 
 export async function saveBotConfig({ telegramBotToken, llmApiKey, llmProvider, confirmationThreshold }) {
-  const res = await botAdminFetch(BOT_CONFIG_URL, {
+  const res = await authenticatedFetch(BOT_CONFIG_URL, {
     method: 'POST',
     body: JSON.stringify({
       telegram_bot_token: telegramBotToken,
@@ -39,7 +38,7 @@ export async function saveBotConfig({ telegramBotToken, llmApiKey, llmProvider, 
 }
 
 export async function updateBotConfig(patch) {
-  const res = await botAdminFetch(BOT_CONFIG_URL, {
+  const res = await authenticatedFetch(BOT_CONFIG_URL, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
@@ -47,7 +46,7 @@ export async function updateBotConfig(patch) {
 }
 
 export async function deleteBotConfig() {
-  const res = await botAdminFetch(BOT_CONFIG_URL, {
+  const res = await authenticatedFetch(BOT_CONFIG_URL, {
     method: 'DELETE',
   })
   return parseResponse(res, `Erro ao remover: ${res.status}`)

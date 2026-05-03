@@ -35,8 +35,8 @@ const Sidebar = ({ activeTab, setActiveTab, mobileOpen, onMobileClose }) => {
 
       <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="logo-container">
-          <div className="logo-icon">PF</div>
-          {!isCollapsed && <span className="logo-text">PettoFlow</span>}
+          <div className="logo-icon">NC</div>
+          {!isCollapsed && <span className="logo-text">NexusCRM</span>}
         </div>
 
         <button
@@ -65,7 +65,7 @@ const Sidebar = ({ activeTab, setActiveTab, mobileOpen, onMobileClose }) => {
             <div className="avatar">P</div>
             {!isCollapsed && (
               <div className="user-info">
-                <span className="user-name">Usuário Petto</span>
+                <span className="user-name">Usuário NexusCRM</span>
                 <span className="user-role">Administrador</span>
               </div>
             )}

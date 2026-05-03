@@ -54,7 +54,7 @@ export default function OnboardingWizard({ onConnected }) {
           body: (
             <p>
               Envie o comando <code>/newbot</code> e siga as instrucoes para criar seu bot
-              pessoal do PettoFlow.
+              pessoal do NexusCRM.
             </p>
           ),
           done: hasToken,

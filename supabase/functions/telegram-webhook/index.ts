@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
       const body = auth.body as { message?: { chat?: { id: number } } }
       const chatId = body?.message?.chat?.id
       if (chatId) {
-        await sendMessage(botToken, chatId, '⏸️ Bot pausado. Reative nas Configurações do PettoFlow.')
+        await sendMessage(botToken, chatId, '⏸️ Bot pausado. Reative nas Configurações do NexusCRM.')
       }
     }
     return new Response('', { status: auth.status ?? 200 })
@@ -117,7 +117,7 @@ Deno.serve(async (req: Request) => {
         return new Response('OK', { status: 200 })
       }
     } else {
-      if (chatId) await sendMessage(botToken, chatId, '🎤 Mensagens de voz requerem a API do Google Gemini. Configure nas Configurações do PettoFlow.')
+      if (chatId) await sendMessage(botToken, chatId, '🎤 Mensagens de voz requerem a API do Google Gemini. Configure nas Configurações do NexusCRM.')
       return new Response('OK', { status: 200 })
     }
   }
@@ -242,13 +242,13 @@ Deno.serve(async (req: Request) => {
           const newIds = [...config.allowed_telegram_ids, fromId]
           await sb.from('bot_configs').update({ allowed_telegram_ids: newIds }).eq('id', configRow.id)
         }
-        responseText = `👋 Olá! Sou o bot do PettoFlow.\nSeu ID Telegram é: <code>${fromId}</code>\n\n${HELP_TEXT}`
+        responseText = `👋 Olá! Sou o bot do NexusCRM.\nSeu ID Telegram é: <code>${fromId}</code>\n\n${HELP_TEXT}`
         break
       case 'bot.help':
         responseText = HELP_TEXT
         break
       case 'bot.status':
-        responseText = '✅ Bot ativo e conectado ao PettoFlow.'
+        responseText = '✅ Bot ativo e conectado ao NexusCRM.'
         break
       default:
         responseText = '🤔 Não entendi. Tente /ajuda.'

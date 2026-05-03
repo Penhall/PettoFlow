@@ -1,6 +1,7 @@
 import { json, preflight } from '../_shared/cors.ts'
 import { getSupabaseClient } from '../_shared/supabase.ts'
-import { requireWorkspaceAccess, workspaceAuthError } from '../_shared/workspace-auth.ts'
+import { requireAuthenticatedUser } from '../_shared/auth.ts'
+import { requireTenantAccess } from '../_shared/tenant.ts'
 
 function parseId(segment: string | null) {
   if (!segment) return null
@@ -77,6 +78,14 @@ function getRange(page: number, pageSize: number) {
   return { from, to }
 }
 
+function scopeTenantQuery<T>(query: T, tenantId: string) {
+  return (query as { eq: (column: string, value: string) => T }).eq('tenant_id', tenantId)
+}
+
+function injectTenantId(body: Record<string, unknown>, tenantId: string) {
+  return { ...body, tenant_id: tenantId }
+}
+
 const TASK_CREATE_FIELDS = ['title', 'status', 'priority', 'owner', 'tags', 'progress', 'deal_value', 'client_id', 'category', 'due_date', 'created_at', 'completed_at']
 const TASK_UPDATE_FIELDS = ['title', 'status', 'priority', 'owner', 'tags', 'progress', 'deal_value', 'client_id', 'category', 'due_date', 'completed_at']
 const COLUMN_FIELDS = ['name', 'order_index']
@@ -96,10 +105,15 @@ const INTERACTION_LOG_FIELDS = ['client_id', 'type', 'notes']
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return preflight(req, 'GET, POST, PATCH, DELETE, OPTIONS')
-  if (!requireWorkspaceAccess(req)) return workspaceAuthError(req)
+  const auth = await requireAuthenticatedUser(req)
+  if (!auth.ok) return auth.response
+
+  const tenantAccess = await requireTenantAccess(req, auth.user.id)
+  if (!tenantAccess.ok) return tenantAccess.response
 
   const sb = getSupabaseClient()
   const { url, routeParts } = getRouteParts(req)
+  const tenantId = tenantAccess.tenantId
   const resource = routeParts[0] ?? null
   const resourceId = routeParts[1] ?? null
   const action = routeParts[2] ?? null
@@ -107,10 +121,10 @@ Deno.serve(async (req: Request) => {
   try {
     if (req.method === 'GET' && resource === 'bootstrap') {
       const [tasksResult, teamResult, clientsResult, columnsResult] = await Promise.all([
-        sb.from('tasks').select('*').is('archived_at', null).order('created_at', { ascending: false }),
-        sb.from('team').select('*').order('id'),
-        sb.from('clients').select('*').order('name'),
-        sb.from('kanban_columns').select('*').order('order_index'),
+        scopeTenantQuery(sb.from('tasks').select('*').is('archived_at', null), tenantId).order('created_at', { ascending: false }),
+        scopeTenantQuery(sb.from('team').select('*'), tenantId).order('id'),
+        scopeTenantQuery(sb.from('clients').select('*'), tenantId).order('name'),
+        scopeTenantQuery(sb.from('kanban_columns').select('*'), tenantId).order('order_index'),
       ])
 
       if (tasksResult.error) return json(req, { error: tasksResult.error.message }, 500)
@@ -138,12 +152,12 @@ Deno.serve(async (req: Request) => {
       const dateTo = url.searchParams.get('dateTo') ?? ''
       const { from, to } = getRange(parsedPage.value, parsedPageSize.value)
 
-      let query = sb
+      let query = scopeTenantQuery(sb
         .from('tasks')
         .select('*', { count: 'exact' })
         .not('archived_at', 'is', null)
         .order('archived_at', { ascending: false })
-        .range(from, to)
+        .range(from, to), tenantId)
 
       if (category) query = query.eq('category', category)
       if (tag) query = query.contains('tags', [tag])
@@ -156,7 +170,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'tasks' && !resourceId) {
-      const body = pickFields(await req.json(), TASK_CREATE_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), TASK_CREATE_FIELDS), tenantId)
       const { data, error } = await sb.from('tasks').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -165,8 +179,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'tasks' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Task id invalido' }, 400)
-      const body = pickFields(await req.json(), TASK_UPDATE_FIELDS)
-      const { data, error } = await sb.from('tasks').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), TASK_UPDATE_FIELDS), tenantId)
+      let query = sb.from('tasks').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -174,7 +190,9 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'tasks' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Task id invalido' }, 400)
-      const { error } = await sb.from('tasks').delete().eq('id', id)
+      let query = sb.from('tasks').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
@@ -182,7 +200,9 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'POST' && resource === 'tasks' && resourceId && action === 'archive') {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Task id invalido' }, 400)
-      const { error } = await sb.from('tasks').update({ archived_at: new Date().toISOString() }).eq('id', id)
+      let query = sb.from('tasks').update({ archived_at: new Date().toISOString() }).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
@@ -190,13 +210,15 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'POST' && resource === 'tasks' && resourceId && action === 'restore') {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Task id invalido' }, 400)
-      const { data, error } = await sb.from('tasks').update({ archived_at: null }).eq('id', id).select().single()
+      let query = sb.from('tasks').update({ archived_at: null }).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
 
     if (req.method === 'POST' && resource === 'columns' && !resourceId) {
-      const body = pickFields(await req.json(), COLUMN_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), COLUMN_FIELDS), tenantId)
       const { data, error } = await sb.from('kanban_columns').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -205,13 +227,15 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'columns' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Column id invalido' }, 400)
-      const { error } = await sb.from('kanban_columns').delete().eq('id', id)
+      let query = sb.from('kanban_columns').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'POST' && resource === 'team' && !resourceId) {
-      const body = pickFields(await req.json(), TEAM_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), TEAM_FIELDS), tenantId)
       const { data, error } = await sb.from('team').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -220,8 +244,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'team' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Team id invalido' }, 400)
-      const body = pickFields(await req.json(), TEAM_FIELDS)
-      const { data, error } = await sb.from('team').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), TEAM_FIELDS), tenantId)
+      let query = sb.from('team').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -229,13 +255,15 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'team' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Team id invalido' }, 400)
-      const { error } = await sb.from('team').delete().eq('id', id)
+      let query = sb.from('team').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'POST' && resource === 'clients' && !resourceId) {
-      const body = pickFields(await req.json(), CLIENT_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), CLIENT_FIELDS), tenantId)
       const { data, error } = await sb.from('clients').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -244,8 +272,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'clients' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Client id invalido' }, 400)
-      const body = pickFields(await req.json(), CLIENT_FIELDS)
-      const { data, error } = await sb.from('clients').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), CLIENT_FIELDS), tenantId)
+      let query = sb.from('clients').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -253,19 +283,21 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'clients' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Client id invalido' }, 400)
-      const { error } = await sb.from('clients').delete().eq('id', id)
+      let query = sb.from('clients').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'GET' && resource === 'activities' && !resourceId) {
-      const { data, error } = await sb.from('activities').select('*').order('created_at', { ascending: false })
+      const { data, error } = await scopeTenantQuery(sb.from('activities').select('*'), tenantId).order('created_at', { ascending: false })
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'activities' && !resourceId) {
-      const body = pickFields(await req.json(), ACTIVITY_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), ACTIVITY_FIELDS), tenantId)
       const { data, error } = await sb.from('activities').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -274,8 +306,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'activities' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Activity id invalido' }, 400)
-      const body = pickFields(await req.json(), ACTIVITY_FIELDS)
-      const { data, error } = await sb.from('activities').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), ACTIVITY_FIELDS), tenantId)
+      let query = sb.from('activities').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -283,19 +317,21 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'activities' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Activity id invalido' }, 400)
-      const { error } = await sb.from('activities').delete().eq('id', id)
+      let query = sb.from('activities').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'GET' && resource === 'activity-templates' && !resourceId) {
-      const { data, error } = await sb.from('activity_templates').select('*').order('name')
+      const { data, error } = await scopeTenantQuery(sb.from('activity_templates').select('*'), tenantId).order('name')
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'activity-templates' && !resourceId) {
-      const body = pickFields(await req.json(), ACTIVITY_TEMPLATE_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), ACTIVITY_TEMPLATE_FIELDS), tenantId)
       const { data, error } = await sb.from('activity_templates').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -304,8 +340,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'activity-templates' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Template id invalido' }, 400)
-      const body = pickFields(await req.json(), ACTIVITY_TEMPLATE_FIELDS)
-      const { data, error } = await sb.from('activity_templates').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), ACTIVITY_TEMPLATE_FIELDS), tenantId)
+      let query = sb.from('activity_templates').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -313,25 +351,27 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'activity-templates' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Template id invalido' }, 400)
-      const { error } = await sb.from('activity_templates').delete().eq('id', id)
+      let query = sb.from('activity_templates').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'GET' && resource === 'accounts' && !resourceId) {
-      const { data, error } = await sb.from('accounts').select('*').order('sort_order', { ascending: true })
+      const { data, error } = await scopeTenantQuery(sb.from('accounts').select('*'), tenantId).order('sort_order', { ascending: true })
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'GET' && resource === 'accounts' && resourceId === 'active') {
-      const { data, error } = await sb.from('accounts').select('*').eq('is_active', true)
+      const { data, error } = await scopeTenantQuery(sb.from('accounts').select('*').eq('is_active', true), tenantId)
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'accounts' && !resourceId) {
-      const body = pickFields(await req.json(), ACCOUNT_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), ACCOUNT_FIELDS), tenantId)
       const { data, error } = await sb.from('accounts').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -340,20 +380,22 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'accounts' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Account id invalido' }, 400)
-      const body = pickFields(await req.json(), ACCOUNT_FIELDS)
-      const { data, error } = await sb.from('accounts').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), ACCOUNT_FIELDS), tenantId)
+      let query = sb.from('accounts').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
 
     if (req.method === 'GET' && resource === 'payees' && !resourceId) {
-      const { data, error } = await sb.from('payees').select('*').order('name', { ascending: true })
+      const { data, error } = await scopeTenantQuery(sb.from('payees').select('*'), tenantId).order('name', { ascending: true })
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'payees' && !resourceId) {
-      const body = pickFields(await req.json(), PAYEE_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), PAYEE_FIELDS), tenantId)
       const { data, error } = await sb.from('payees').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -362,20 +404,22 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'payees' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Payee id invalido' }, 400)
-      const body = pickFields(await req.json(), PAYEE_FIELDS)
-      const { data, error } = await sb.from('payees').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), PAYEE_FIELDS), tenantId)
+      let query = sb.from('payees').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
 
     if (req.method === 'GET' && resource === 'fin-rules' && !resourceId) {
-      const { data, error } = await sb.from('fin_rules').select('*').order('priority', { ascending: true })
+      const { data, error } = await scopeTenantQuery(sb.from('fin_rules').select('*'), tenantId).order('priority', { ascending: true })
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'fin-rules' && !resourceId) {
-      const body = pickFields(await req.json(), FIN_RULE_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), FIN_RULE_FIELDS), tenantId)
       const { data, error } = await sb.from('fin_rules').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -384,8 +428,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'fin-rules' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Rule id invalido' }, 400)
-      const body = pickFields(await req.json(), FIN_RULE_FIELDS)
-      const { data, error } = await sb.from('fin_rules').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), FIN_RULE_FIELDS), tenantId)
+      let query = sb.from('fin_rules').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -393,15 +439,17 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'fin-rules' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Rule id invalido' }, 400)
-      const { error } = await sb.from('fin_rules').delete().eq('id', id)
+      let query = sb.from('fin_rules').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'GET' && resource === 'fin-categories' && !resourceId) {
       const [groupsRes, catsRes] = await Promise.all([
-        sb.from('category_groups').select('*').order('sort_order'),
-        sb.from('fin_categories').select('*').order('sort_order'),
+        scopeTenantQuery(sb.from('category_groups').select('*'), tenantId).order('sort_order'),
+        scopeTenantQuery(sb.from('fin_categories').select('*'), tenantId).order('sort_order'),
       ])
       if (groupsRes.error) return json(req, { error: groupsRes.error.message }, 500)
       if (catsRes.error) return json(req, { error: catsRes.error.message }, 500)
@@ -409,14 +457,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'fin-categories' && resourceId === 'groups') {
-      const body = pickFields(await req.json(), CATEGORY_GROUP_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), CATEGORY_GROUP_FIELDS), tenantId)
       const { data, error } = await sb.from('category_groups').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
     }
 
     if (req.method === 'POST' && resource === 'fin-categories' && resourceId === 'items') {
-      const body = pickFields(await req.json(), FIN_CATEGORY_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), FIN_CATEGORY_FIELDS), tenantId)
       const { data, error } = await sb.from('fin_categories').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -425,14 +473,16 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'fin-categories' && resourceId === 'items' && action) {
       const id = parseId(action)
       if (!id) return json(req, { error: 'Category id invalido' }, 400)
-      const body = pickFields(await req.json(), FIN_CATEGORY_FIELDS)
-      const { data, error } = await sb.from('fin_categories').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), FIN_CATEGORY_FIELDS), tenantId)
+      let query = sb.from('fin_categories').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
 
     if (req.method === 'GET' && resource === 'transactions' && !resourceId) {
-      let query = sb.from('transactions').select('*')
+      let query = scopeTenantQuery(sb.from('transactions').select('*'), tenantId)
       const accountId = parseOptionalPositiveInt(url.searchParams.get('accountId'), 'accountId')
       if (accountId.error) return json(req, { error: accountId.error }, 400)
       const categoryId = parseOptionalPositiveInt(url.searchParams.get('categoryId'), 'categoryId')
@@ -472,7 +522,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'transactions' && !resourceId) {
-      const body = pickFields(await req.json(), TRANSACTION_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), TRANSACTION_FIELDS), tenantId)
       const { data, error } = await sb.from('transactions').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -481,8 +531,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'transactions' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Transaction id invalido' }, 400)
-      const body = pickFields(await req.json(), TRANSACTION_FIELDS)
-      const { data, error } = await sb.from('transactions').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), TRANSACTION_FIELDS), tenantId)
+      let query = sb.from('transactions').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -490,13 +542,15 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'DELETE' && resource === 'transactions' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Transaction id invalido' }, 400)
-      const { error } = await sb.from('transactions').delete().eq('id', id)
+      let query = sb.from('transactions').delete().eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { error } = await query
       if (error) return json(req, { error: error.message }, 500)
       return json(req, { ok: true })
     }
 
     if (req.method === 'GET' && resource === 'receivables' && !resourceId) {
-      const { data, error } = await sb
+      const { data, error } = await scopeTenantQuery(sb
         .from('receivables')
         .select(`
           *,
@@ -504,13 +558,13 @@ Deno.serve(async (req: Request) => {
           activities ( title, id ),
           accounts ( name )
         `)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }), tenantId)
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'receivables' && !resourceId) {
-      const body = pickFields(await req.json(), RECEIVABLE_CREATE_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), RECEIVABLE_CREATE_FIELDS), tenantId)
       const { data, error } = await sb.from('receivables').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)
@@ -519,8 +573,10 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'PATCH' && resource === 'receivables' && resourceId) {
       const id = parseId(resourceId)
       if (!id) return json(req, { error: 'Receivable id invalido' }, 400)
-      const body = pickFields(await req.json(), RECEIVABLE_UPDATE_FIELDS)
-      const { data, error } = await sb.from('receivables').update(body).eq('id', id).select().single()
+      const body = injectTenantId(pickFields(await req.json(), RECEIVABLE_UPDATE_FIELDS), tenantId)
+      let query = sb.from('receivables').update(body).eq('id', id)
+      query = scopeTenantQuery(query, tenantId)
+      const { data, error } = await query.select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data)
     }
@@ -531,17 +587,17 @@ Deno.serve(async (req: Request) => {
         return json(req, { error: clientId.error ?? 'clientId obrigatorio' }, 400)
       }
 
-      const { data, error } = await sb
+      const { data, error } = await scopeTenantQuery(sb
         .from('interaction_logs')
         .select('*')
         .eq('client_id', clientId.value)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }), tenantId)
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data ?? [])
     }
 
     if (req.method === 'POST' && resource === 'interaction-logs' && !resourceId) {
-      const body = pickFields(await req.json(), INTERACTION_LOG_FIELDS)
+      const body = injectTenantId(pickFields(await req.json(), INTERACTION_LOG_FIELDS), tenantId)
       const { data, error } = await sb.from('interaction_logs').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
       return json(req, data, 201)

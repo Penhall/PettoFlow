@@ -3,14 +3,23 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { ThemeProvider } from './context/ThemeContext.jsx'
-import WorkspaceGate from './components/WorkspaceGate.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
+import { TenantProvider } from './context/TenantContext.jsx'
+import TenantGate from './components/tenant/TenantGate.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
-      <WorkspaceGate>
-        <App />
-      </WorkspaceGate>
+      <AuthProvider>
+        <ProtectedRoute>
+          <TenantProvider>
+            <TenantGate>
+              <App />
+            </TenantGate>
+          </TenantProvider>
+        </ProtectedRoute>
+      </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>,
 )

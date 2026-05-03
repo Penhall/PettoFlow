@@ -1,4 +1,4 @@
-# PettoFlow — Documentação Técnica
+# NexusCRM — Documentação Técnica
 
 > Última atualização: 2026-03-16
 
@@ -6,7 +6,7 @@
 
 ## Visão Geral
 
-PettoFlow é um CRM/gestão de tarefas para pequenas equipes, construído com React 18 + Vite + Supabase. Oferece kanban, linha do tempo de atividades, gestão de clientes e time, com suporte a 4 temas visuais.
+NexusCRM é um CRM/gestão de tarefas para pequenas equipes, construído com React 18 + Vite + Supabase. Oferece kanban, linha do tempo de atividades, gestão de clientes e time, com suporte a 4 temas visuais.
 
 ---
 
