@@ -2,6 +2,8 @@ import { json, preflight } from '../_shared/cors.ts'
 import { getUserSupabaseClient } from '../_shared/supabase.ts'
 import { requireAuthenticatedUser } from '../_shared/auth.ts'
 import { requireTenantAccess } from '../_shared/tenant.ts'
+import { fetchTenantPlanLimits, resolveLimitExceededMessage } from '../_shared/limits.ts'
+import { attachRequestId, createRequestContext } from '../_shared/observability.ts'
 
 function parseId(segment: string | null) {
   if (!segment) return null
@@ -86,6 +88,43 @@ function injectTenantId(body: Record<string, unknown>, tenantId: string) {
   return { ...body, tenant_id: tenantId }
 }
 
+async function assertTableCreationWithinLimit(
+  sb: ReturnType<typeof getUserSupabaseClient>,
+  tenantId: string,
+  tableName: 'tasks' | 'clients' | 'activities' | 'transactions',
+) {
+  const limits = await fetchTenantPlanLimits(tenantId)
+  const metricByTable = {
+    tasks: 'max_tasks',
+    clients: 'max_clients',
+    activities: 'max_activities',
+    transactions: 'max_transactions',
+  } as const
+  const metric = metricByTable[tableName]
+  const limitValue = limits[metric]
+
+  if (limitValue === null) return
+
+  let query = scopeTenantQuery(
+    sb.from(tableName).select('id', { count: 'exact', head: true }),
+    tenantId,
+  )
+
+      if (tableName === 'tasks') {
+        query = query.is('archived_at', null)
+      }
+
+  const { count, error } = await query
+  if (error) throw error
+
+  const nextValue = (count ?? 0) + 1
+  if (nextValue > limitValue) {
+    const limitError = new Error(resolveLimitExceededMessage(metric))
+    ;(limitError as Error & { code?: string }).code = metric
+    throw limitError
+  }
+}
+
 const TASK_CREATE_FIELDS = ['title', 'status', 'priority', 'owner', 'tags', 'progress', 'deal_value', 'client_id', 'category', 'due_date', 'created_at', 'completed_at']
 const TASK_UPDATE_FIELDS = ['title', 'status', 'priority', 'owner', 'tags', 'progress', 'deal_value', 'client_id', 'category', 'due_date', 'completed_at']
 const COLUMN_FIELDS = ['name', 'order_index']
@@ -104,6 +143,10 @@ const RECEIVABLE_UPDATE_FIELDS = ['amount', 'target_account_id', 'status', 'due_
 const INTERACTION_LOG_FIELDS = ['client_id', 'type', 'notes']
 
 Deno.serve(async (req: Request) => {
+  const ctx = createRequestContext(req, 'workspace-core')
+  req = attachRequestId(req, ctx.requestId)
+  ctx.log('info', 'request_started')
+
   if (req.method === 'OPTIONS') return preflight(req, 'GET, POST, PATCH, DELETE, OPTIONS')
   const auth = await requireAuthenticatedUser(req)
   if (!auth.ok) return auth.response
@@ -170,9 +213,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'tasks' && !resourceId) {
+      await assertTableCreationWithinLimit(sb, tenantId, 'tasks')
       const body = injectTenantId(pickFields(await req.json(), TASK_CREATE_FIELDS), tenantId)
       const { data, error } = await sb.from('tasks').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
+      ctx.log('info', 'task_created', { tenant_id: tenantId, user_id: auth.user.id, task_id: data?.id ?? null })
       return json(req, data, 201)
     }
 
@@ -263,9 +308,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'clients' && !resourceId) {
+      await assertTableCreationWithinLimit(sb, tenantId, 'clients')
       const body = injectTenantId(pickFields(await req.json(), CLIENT_FIELDS), tenantId)
       const { data, error } = await sb.from('clients').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
+      ctx.log('info', 'client_created', { tenant_id: tenantId, user_id: auth.user.id, client_id: data?.id ?? null })
       return json(req, data, 201)
     }
 
@@ -297,9 +344,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'activities' && !resourceId) {
+      await assertTableCreationWithinLimit(sb, tenantId, 'activities')
       const body = injectTenantId(pickFields(await req.json(), ACTIVITY_FIELDS), tenantId)
       const { data, error } = await sb.from('activities').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
+      ctx.log('info', 'activity_created', { tenant_id: tenantId, user_id: auth.user.id, activity_id: data?.id ?? null })
       return json(req, data, 201)
     }
 
@@ -522,9 +571,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST' && resource === 'transactions' && !resourceId) {
+      await assertTableCreationWithinLimit(sb, tenantId, 'transactions')
       const body = injectTenantId(pickFields(await req.json(), TRANSACTION_FIELDS), tenantId)
       const { data, error } = await sb.from('transactions').insert([body]).select().single()
       if (error) return json(req, { error: error.message }, 500)
+      ctx.log('info', 'transaction_created', { tenant_id: tenantId, user_id: auth.user.id, transaction_id: data?.id ?? null })
       return json(req, data, 201)
     }
 
@@ -605,7 +656,14 @@ Deno.serve(async (req: Request) => {
 
     return json(req, { error: 'Method not allowed' }, 405)
   } catch (err) {
-    console.error('[workspace-core] unhandled error:', err)
-    return json(req, { error: err instanceof Error ? err.message : 'Internal server error' }, 500)
+    const errorCode = err instanceof Error && 'code' in err ? String((err as Error & { code?: string }).code ?? '') : ''
+    const status = errorCode.startsWith('max_') ? 409 : 500
+    ctx.log('error', 'request_crashed', {
+      tenant_id: tenantAccess.ok ? tenantAccess.tenantId : null,
+      user_id: auth.user.id,
+      error: err instanceof Error ? err.message : 'Internal server error',
+      code: errorCode || null,
+    })
+    return json(req, { error: err instanceof Error ? err.message : 'Internal server error', code: errorCode || 'internal_server_error' }, status)
   }
 })

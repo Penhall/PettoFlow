@@ -1,7 +1,21 @@
-import { json, preflight } from '../_shared/cors.ts'
+import { preflight } from '../_shared/cors.ts'
 import { requireAuthenticatedUser } from '../_shared/auth.ts'
-import { getUserSupabaseClient } from '../_shared/supabase.ts'
+import { getServiceRoleClient, getUserSupabaseClient } from '../_shared/supabase.ts'
 import { requireTenantAccess } from '../_shared/tenant.ts'
+import { writeAuditLog } from '../_shared/audit.ts'
+import {
+  getTenantSubscription,
+  getTenantUsageSnapshot,
+  listActivePlans,
+  updateTenantSubscription,
+} from '../_shared/billing.ts'
+import {
+  createStripeBillingPortalSession,
+  createStripeCheckoutSession,
+  createStripeCustomer,
+  isStripeConfigured,
+} from '../_shared/stripe.ts'
+import { attachRequestId, createRequestContext } from '../_shared/observability.ts'
 
 function getRouteParts(req: Request) {
   const url = new URL(req.url)
@@ -23,20 +37,78 @@ function isValidTenantSlug(value: string) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return preflight(req, 'GET, POST, PATCH, OPTIONS')
+function canManageBilling(role: string | null | undefined) {
+  return role === 'owner' || role === 'admin'
+}
 
-  const auth = await requireAuthenticatedUser(req)
+function normalizeSubscription(subscription: Record<string, unknown> | null) {
+  if (!subscription) return null
+
+  const plan = toRecord(subscription.plan)
+  return {
+    id: subscription.id ?? null,
+    tenantId: subscription.tenant_id ?? null,
+    status: subscription.status ?? null,
+    provider: subscription.provider ?? null,
+    billingInterval: subscription.billing_interval ?? 'monthly',
+    currentPeriodStart: subscription.current_period_start ?? null,
+    currentPeriodEnd: subscription.current_period_end ?? null,
+    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+    lastSyncedAt: subscription.last_synced_at ?? null,
+    plan: plan.id
+      ? {
+        id: plan.id,
+        name: plan.name,
+        slug: plan.slug,
+        description: plan.description ?? null,
+        limits: toRecord(plan.limits),
+        priceMonthly: plan.price_monthly ?? null,
+        priceYearly: plan.price_yearly ?? null,
+      }
+      : null,
+  }
+}
+
+function normalizePlan(plan: Record<string, unknown>) {
+  return {
+    id: plan.id ?? null,
+    name: plan.name ?? null,
+    slug: plan.slug ?? null,
+    description: plan.description ?? null,
+    limits: toRecord(plan.limits),
+    priceMonthly: plan.price_monthly ?? null,
+    priceYearly: plan.price_yearly ?? null,
+    monthlyAvailable: Boolean(plan.stripe_price_monthly_id),
+    yearlyAvailable: Boolean(plan.stripe_price_yearly_id),
+    displayOrder: plan.display_order ?? 0,
+  }
+}
+
+function parseBillingInterval(value: unknown) {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  return normalized === 'yearly' ? 'yearly' : normalized === 'monthly' ? 'monthly' : null
+}
+
+Deno.serve(async (req: Request) => {
+  const ctx = createRequestContext(req, 'tenant-core')
+  const request = attachRequestId(req, ctx.requestId)
+  ctx.log('info', 'request_started')
+
+  if (request.method === 'OPTIONS') return preflight(request, 'GET, POST, PATCH, OPTIONS')
+
+  const auth = await requireAuthenticatedUser(request)
   if (!auth.ok) return auth.response
 
-  const sb = getUserSupabaseClient(req)
-  const { routeParts } = getRouteParts(req)
+  const sb = getUserSupabaseClient(request)
+  const serviceSb = getServiceRoleClient()
+  const { url, routeParts } = getRouteParts(request)
   const resource = routeParts[0] ?? null
   const resourceId = routeParts[1] ?? null
   const action = routeParts[2] ?? null
+  const subAction = routeParts[3] ?? null
 
   try {
-    if (req.method === 'GET' && resource === 'tenants' && !resourceId) {
+    if (request.method === 'GET' && resource === 'tenants' && !resourceId) {
       const { data, error } = await sb
         .from('memberships')
         .select(`
@@ -56,7 +128,7 @@ Deno.serve(async (req: Request) => {
         .eq('status', 'active')
         .order('created_at', { ascending: true })
 
-      if (error) return json(req, { error: error.message }, 500)
+      if (error) return ctx.fail(500, 'tenant_list_failed', error.message)
 
       const items = (data ?? [])
         .map((entry) => {
@@ -77,18 +149,19 @@ Deno.serve(async (req: Request) => {
         })
         .filter(Boolean)
 
-      return json(req, { items })
+      ctx.log('info', 'tenants_listed', { user_id: auth.user.id, tenant_count: items.length })
+      return ctx.ok({ items })
     }
 
-    if (req.method === 'POST' && resource === 'tenants' && !resourceId) {
-      const body = toRecord(await req.json())
+    if (request.method === 'POST' && resource === 'tenants' && !resourceId) {
+      const body = toRecord(await request.json())
       const name = String(body.name ?? '').trim()
       const slug = String(body.slug ?? '').trim().toLowerCase()
 
-      if (!name) return json(req, { error: 'Nome do workspace obrigatorio.' }, 400)
-      if (!slug) return json(req, { error: 'Slug do workspace obrigatorio.' }, 400)
+      if (!name) return ctx.fail(400, 'tenant_name_required', 'Nome do workspace obrigatorio.')
+      if (!slug) return ctx.fail(400, 'tenant_slug_required', 'Slug do workspace obrigatorio.')
       if (!isValidTenantSlug(slug)) {
-        return json(req, { error: 'Slug do workspace invalido.' }, 400)
+        return ctx.fail(400, 'tenant_slug_invalid', 'Slug do workspace invalido.')
       }
 
       const { data: tenantId, error } = await sb.rpc('create_tenant_with_owner', {
@@ -100,7 +173,7 @@ Deno.serve(async (req: Request) => {
       if (error) {
         const message = error.message ?? 'Erro ao criar workspace.'
         const conflict = message.includes('already exists')
-        return json(req, { error: message }, conflict ? 409 : 500)
+        return ctx.fail(conflict ? 409 : 500, conflict ? 'tenant_slug_conflict' : 'tenant_create_failed', message)
       }
 
       const { data: tenant, error: tenantError } = await sb
@@ -109,7 +182,7 @@ Deno.serve(async (req: Request) => {
         .eq('id', tenantId)
         .single()
 
-      if (tenantError) return json(req, { error: tenantError.message }, 500)
+      if (tenantError) return ctx.fail(500, 'tenant_fetch_failed', tenantError.message)
 
       const { data: membership, error: membershipError } = await sb
         .from('memberships')
@@ -118,7 +191,7 @@ Deno.serve(async (req: Request) => {
         .eq('user_id', auth.user.id)
         .single()
 
-      if (membershipError) return json(req, { error: membershipError.message }, 500)
+      if (membershipError) return ctx.fail(500, 'membership_fetch_failed', membershipError.message)
 
       const defaultSettings = {
         workspace_name: tenant.name,
@@ -132,9 +205,27 @@ Deno.serve(async (req: Request) => {
           { onConflict: 'tenant_id,key' },
         )
 
-      if (settingsError) return json(req, { error: settingsError.message }, 500)
+      if (settingsError) return ctx.fail(500, 'tenant_settings_upsert_failed', settingsError.message)
 
-      return json(req, {
+      await writeAuditLog({
+        tenantId: tenant.id,
+        userId: auth.user.id,
+        action: 'tenant.created',
+        resourceType: 'tenant',
+        resourceId: tenant.id,
+        metadata: {
+          slug: tenant.slug,
+          owner_user_id: tenant.owner_user_id,
+        },
+      })
+
+      ctx.log('info', 'tenant_created', {
+        user_id: auth.user.id,
+        tenant_id: tenant.id,
+        slug: tenant.slug,
+      })
+
+      return ctx.ok({
         tenant: {
           id: tenant.id,
           name: tenant.name,
@@ -151,25 +242,25 @@ Deno.serve(async (req: Request) => {
       }, 201)
     }
 
-    if ((req.method === 'GET' || req.method === 'PATCH') && resource === 'tenants' && resourceId && action === 'settings') {
-      const tenantAccess = await requireTenantAccess(req, auth.user.id)
+    if ((request.method === 'GET' || request.method === 'PATCH') && resource === 'tenants' && resourceId && action === 'settings') {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
       if (!tenantAccess.ok) return tenantAccess.response
       if (tenantAccess.tenantId !== resourceId) {
-        return json(req, { error: 'Tenant id do path difere do header.' }, 400)
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
       }
 
-      if (req.method === 'GET') {
+      if (request.method === 'GET') {
         const { data, error } = await sb
           .from('tenant_settings')
           .select('id, tenant_id, key, value, created_at, updated_at')
           .eq('tenant_id', tenantAccess.tenantId)
           .order('key', { ascending: true })
 
-        if (error) return json(req, { error: error.message }, 500)
-        return json(req, { items: data ?? [] })
+        if (error) return ctx.fail(500, 'tenant_settings_list_failed', error.message)
+        return ctx.ok({ items: data ?? [] })
       }
 
-      const body = toRecord(await req.json())
+      const body = toRecord(await request.json())
       const value = body.value
 
       const { data, error } = await sb
@@ -181,13 +272,206 @@ Deno.serve(async (req: Request) => {
         .select('id, tenant_id, key, value, created_at, updated_at')
         .single()
 
-      if (error) return json(req, { error: error.message }, 500)
-      return json(req, data)
+      if (error) return ctx.fail(500, 'tenant_settings_update_failed', error.message)
+      return ctx.ok(data)
     }
 
-    return json(req, { error: 'Method not allowed' }, 405)
+    if (request.method === 'GET' && resource === 'tenants' && resourceId && action === 'billing') {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
+      if (!tenantAccess.ok) return tenantAccess.response
+      if (tenantAccess.tenantId !== resourceId) {
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
+      }
+
+      const [subscription, usage, plans] = await Promise.all([
+        getTenantSubscription(tenantAccess.tenantId),
+        getTenantUsageSnapshot(tenantAccess.tenantId),
+        listActivePlans(),
+      ])
+
+      return ctx.ok({
+        manageable: canManageBilling(tenantAccess.membership.role),
+        stripeConfigured: isStripeConfigured(),
+        subscription: normalizeSubscription(subscription as Record<string, unknown> | null),
+        usage,
+        plans: plans.map((plan) => normalizePlan(plan as Record<string, unknown>)),
+      })
+    }
+
+    if (request.method === 'POST' && resource === 'tenants' && resourceId && action === 'billing' && subAction === 'checkout') {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
+      if (!tenantAccess.ok) return tenantAccess.response
+      if (tenantAccess.tenantId !== resourceId) {
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
+      }
+      if (!canManageBilling(tenantAccess.membership.role)) {
+        return ctx.fail(403, 'billing_management_forbidden', 'Apenas owner/admin podem gerenciar billing.')
+      }
+
+      const body = toRecord(await request.json())
+      const planSlug = String(body.planSlug ?? '').trim().toLowerCase()
+      const interval = parseBillingInterval(body.interval)
+      if (!planSlug) return ctx.fail(400, 'billing_plan_required', 'Plano obrigatorio.')
+      if (!interval) return ctx.fail(400, 'billing_interval_invalid', 'Intervalo de billing invalido.')
+      if (!isStripeConfigured()) {
+        return ctx.fail(503, 'stripe_not_configured', 'Stripe ainda nao configurado neste ambiente.')
+      }
+      if (!auth.user.email) {
+        return ctx.fail(400, 'billing_email_missing', 'Usuario autenticado sem email para billing.')
+      }
+
+      const [{ data: tenant, error: tenantError }, subscription, plans] = await Promise.all([
+        sb.from('tenants').select('id, name, slug').eq('id', tenantAccess.tenantId).single(),
+        getTenantSubscription(tenantAccess.tenantId),
+        listActivePlans(),
+      ])
+
+      if (tenantError) return ctx.fail(500, 'tenant_fetch_failed', tenantError.message)
+
+      const selectedPlan = plans.find((plan) => String(plan.slug).toLowerCase() === planSlug)
+      if (!selectedPlan) return ctx.fail(404, 'billing_plan_not_found', 'Plano selecionado nao encontrado.')
+
+      const priceId = interval === 'yearly'
+        ? selectedPlan.stripe_price_yearly_id
+        : selectedPlan.stripe_price_monthly_id
+
+      if (!priceId) {
+        return ctx.fail(409, 'billing_plan_not_linked', 'Plano selecionado ainda nao possui price id Stripe configurado.')
+      }
+
+      let customerId = typeof subscription?.provider_customer_id === 'string'
+        ? subscription.provider_customer_id
+        : null
+
+      if (!customerId) {
+        const customer = await createStripeCustomer({
+          tenantId: tenantAccess.tenantId,
+          tenantName: String(tenant.name),
+          email: auth.user.email,
+        })
+        customerId = String(customer.id)
+      }
+
+      const checkout = await createStripeCheckoutSession({
+        tenantId: tenantAccess.tenantId,
+        tenantName: String(tenant.name),
+        customerId,
+        priceId: String(priceId),
+        interval,
+      })
+
+      const updatedSubscription = await updateTenantSubscription(tenantAccess.tenantId, {
+        provider: 'stripe',
+        provider_customer_id: customerId,
+        checkout_session_id: checkout.id,
+        billing_interval: interval,
+        metadata: {
+          pending_plan_slug: selectedPlan.slug,
+          pending_price_id: priceId,
+        },
+      })
+
+      await writeAuditLog({
+        tenantId: tenantAccess.tenantId,
+        userId: auth.user.id,
+        action: 'billing.checkout_started',
+        resourceType: 'subscription',
+        resourceId: updatedSubscription.id,
+        metadata: {
+          plan_slug: selectedPlan.slug,
+          interval,
+          checkout_session_id: checkout.id,
+        },
+      })
+
+      ctx.log('info', 'billing_checkout_created', {
+        user_id: auth.user.id,
+        tenant_id: tenantAccess.tenantId,
+        plan_slug: selectedPlan.slug,
+        interval,
+      })
+
+      return ctx.ok({
+        url: checkout.url ?? null,
+        sessionId: checkout.id ?? null,
+      }, 201)
+    }
+
+    if (request.method === 'POST' && resource === 'tenants' && resourceId && action === 'billing' && subAction === 'portal') {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
+      if (!tenantAccess.ok) return tenantAccess.response
+      if (tenantAccess.tenantId !== resourceId) {
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
+      }
+      if (!canManageBilling(tenantAccess.membership.role)) {
+        return ctx.fail(403, 'billing_management_forbidden', 'Apenas owner/admin podem gerenciar billing.')
+      }
+      if (!isStripeConfigured()) {
+        return ctx.fail(503, 'stripe_not_configured', 'Stripe ainda nao configurado neste ambiente.')
+      }
+
+      const subscription = await getTenantSubscription(tenantAccess.tenantId)
+      const customerId = typeof subscription?.provider_customer_id === 'string'
+        ? subscription.provider_customer_id
+        : null
+
+      if (!customerId) {
+        return ctx.fail(409, 'billing_customer_missing', 'Nenhum cliente Stripe vinculado ao workspace.')
+      }
+
+      const portal = await createStripeBillingPortalSession({ customerId })
+
+      await writeAuditLog({
+        tenantId: tenantAccess.tenantId,
+        userId: auth.user.id,
+        action: 'billing.portal_opened',
+        resourceType: 'subscription',
+        resourceId: subscription?.id ?? null,
+        metadata: {
+          provider_customer_id: customerId,
+        },
+      })
+
+      return ctx.ok({
+        url: portal.url ?? null,
+      }, 201)
+    }
+
+    if (request.method === 'GET' && resource === 'tenants' && resourceId && action === 'audit-logs') {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
+      if (!tenantAccess.ok) return tenantAccess.response
+      if (tenantAccess.tenantId !== resourceId) {
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
+      }
+      if (!canManageBilling(tenantAccess.membership.role)) {
+        return ctx.fail(403, 'audit_log_access_forbidden', 'Apenas owner/admin podem visualizar auditoria do tenant.')
+      }
+
+      const limit = Math.min(Number(url.searchParams.get('limit') ?? '50') || 50, 200)
+      const actionFilter = String(url.searchParams.get('action') ?? '').trim()
+
+      let query = serviceSb
+        .from('audit_logs')
+        .select('id, tenant_id, user_id, action, resource_type, resource_id, metadata, created_at')
+        .eq('tenant_id', tenantAccess.tenantId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (actionFilter) {
+        query = query.ilike('action', `${actionFilter}%`)
+      }
+
+      const { data, error } = await query
+      if (error) return ctx.fail(500, 'audit_logs_list_failed', error.message)
+      return ctx.ok({ items: data ?? [] })
+    }
+
+    return ctx.fail(405, 'method_not_allowed', 'Method not allowed')
   } catch (err) {
-    console.error('[tenant-core] unhandled error:', err)
-    return json(req, { error: err instanceof Error ? err.message : 'Internal server error' }, 500)
+    ctx.log('error', 'request_crashed', {
+      error: err instanceof Error ? err.message : 'Internal server error',
+      user_id: auth.user.id,
+    })
+    return ctx.fail(500, 'internal_server_error', err instanceof Error ? err.message : 'Internal server error')
   }
 })

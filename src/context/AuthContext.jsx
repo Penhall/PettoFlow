@@ -10,6 +10,27 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+
+  async function syncPlatformAdmin(nextSession, isActive = () => true) {
+    if (!supabase || !nextSession) {
+      if (isActive()) setIsPlatformAdmin(false)
+      return false
+    }
+
+    const { data, error } = await supabase.rpc('is_current_user_platform_admin')
+    if (!isActive()) return false
+
+    if (error) {
+      console.error('Erro ao carregar flag administrativa global:', error)
+      setIsPlatformAdmin(false)
+      return false
+    }
+
+    const nextValue = Boolean(data)
+    setIsPlatformAdmin(nextValue)
+    return nextValue
+  }
 
   useEffect(() => {
     let active = true
@@ -30,6 +51,7 @@ export function AuthProvider({ children }) {
       const nextSession = data?.session ?? null
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
+      await syncPlatformAdmin(nextSession, () => active)
       setLoading(false)
     }
 
@@ -43,9 +65,12 @@ export function AuthProvider({ children }) {
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return
-      setSession(nextSession ?? null)
-      setUser(nextSession?.user ?? null)
-      setLoading(false)
+      const resolvedSession = nextSession ?? null
+      setSession(resolvedSession)
+      setUser(resolvedSession?.user ?? null)
+      syncPlatformAdmin(resolvedSession, () => active).finally(() => {
+        if (active) setLoading(false)
+      })
     })
 
     return () => {
@@ -65,6 +90,7 @@ export function AuthProvider({ children }) {
     const nextSession = data?.session ?? null
     setSession(nextSession)
     setUser(nextSession?.user ?? null)
+    await syncPlatformAdmin(nextSession)
     return nextSession
   }
 
@@ -109,6 +135,7 @@ export function AuthProvider({ children }) {
         session,
         loading,
         isAuthenticated: Boolean(session),
+        isPlatformAdmin,
         isConfigured: Boolean(supabase),
         signIn,
         signUp,

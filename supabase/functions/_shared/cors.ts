@@ -35,13 +35,16 @@ export function getCorsHeaders(req: Request, methods = DEFAULT_METHODS) {
   }
 }
 
-export function json(req: Request, data: unknown, status = 200) {
+export function json(req: Request, data: unknown, status = 200, extraHeaders: HeadersInit = {}) {
   const corsHeaders = getCorsHeaders(req) ?? {}
+  const requestId = req.headers.get('x-request-id')?.trim() ?? ''
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'Content-Type': 'application/json',
+      ...(requestId ? { 'X-Request-Id': requestId } : {}),
       ...corsHeaders,
+      ...extraHeaders,
     },
   })
 }

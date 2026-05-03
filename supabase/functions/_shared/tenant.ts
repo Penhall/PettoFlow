@@ -3,10 +3,12 @@ import { getServiceRoleClient } from './supabase.ts'
 
 function tenantError(req: Request, status: number, message: string) {
   const corsHeaders = getCorsHeaders(req) ?? {}
+  const requestId = req.headers.get('x-request-id')?.trim() ?? ''
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: {
       'Content-Type': 'application/json',
+      ...(requestId ? { 'X-Request-Id': requestId } : {}),
       ...corsHeaders,
     },
   })

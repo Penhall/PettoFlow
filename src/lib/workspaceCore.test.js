@@ -11,7 +11,7 @@ vi.mock('./activeTenant.js', () => ({
   getRequiredActiveTenantId: () => getRequiredActiveTenantIdMock(),
 }))
 
-import { fetchWorkspaceBootstrap } from './workspaceCore.js'
+import { createTaskRecord, fetchWorkspaceBootstrap } from './workspaceCore.js'
 
 describe('workspaceCore', () => {
   beforeEach(() => {
@@ -49,6 +49,22 @@ describe('workspaceCore', () => {
         tenantId: 'tenant-123',
         requireTenant: true,
       }),
+    )
+  })
+
+  it('surfaces quota errors returned by workspace-core', async () => {
+    getRequiredActiveTenantIdMock.mockReturnValue('tenant-123')
+    authenticatedFetchMock.mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({
+        error: 'Limite de tarefas do plano atingido para este workspace.',
+        code: 'max_tasks',
+      }),
+    })
+
+    await expect(createTaskRecord({ title: 'Nova tarefa' })).rejects.toThrow(
+      'Limite de tarefas do plano atingido para este workspace.',
     )
   })
 })

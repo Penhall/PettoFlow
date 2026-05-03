@@ -1,4 +1,4 @@
-import { Search, Bell, Download, Palette, Menu, LogOut } from 'lucide-react'
+import { Search, Bell, Download, Palette, Menu, LogOut, Shield } from 'lucide-react'
 import { useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../hooks/useAuth.js'
@@ -6,7 +6,7 @@ import TenantSwitcher from './tenant/TenantSwitcher.jsx'
 
 const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
   const { theme, setTheme, themes } = useTheme()
-  const { user, signOut } = useAuth()
+  const { user, signOut, isPlatformAdmin } = useAuth()
   const [showThemeMenu, setShowThemeMenu] = useState(false)
 
   async function handleSignOut() {
@@ -68,6 +68,16 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
         </div>
 
         <button className="icon-btn"><Bell size={20} /></button>
+        {isPlatformAdmin && (
+          <button
+            className="icon-btn"
+            onClick={() => { window.location.hash = '/admin' }}
+            title="Abrir painel administrativo"
+            aria-label="Abrir painel administrativo"
+          >
+            <Shield size={18} />
+          </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             {user?.email || 'Usuario autenticado'}

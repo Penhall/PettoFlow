@@ -1,30 +1,32 @@
-import { useState } from 'react';
-import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity, Wallet, Archive, ChevronLeft, ChevronRight, CalendarDays, Settings } from 'lucide-react';
+import { useState } from 'react'
+import { LayoutDashboard, CheckSquare, Users, UserCircle, Activity, Wallet, Archive, ChevronLeft, ChevronRight, CalendarDays, Settings } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth.js'
+import { useTenant } from '../hooks/useTenant.js'
 
 const Sidebar = ({ activeTab, setActiveTab, mobileOpen, onMobileClose }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { user } = useAuth()
+  const { activeTenant } = useTenant()
 
   const menuItems = [
-    { id: 'dashboard',  label: 'Dashboard',      icon: LayoutDashboard },
-    { id: 'tarefas',    label: 'Minhas Tarefas',  icon: CheckSquare     },
-    { id: 'atividades', label: 'Atividades',       icon: Activity        },
-    { id: 'financas',   label: 'Finanças',         icon: Wallet          },
-    { id: 'time',       label: 'Time',             icon: Users           },
-    { id: 'clientes',   label: 'Clientes',         icon: UserCircle      },
-    { id: 'arquivo',    label: 'Arquivo',          icon: Archive         },
-    { id: 'calendario', label: 'Calendário',       icon: CalendarDays    },
-    { id: 'settings',   label: 'Configurações',    icon: Settings        },
-  ];
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'tarefas', label: 'Minhas Tarefas', icon: CheckSquare },
+    { id: 'atividades', label: 'Atividades', icon: Activity },
+    { id: 'financas', label: 'Financas', icon: Wallet },
+    { id: 'time', label: 'Time', icon: Users },
+    { id: 'clientes', label: 'Clientes', icon: UserCircle },
+    { id: 'arquivo', label: 'Arquivo', icon: Archive },
+    { id: 'calendario', label: 'Calendario', icon: CalendarDays },
+    { id: 'settings', label: 'Configuracoes', icon: Settings },
+  ]
 
   const handleNavClick = (id) => {
-    setActiveTab(id);
-    // Fecha o drawer mobile após navegar
-    if (onMobileClose) onMobileClose();
-  };
+    setActiveTab(id)
+    if (onMobileClose) onMobileClose()
+  }
 
   return (
     <>
-      {/* Overlay escuro atrás do drawer — apenas quando aberto no mobile */}
       {mobileOpen && (
         <div
           className="sidebar-mobile-overlay"
@@ -42,7 +44,7 @@ const Sidebar = ({ activeTab, setActiveTab, mobileOpen, onMobileClose }) => {
         <button
           className="collapse-btn"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
+          title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
         >
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
@@ -62,18 +64,18 @@ const Sidebar = ({ activeTab, setActiveTab, mobileOpen, onMobileClose }) => {
 
         <div className="sidebar-footer">
           <div className="user-profile">
-            <div className="avatar">P</div>
+            <div className="avatar">{(user?.email?.[0] || 'N').toUpperCase()}</div>
             {!isCollapsed && (
               <div className="user-info">
-                <span className="user-name">Usuário NexusCRM</span>
-                <span className="user-role">Administrador</span>
+                <span className="user-name">{user?.email || 'Usuario NexusCRM'}</span>
+                <span className="user-role">{activeTenant?.role || 'Workspace ativo'}</span>
               </div>
             )}
           </div>
         </div>
       </aside>
     </>
-  );
-};
+  )
+}
 
-export default Sidebar;
+export default Sidebar

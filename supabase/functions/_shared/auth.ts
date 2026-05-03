@@ -3,10 +3,12 @@ import { getServiceRoleClient } from './supabase.ts'
 
 export function authError(req: Request) {
   const corsHeaders = getCorsHeaders(req) ?? {}
+  const requestId = req.headers.get('x-request-id')?.trim() ?? ''
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
     status: 401,
     headers: {
       'Content-Type': 'application/json',
+      ...(requestId ? { 'X-Request-Id': requestId } : {}),
       ...corsHeaders,
     },
   })

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
 import { TenantContext } from './tenantContext.js'
 import { createTenant, listMyTenants } from '../lib/tenantApi.js'
+import { acceptInvitation } from '../lib/memberApi.js'
 import {
   getStoredActiveTenantId,
   setStoredActiveTenantId,
@@ -37,6 +38,19 @@ function resolveNextActiveTenantId(tenants) {
   return null
 }
 
+function getInvitationToken() {
+  if (typeof window === 'undefined') return null
+  const url = new URL(window.location.href)
+  return url.searchParams.get('invite')?.trim() || null
+}
+
+function clearInvitationToken() {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.searchParams.delete('invite')
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
 export function TenantProvider({ children }) {
   const { isAuthenticated } = useAuth()
   const [tenants, setTenants] = useState([])
@@ -66,6 +80,13 @@ export function TenantProvider({ children }) {
       setError(null)
 
       try {
+        const invitationToken = getInvitationToken()
+        if (invitationToken) {
+          await acceptInvitation(invitationToken)
+          if (!active) return
+          clearInvitationToken()
+        }
+
         const records = await listMyTenants()
         if (!active) return
 

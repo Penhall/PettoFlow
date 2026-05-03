@@ -35,8 +35,23 @@ import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Fol
 
 const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
 
+const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'settings'])
+
+function readInitialAppTab() {
+  if (typeof window === 'undefined') return 'tarefas'
+  const url = new URL(window.location.href)
+  const nextTab = url.searchParams.get('tab')?.trim() || ''
+  return APP_TABS.has(nextTab) ? nextTab : 'tarefas'
+}
+
+function readInitialSettingsTab() {
+  if (typeof window === 'undefined') return 'members'
+  const url = new URL(window.location.href)
+  return url.searchParams.get('settingsTab')?.trim() || 'members'
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState('tarefas')
+  const [activeTab, setActiveTab] = useState(readInitialAppTab)
   const [viewType, setViewType] = useState('kanban')
   const [tasks, setTasks] = useState([])
   const [team, setTeam] = useState([])
@@ -53,6 +68,7 @@ function App() {
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [initialSettingsTab] = useState(readInitialSettingsTab)
 
   const { activities } = useActivities()
   const { isOpen: paletteOpen, query, setQuery, results, close: closePalette } = useCommandPalette(tasks, clients, activities)
@@ -435,7 +451,7 @@ function App() {
           />
         )
       case 'settings':
-        return <SettingsView />
+        return <SettingsView initialTab={initialSettingsTab} />
       default:
         return null
     }
