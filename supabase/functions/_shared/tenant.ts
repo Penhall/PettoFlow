@@ -1,5 +1,5 @@
 import { getCorsHeaders } from './cors.ts'
-import { getSupabaseClient } from './supabase.ts'
+import { getServiceRoleClient } from './supabase.ts'
 
 function tenantError(req: Request, status: number, message: string) {
   const corsHeaders = getCorsHeaders(req) ?? {}
@@ -47,7 +47,7 @@ export function requireTenantId(req: Request) {
 }
 
 export async function assertUserCanAccessTenant(userId: string, tenantId: string) {
-  const sb = getSupabaseClient()
+  const sb = getServiceRoleClient()
   const { data, error } = await sb
     .from('memberships')
     .select('tenant_id, user_id, role, status')

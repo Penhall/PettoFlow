@@ -1,6 +1,6 @@
 import { json, preflight } from '../_shared/cors.ts'
 import { requireAuthenticatedUser } from '../_shared/auth.ts'
-import { getSupabaseClient } from '../_shared/supabase.ts'
+import { getUserSupabaseClient } from '../_shared/supabase.ts'
 import { requireTenantAccess } from '../_shared/tenant.ts'
 
 function getRouteParts(req: Request) {
@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
   const auth = await requireAuthenticatedUser(req)
   if (!auth.ok) return auth.response
 
-  const sb = getSupabaseClient()
+  const sb = getUserSupabaseClient(req)
   const { routeParts } = getRouteParts(req)
   const resource = routeParts[0] ?? null
   const resourceId = routeParts[1] ?? null

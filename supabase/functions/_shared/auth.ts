@@ -1,5 +1,5 @@
 import { getCorsHeaders } from './cors.ts'
-import { getSupabaseClient } from './supabase.ts'
+import { getServiceRoleClient } from './supabase.ts'
 
 export function authError(req: Request) {
   const corsHeaders = getCorsHeaders(req) ?? {}
@@ -19,7 +19,7 @@ export async function requireAuthenticatedUser(req: Request) {
     return { ok: false as const, response: authError(req), user: null }
   }
 
-  const sb = getSupabaseClient()
+  const sb = getServiceRoleClient()
   const { data, error } = await sb.auth.getUser(token)
   if (error || !data.user) {
     return { ok: false as const, response: authError(req), user: null }
