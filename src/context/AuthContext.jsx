@@ -112,7 +112,10 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: metadata ? { data: metadata } : undefined,
+      options: {
+        ...(metadata ? { data: metadata } : {}),
+        emailRedirectTo: window.location.origin,
+      },
     })
 
     if (error) throw error
