@@ -2,15 +2,16 @@
 import { useState } from 'react'
 import { CheckCircle } from 'lucide-react'
 import { centsToReal, realToCents } from '../../lib/finUtils'
+import EmptyState from '../shared/EmptyState.jsx'
 
 export default function ReceivablesList({ receivables, onInvoice, addActivity, onAddTask, columns = [] }) {
   const [invoicingId, setInvoicingId] = useState(null)
   const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: '' })
 
-  const openInvoice = (r) => {
-    setInvoicingId(r.id)
+  const openInvoice = (receivable) => {
+    setInvoicingId(receivable.id)
     setInvoiceForm({
-      amount: (r.amount / 100).toFixed(2).replace('.', ','),
+      amount: (receivable.amount / 100).toFixed(2).replace('.', ','),
       date: new Date().toISOString().slice(0, 10),
     })
   }
@@ -26,41 +27,49 @@ export default function ReceivablesList({ receivables, onInvoice, addActivity, o
 
   if (receivables.length === 0) {
     return (
-      <p style={{ color: 'var(--text-secondary)', padding: '24px 0' }}>
-        Nenhum valor a receber pendente.
-      </p>
+      <EmptyState
+        title="Nenhum valor a receber"
+        description="Esta área concentra recebíveis pendentes, faturamento e próximos movimentos operacionais."
+        detail="O painel está vazio porque não existem valores pendentes no momento."
+      />
     )
   }
 
   return (
     <div className="receivables-list">
-      {receivables.map(r => (
-        <div key={r.id} className="receivable-row" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 0',
-          borderBottom: '1px solid var(--border-color)',
-          flexWrap: 'wrap',
-        }}>
+      {receivables.map((receivable) => (
+        <div
+          key={receivable.id}
+          className="receivable-row"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 0',
+            borderBottom: '1px solid var(--border-color)',
+            flexWrap: 'wrap',
+          }}
+        >
           <div style={{ flex: 1, minWidth: 180 }}>
-            <div style={{ fontWeight: 500 }}>{r.tasks?.title ?? r.activities?.title ?? '—'}</div>
+            <div style={{ fontWeight: 500 }}>
+              {receivable.tasks?.title ?? receivable.activities?.title ?? '—'}
+            </div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-              {r.accounts?.name ?? '—'} · {new Date(r.created_at).toLocaleDateString('pt-BR')}
+              {receivable.accounts?.name ?? '—'} · {new Date(receivable.created_at).toLocaleDateString('pt-BR')}
             </div>
           </div>
 
           <span style={{ fontWeight: 600, color: 'var(--accent-green, #05CD99)' }}>
-            {centsToReal(r.amount)}
+            {centsToReal(receivable.amount)}
           </span>
 
-          {invoicingId === r.id ? (
+          {invoicingId === receivable.id ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 className="form-input"
                 value={invoiceForm.amount}
-                onChange={e => setInvoiceForm(f => ({ ...f, amount: e.target.value }))}
+                onChange={(event) => setInvoiceForm((current) => ({ ...current, amount: event.target.value }))}
                 style={{ width: 110 }}
                 placeholder="Valor"
               />
@@ -68,7 +77,7 @@ export default function ReceivablesList({ receivables, onInvoice, addActivity, o
                 type="date"
                 className="form-input"
                 value={invoiceForm.date}
-                onChange={e => setInvoiceForm(f => ({ ...f, date: e.target.value }))}
+                onChange={(event) => setInvoiceForm((current) => ({ ...current, date: event.target.value }))}
               />
               <button className="btn-primary" onClick={handleConfirm}>
                 Confirmar
@@ -85,7 +94,7 @@ export default function ReceivablesList({ receivables, onInvoice, addActivity, o
               <button
                 className="btn-primary"
                 style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                onClick={() => openInvoice(r)}
+                onClick={() => openInvoice(receivable)}
               >
                 <CheckCircle size={14} /> Faturar
               </button>
@@ -94,26 +103,26 @@ export default function ReceivablesList({ receivables, onInvoice, addActivity, o
                 className="action-btn"
                 style={{ fontSize: 13, padding: '4px 10px' }}
                 onClick={() => addActivity?.({
-                  title: `Follow-up: ${r.tasks?.title ?? r.activities?.title ?? ''}`,
+                  title: `Follow-up: ${receivable.tasks?.title ?? receivable.activities?.title ?? ''}`,
                   type: 'call',
                   status: 'pending',
                   scheduled_at: null,
-                  related_to: [{ type: 'receivable', id: r.id }],
+                  related_to: [{ type: 'receivable', id: receivable.id }],
                 })}
               >
-                📞 Follow-up
+                Follow-up
               </button>
 
               <button
                 className="action-btn"
                 style={{ fontSize: 13, padding: '4px 10px' }}
                 onClick={() => onAddTask?.({
-                  title: `Cobrar: ${r.tasks?.title ?? r.activities?.title ?? ''}`,
+                  title: `Cobrar: ${receivable.tasks?.title ?? receivable.activities?.title ?? ''}`,
                   status: columns[0]?.name ?? 'A Fazer',
                   priority: 'Média',
                 })}
               >
-                + Tarefa
+                Nova tarefa
               </button>
             </>
           )}

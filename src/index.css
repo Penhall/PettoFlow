@@ -2857,10 +2857,46 @@ body {
    FINANCE MODULE
    ===================================================== */
 
-.finance-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.finance-view,
+.finance-page {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.finance-page {
+  max-width: 1280px;
+}
+
+.finance-page__surface {
+  min-width: 0;
+}
+
+.finance-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.finance-summary-card {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+}
+
+.finance-summary-card.is-clickable {
+  cursor: pointer;
+}
+
+.finance-summary-card:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.finance-summary-card__metric.is-negative .metric-card__value {
+  color: var(--danger);
 }
 
 /* --- Accounts grid --- */
@@ -2907,6 +2943,10 @@ body {
 /* --- Transaction list --- */
 .transaction-list { display: flex; flex-direction: column; gap: 0; }
 
+.tx-table-wrapper {
+  overflow-x: auto;
+}
+
 .review-banner {
   display: flex;
   align-items: center;
@@ -2920,21 +2960,27 @@ body {
 }
 .review-banner .action-btn.sm { margin-left: auto; }
 
-.tx-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.tx-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
 .tx-table th {
   text-align: left;
-  padding: 8px 12px;
+  padding: 10px 12px;
   color: var(--text-secondary);
-  border-bottom: var(--border-width) solid var(--border-color);
-  font-weight: 500;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent);
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 .tx-table td {
   padding: 10px 12px;
-  border-bottom: var(--border-width) solid var(--border-color);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 72%, transparent);
   color: var(--text-main);
 }
-.tx-table tr.needs-review { background: #F59E0B0A; }
-.tx-table tr:hover { background: var(--bg-main); }
+.tx-table tr.needs-review { background: color-mix(in srgb, #F59E0B 10%, transparent); }
+.tx-table tr:hover { background: color-mix(in srgb, var(--surface-muted) 55%, transparent); }
 
 .tx-amount { font-weight: 600; text-align: right; }
 .tx-amount.income  { color: var(--success); }
@@ -2950,7 +2996,6 @@ body {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 .finance-filters select,
 .finance-filters input[type="date"] {
