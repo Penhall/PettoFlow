@@ -1081,10 +1081,12 @@ body {
   padding: 24px;
   border: var(--border-width) solid var(--border-color);
   box-shadow: var(--shadow-sm);
+  overflow-x: auto;
 }
 
 .task-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
 }
 
@@ -4045,8 +4047,8 @@ body {
 
 .page-header__title {
   font-family: var(--font-serif);
-  font-size: clamp(1.9rem, 2vw + 1rem, 2.8rem);
-  line-height: 0.98;
+  font-size: clamp(1.8rem, 1.4vw + 1rem, 2.5rem);
+  line-height: 1.02;
   letter-spacing: -0.04em;
   color: var(--text-main);
 }
@@ -4070,6 +4072,19 @@ body {
 
 .page-tabs {
   min-width: 0;
+}
+
+.tasks-page {
+  display: grid;
+  gap: 16px;
+}
+
+.tasks-page__content {
+  min-width: 0;
+}
+
+.tasks-files-view {
+  min-height: 220px;
 }
 
 .page-tabs__scroller {

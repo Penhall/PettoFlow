@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, ArrowRight, GripVertical, Check, X, Archive } from 'lucide-react'
+import EmptyState from '../shared/EmptyState.jsx'
 import { isWithin30Days } from '../../lib/financeUtils'
 import {
   DndContext,
@@ -80,11 +81,21 @@ const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, onArch
         </div>
         <div style={{ display: 'flex', gap: '4px' }}>
           {!task.archived_at && onArchive && (
-            <button className="delete-task-btn" title="Arquivar tarefa" onClick={() => onArchive(task.id)}>
+            <button
+              className="delete-task-btn"
+              title="Arquivar tarefa"
+              aria-label={`Arquivar ${task.title || 'tarefa'}`}
+              onClick={() => onArchive(task.id)}
+            >
               <Archive size={14} />
             </button>
           )}
-          <button className="delete-task-btn" onClick={() => onDeleteTask(task.id)}>
+          <button
+            className="delete-task-btn"
+            aria-label={`Excluir ${task.title || 'tarefa'}`}
+            title="Excluir tarefa"
+            onClick={() => onDeleteTask(task.id)}
+          >
             <Trash2 size={14} />
           </button>
         </div>
@@ -100,6 +111,7 @@ const SortableTaskCard = ({ task, onUpdateTask, onDeleteTask, onEditTask, onArch
             className="status-cycle-btn" 
             onClick={() => onUpdateTask(task.id, { status: getNextStatus(task.status) })}
             title="Mudar Status"
+            aria-label={`Avançar status de ${task.title || 'tarefa'}`}
           >
             <ArrowRight size={14} />
           </button>
@@ -198,7 +210,12 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                   <span className="task-count">{visibleTasks.length}</span>
                 </div>
                 <div className="header-actions">
-                  <button className="icon-btn sm" onClick={() => onAddTask(column.name)}>
+                  <button
+                    className="icon-btn sm"
+                    aria-label={`Adicionar tarefa em ${column.name}`}
+                    title={`Adicionar tarefa em ${column.name}`}
+                    onClick={() => onAddTask(column.name)}
+                  >
                     <Plus size={14} />
                   </button>
                   {columns.length > 1 && (
@@ -246,7 +263,11 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
 
                 {visibleTasks.length === 0 && (
                   <div className="empty-column">
-                    <p>Arraste aqui</p>
+                    <EmptyState
+                      title={`Sem tarefas em ${column.name}`}
+                      description="Cada etapa mantém a execução visível e facilita a próxima decisão do time."
+                      detail="Crie uma nova tarefa nesta coluna ou mova um item existente para começar."
+                    />
                   </div>
                 )}
 

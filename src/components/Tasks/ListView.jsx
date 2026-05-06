@@ -1,17 +1,29 @@
 import { Trash2, ArrowRight } from 'lucide-react'
+import EmptyState from '../shared/EmptyState.jsx'
 
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
-const STATUSES = ['A Fazer', 'Em Progresso', 'Concluído']
 
-const ListView = ({ tasks, onUpdateTask, onDeleteTask }) => {
+const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
   const getNextStatus = (current) => {
-    const idx = STATUSES.indexOf(current)
-    return STATUSES[(idx + 1) % STATUSES.length]
+    if (!columns.length) return current
+
+    const orderedColumns = [...columns].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+    const currentIndex = orderedColumns.findIndex((column) => column.name === current)
+
+    if (currentIndex === -1) return orderedColumns[0]?.name || current
+
+    return orderedColumns[(currentIndex + 1) % orderedColumns.length]?.name || current
   }
 
   if (tasks.length === 0) {
-    return <p className="no-results">Nenhuma tarefa encontrada.</p>
+    return (
+      <EmptyState
+        title="Nenhuma tarefa encontrada"
+        description="A lista mostra status, prioridade, responsável e progresso em uma superfície compacta."
+        detail="Este resultado está vazio porque nenhum item corresponde aos filtros ou à busca atual."
+      />
+    )
   }
 
   return (
@@ -52,17 +64,19 @@ const ListView = ({ tasks, onUpdateTask, onDeleteTask }) => {
               </td>
               <td>
                 <div className="list-actions">
-                  <button 
-                    className="action-icon-btn sm" 
+                  <button
+                    className="action-icon-btn sm"
                     onClick={() => onUpdateTask(task.id, { status: getNextStatus(task.status) })}
-                    title="Próximo Status"
+                    title="Próximo status"
+                    aria-label={`Avançar status de ${task.title || 'tarefa'}`}
                   >
                     <ArrowRight size={14} />
                   </button>
-                  <button 
-                    className="action-icon-btn sm danger" 
+                  <button
+                    className="action-icon-btn sm danger"
                     onClick={() => onDeleteTask(task.id)}
                     title="Excluir"
+                    aria-label={`Excluir ${task.title || 'tarefa'}`}
                   >
                     <Trash2 size={14} />
                   </button>

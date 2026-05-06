@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
+import TasksPage from './components/Tasks/TasksPage'
 import KanbanView from './components/Tasks/KanbanView'
 import ListView from './components/Tasks/ListView'
 import OverviewView from './components/Tasks/OverviewView'
@@ -14,6 +15,7 @@ import FinanceView from './components/Finance/FinanceView'
 import ArchiveView from './components/Archive/ArchiveView'
 import CalendarView from './components/Calendar/CalendarView'
 import SettingsView from './components/Settings/SettingsView'
+import EmptyState from './components/shared/EmptyState'
 import ReminderToast from './components/shared/ReminderToast'
 import CommandPalette from './components/shared/CommandPalette'
 import { useActivities } from './hooks/useActivities'
@@ -31,7 +33,6 @@ import {
   deleteColumnRecord,
   listActiveAccounts,
 } from './lib/workspaceCore'
-import { LayoutGrid, List as ListIcon, Plus, Filter, ArrowUpDown, BarChart2, Folder, CalendarDays } from 'lucide-react'
 
 const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
 
@@ -206,6 +207,8 @@ function App() {
         }
       }
     }
+
+    return updatedTask
   }
 
   const deleteTask = async (id) => {
@@ -297,137 +300,81 @@ function App() {
     }
   }
 
+  const headerSearchHandler = activeTab === 'tarefas' ? null : setSearchQuery
+  const headerExportHandler = activeTab === 'tarefas' ? null : exportCSV
+  const headerTitle = activeTab === 'tarefas' ? null : getPageTitle()
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard tasks={tasks} columns={columns} />
       case 'tarefas':
         return (
-          <>
-            <section className="taskbar">
-              <div className="tabs">
-                <button
-                  className={`tab-btn ${viewType === 'kanban' ? 'active' : ''}`}
-                  onClick={() => setViewType('kanban')}
-                >
-                  <LayoutGrid size={16} />
-                  Kanban
-                </button>
-                <button
-                  className={`tab-btn ${viewType === 'list' ? 'active' : ''}`}
-                  onClick={() => setViewType('list')}
-                >
-                  <ListIcon size={16} />
-                  Lista
-                </button>
-                <button
-                  className={`tab-btn ${viewType === 'overview' ? 'active' : ''}`}
-                  onClick={() => setViewType('overview')}
-                >
-                  <BarChart2 size={16} />
-                  Visão Geral
-                </button>
-                <button
-                  className={`tab-btn ${viewType === 'files' ? 'active' : ''}`}
-                  onClick={() => setViewType('files')}
-                >
-                  <Folder size={16} />
-                  Arquivos
-                </button>
-                <button
-                  className={`tab-btn ${viewType === 'calendar' ? 'active' : ''}`}
-                  onClick={() => setViewType('calendar')}
-                >
-                  <CalendarDays size={16} />
-                  Calendário
-                </button>
+          <TasksPage
+            viewType={viewType}
+            setViewType={setViewType}
+            searchQuery={searchQuery}
+            onSearch={setSearchQuery}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            filterTag={filterTag}
+            setFilterTag={setFilterTag}
+            allTags={allTags}
+            showSortMenu={showSortMenu}
+            setShowSortMenu={setShowSortMenu}
+            showFilterMenu={showFilterMenu}
+            setShowFilterMenu={setShowFilterMenu}
+            onCreateTask={() => openAddModal()}
+            taskCount={filteredTasks.length}
+            content={(
+              <div className="board-container">
+                {viewType === 'kanban' && (
+                  <KanbanView
+                    tasks={filteredTasks}
+                    columns={columns}
+                    onAddTask={openAddModal}
+                    onUpdateTask={updateTask}
+                    onDeleteTask={deleteTask}
+                    onEditTask={(task) => { setSelectedTask(task); setShowEditModal(true) }}
+                    onAddColumn={addColumn}
+                    onDeleteColumn={deleteColumn}
+                    onArchive={archiveTask}
+                  />
+                )}
+                {viewType === 'list' && (
+                  <ListView
+                    tasks={filteredTasks}
+                    columns={columns}
+                    onUpdateTask={updateTask}
+                    onDeleteTask={deleteTask}
+                  />
+                )}
+                {viewType === 'overview' && <OverviewView tasks={filteredTasks} />}
+                {viewType === 'files' && (
+                  <div className="tasks-files-view">
+                    <EmptyState
+                      title="Nenhum arquivo vinculado"
+                      description="Centralize anexos e materiais de apoio da operação em uma camada organizada por tarefa."
+                      detail={searchQuery || filterTag
+                        ? 'Nenhuma tarefa com os filtros atuais possui arquivos vinculados.'
+                        : 'Esta área está vazia porque nenhum arquivo foi relacionado às tarefas ainda.'}
+                    />
+                  </div>
+                )}
+                {viewType === 'calendar' && (
+                  <CalendarView
+                    filterTypes={['task']}
+                    tasks={filteredTasks}
+                    clients={clients}
+                    team={team}
+                    columns={columns}
+                    onUpdateTask={updateTask}
+                    onAddTask={addTask}
+                  />
+                )}
               </div>
-
-              <div className="actions">
-                <div className="dropdown-wrapper" onClick={e => e.stopPropagation()}>
-                  <button
-                    className={`action-btn ${sortBy ? 'active-filter' : ''}`}
-                    onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false) }}
-                  >
-                    <ArrowUpDown size={16} /> Ordenar{sortBy ? ' ✓' : ''}
-                  </button>
-                  {showSortMenu && (
-                    <div className="dropdown-menu">
-                      <button onClick={() => { setSortBy('priority'); setShowSortMenu(false) }} className={sortBy === 'priority' ? 'selected' : ''}>Por Prioridade</button>
-                      <button onClick={() => { setSortBy('title'); setShowSortMenu(false) }} className={sortBy === 'title' ? 'selected' : ''}>Por Título (A-Z)</button>
-                      <button onClick={() => { setSortBy('progress'); setShowSortMenu(false) }} className={sortBy === 'progress' ? 'selected' : ''}>Por Progresso</button>
-                      {sortBy && <button onClick={() => { setSortBy(null); setShowSortMenu(false) }} className="clear-btn">Limpar ordenação</button>}
-                    </div>
-                  )}
-                </div>
-
-                <div className="dropdown-wrapper" onClick={e => e.stopPropagation()}>
-                  <button
-                    className={`action-btn ${filterTag ? 'active-filter' : ''}`}
-                    onClick={() => { setShowFilterMenu(!showFilterMenu); setShowSortMenu(false) }}
-                  >
-                    <Filter size={16} /> Filtrar{filterTag ? ' ✓' : ''}
-                  </button>
-                  {showFilterMenu && (
-                    <div className="dropdown-menu">
-                      {allTags.map(tag => (
-                        <button key={tag} onClick={() => { setFilterTag(filterTag === tag ? null : tag); setShowFilterMenu(false) }} className={filterTag === tag ? 'selected' : ''}>
-                          {tag}
-                        </button>
-                      ))}
-                      {filterTag && <button onClick={() => { setFilterTag(null); setShowFilterMenu(false) }} className="clear-btn">Limpar filtro</button>}
-                    </div>
-                  )}
-                </div>
-
-                <button className="add-member-btn" onClick={() => openAddModal()}>
-                  <Plus size={16} />
-                  <span>Nova Tarefa</span>
-                </button>
-              </div>
-            </section>
-
-            <div className="board-container">
-              {viewType === 'kanban' && (
-                <KanbanView
-                  tasks={filteredTasks}
-                  columns={columns}
-                  onAddTask={openAddModal}
-                  onUpdateTask={updateTask}
-                  onDeleteTask={deleteTask}
-                  onEditTask={(task) => { setSelectedTask(task); setShowEditModal(true) }}
-                  onAddColumn={addColumn}
-                  onDeleteColumn={deleteColumn}
-                  onArchive={archiveTask}
-                />
-              )}
-              {viewType === 'list' && (
-                <ListView 
-                  tasks={filteredTasks} 
-                  onUpdateTask={updateTask}
-                  onDeleteTask={deleteTask}
-                />
-              )}
-              {viewType === 'overview' && <OverviewView tasks={tasks} />}
-              {viewType === 'files' && (
-                <div className="empty-state">
-                  <h2>Arquivos</h2>
-                  <p>Nenhum arquivo anexado ao projeto ainda.</p>
-                </div>
-              )}
-              {viewType === 'calendar' && (
-                <CalendarView
-                  filterTypes={['task']}
-                  tasks={filteredTasks}
-                  clients={clients}
-                  team={team}
-                  columns={columns}
-                  onUpdateTask={updateTask}
-                  onAddTask={addTask}
-                />
-              )}
-            </div>
-          </>
+            )}
+          />
         )
       case 'time':
         return <TimeView tasks={tasks} team={team} onRefresh={fetchTeam} searchQuery={searchQuery} />
@@ -470,10 +417,10 @@ function App() {
 
       <main className="content">
         <Header
-          title={getPageTitle()}
+          title={headerTitle}
           searchQuery={searchQuery}
-          onSearch={setSearchQuery}
-          onExport={exportCSV}
+          onSearch={headerSearchHandler}
+          onExport={headerExportHandler}
           onMenuToggle={() => setMobileSidebarOpen(prev => !prev)}
         />
 
@@ -512,15 +459,19 @@ function App() {
         {(showAddModal || showEditModal) && (
           <TaskModal
             task={selectedTask}
-            onSave={(entry) => {
+            onSave={async (entry) => {
               if (selectedTask) {
                 const { id, ...updates } = entry
-                updateTask(id, updates)
+                const updated = await updateTask(id, updates)
+                if (!updated) return
                 setShowEditModal(false)
-              } else {
-                addTask(entry)
-                setShowAddModal(false)
+                setSelectedTask(null)
+                return
               }
+
+              const created = await addTask(entry)
+              if (!created) return
+              setShowAddModal(false)
               setSelectedTask(null)
             }}
             onClose={() => {
@@ -542,3 +493,4 @@ function App() {
 }
 
 export default App
+

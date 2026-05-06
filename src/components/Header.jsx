@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../hooks/useAuth.js'
 import TenantSwitcher from './tenant/TenantSwitcher.jsx'
 
-const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
+const Header = ({ title, searchQuery = '', onSearch, onExport, onMenuToggle }) => {
   const { theme, setTheme, themes } = useTheme()
   const { user, signOut, isPlatformAdmin } = useAuth()
   const [showThemeMenu, setShowThemeMenu] = useState(false)
@@ -29,24 +29,26 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
           <Menu size={22} />
         </button>
 
-        <h1 className="page-title">{title}</h1>
+        {title ? <h1 className="page-title">{title}</h1> : null}
       </div>
 
       <div className="header-right">
         <TenantSwitcher />
 
-        <div className="search-bar">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Pesquisar tarefas..."
-            value={searchQuery}
-            onChange={e => onSearch(e.target.value)}
-          />
-          {searchQuery && (
-            <button className="clear-search" onClick={() => onSearch('')}>x</button>
-          )}
-        </div>
+        {typeof onSearch === 'function' ? (
+          <div className="search-bar">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Pesquisar tarefas..."
+              value={searchQuery}
+              onChange={e => onSearch(e.target.value)}
+            />
+            {searchQuery && (
+              <button className="clear-search" onClick={() => onSearch('')}>x</button>
+            )}
+          </div>
+        ) : null}
 
         <div className="dropdown-wrapper" style={{ position: 'relative' }}>
           <button className="icon-btn" onClick={() => setShowThemeMenu(!showThemeMenu)} title="Alternar tema">
@@ -86,10 +88,12 @@ const Header = ({ title, searchQuery, onSearch, onExport, onMenuToggle }) => {
             <LogOut size={18} />
           </button>
         </div>
-        <button className="export-btn" onClick={onExport}>
-          <Download size={16} />
-          <span>Exportar dados</span>
-        </button>
+        {typeof onExport === 'function' ? (
+          <button className="export-btn" onClick={onExport}>
+            <Download size={16} />
+            <span>Exportar dados</span>
+          </button>
+        ) : null}
       </div>
     </header>
   )
