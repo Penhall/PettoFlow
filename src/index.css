@@ -4087,6 +4087,16 @@ body {
   min-height: 220px;
 }
 
+.settings-page {
+  max-width: 1120px;
+  display: grid;
+  gap: 16px;
+}
+
+.settings-page__panel {
+  min-width: 0;
+}
+
 .page-tabs__scroller {
   display: flex;
   align-items: center;

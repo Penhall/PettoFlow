@@ -23,17 +23,31 @@ vi.mock('../tenant/AuditTimeline.jsx', () => ({
 }))
 
 describe('SettingsView', () => {
-  it('exibe a aba de membros e renderiza a tela correspondente', () => {
+  it('renderiza o cabecalho premium e as tabs semanticas de configuracoes', () => {
     render(<SettingsView />)
 
-    fireEvent.click(screen.getByRole('button', { name: /membros/i }))
+    expect(screen.getByRole('heading', { name: 'Configurações' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/membros, integrações, auditoria e preferências do workspace/i)
+    ).toBeInTheDocument()
 
+    expect(screen.getByRole('tablist', { name: 'Seções de configurações' })).toBeInTheDocument()
+
+    const membersTab = screen.getByRole('tab', { name: 'Membros' })
+    expect(membersTab).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Members Page')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Telegram' }))
+
+    expect(screen.getByRole('tab', { name: 'Telegram' })).toHaveAttribute('aria-selected', 'true')
+    expect(membersTab).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByText('Telegram Section')).toBeInTheDocument()
   })
 
   it('aceita tab inicial para abrir billing diretamente', () => {
     render(<SettingsView initialTab="billing" />)
 
+    expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Billing Page')).toBeInTheDocument()
   })
 })
