@@ -54,6 +54,10 @@ The approved direction is:
 - View switching is broad but visually flat
 - Empty columns feel unfinished
 
+#### Table quality
+
+Tasks tables are a critical operational surface. They must feel lightweight, highly scannable, compact, and enterprise-grade.
+
 ### Activities
 
 - Timeline exists but the page still feels visually sparse
@@ -94,6 +98,35 @@ Global chrome should only carry cross-product utilities. Filters, sorting, view 
 
 Not everything should be wrapped in equal-weight cards. Use surfaces where elevation communicates grouping or interaction priority.
 
+### 6. Operational density
+
+The interface must preserve operational density for long-term daily use by mixed-role teams.
+
+- Prioritize fast scanning
+- Keep lists compressed but readable
+- Maintain a high information-per-screen ratio
+- Reduce cursor travel
+- Favor compact actionable layouts over roomy marketing spacing
+
+Density should feel efficient, deliberate, professional, and operationally mature. It must never feel cramped, noisy, excessively airy, or oversized.
+
+Reference density level:
+
+- Linear
+- Raycast
+- Attio
+- Cron Calendar
+
+### 7. Visual restraint
+
+Every visual decision must pass a simple filter:
+
+`Does this improve clarity or merely add decoration?`
+
+If the answer is decoration, remove or simplify it.
+
+Premium quality should come from restraint, rhythm, hierarchy, spacing, typography, and precision rather than visual excess.
+
 ## Visual direction
 
 ### Overall feel
@@ -121,6 +154,27 @@ Not everything should be wrapped in equal-weight cards. Use surfaces where eleva
 - Flat, empty layouts
 - ERP-style chrome
 - Generic template cards and dashboard tropes
+
+## Product personality
+
+NexusCRM should feel like:
+
+- A premium operational workspace
+- A calm command center
+- An internal operating system for teams
+- A refined professional tool
+- Focused and intentional
+
+NexusCRM should not feel like:
+
+- A startup landing page
+- A playful productivity app
+- A generic AI-generated dashboard
+- A Bootstrap admin template
+- A corporate ERP from the 2010s
+- A marketing-oriented SaaS shell
+
+The emotional tone should communicate confidence, maturity, operational clarity, precision, and sophistication.
 
 ## Theme and typography strategy
 
@@ -157,6 +211,23 @@ Every major page should follow the same anatomy:
    - Main surfaces, feeds, boards, tables, settings groups, or dashboards
 
 This structure is mandatory for Tasks, Activities, Finance, and Settings.
+
+## Shell dimensions
+
+Target shell proportions:
+
+- Sidebar expanded width: `240px`
+- Sidebar compact width: `72px`
+- Desktop topbar height: `56px`
+- Compact/mobile topbar height: `48px`
+
+Page width behavior:
+
+- Avoid excessive ultra-wide stretching
+- Preserve comfortable reading and scanning zones
+- Maintain operational density instead of using marketing-style open space
+
+Content spacing rhythm should be tighter than marketing websites, calmer than legacy ERPs, and balanced for daily operational use.
 
 ## App shell redesign
 
@@ -215,6 +286,34 @@ Create a small internal UI system before migrating pages:
 - `SegmentedTabs`
 
 These primitives should define the new page rhythm. Page components should consume them rather than re-implementing their own shell patterns.
+
+## Surface philosophy
+
+Borders must not remain the primary grouping mechanism.
+
+The current interface overuses borders and outlined structures. The redesign should prioritize:
+
+- Spacing
+- Alignment
+- Contrast
+- Elevation
+- Typography hierarchy
+- Surface rhythm
+
+Borders should become subtle, secondary, and supportive rather than structural.
+
+Preferred grouping cues:
+
+- Soft surfaces
+- Tonal separation
+- Depth layering
+- Spatial organization
+
+Avoid:
+
+- Heavy outlined cards
+- Boxed admin-panel framing
+- Bootstrap-style surface treatment
 
 ## Page-specific design
 
@@ -291,6 +390,10 @@ The always-visible summary remains, but it should be restyled into premium KPI s
 - Table design becomes cleaner, lighter, and easier to scan
 - The section should feel less like a utility form stacked over a table
 
+#### Table quality
+
+Finance tables are a critical operational surface. They must feel lightweight, highly scannable, operationally efficient, and compact but readable.
+
 #### Contas and regras
 
 - Account cards should be simplified and elevated just enough to communicate ownership and balance
@@ -331,13 +434,52 @@ Priority empty states:
 - Finance accounts/rules/receivables when blank
 - Settings sections when configuration has not been completed yet
 
+### Emotional direction
+
+Empty states should feel:
+
+- Premium
+- Calm
+- Aspirational
+- Operational
+- Trustworthy
+
+Avoid:
+
+- Playful mascots
+- Cartoon illustrations
+- Startup gamification patterns
+- Exaggerated onboarding theatrics
+
+Reference quality:
+
+- Linear
+- Attio
+- Cron
+- Vercel
+
+Each empty state must explain:
+
+1. What the area does
+2. Why it is empty
+3. What action should happen next
+
+Use restrained visual accents only. Empty states should reinforce product maturity, clarity, confidence, and guidance.
+
 ## Motion and interaction
 
 Motion should feel calm, expensive, and intentional.
 
+### Motion philosophy
+
+Motion should follow a restrained enterprise-grade interaction model with Linear-level subtlety. It should feel calm, precise, and invisible whenever possible. Motion exists to support responsiveness, confidence, and product quality, never spectacle.
+
 ### Allowed motion
 
 - Short opacity and transform transitions
+- Subtle `translateY`
+- Soft scale adjustments under `1.01`
+- Controlled easing curves
 - Subtle hover lift on actionable surfaces
 - Controlled dropdown and menu reveals
 - Smooth tab and segmented control transitions
@@ -345,13 +487,58 @@ Motion should feel calm, expensive, and intentional.
 
 ### Avoid
 
+- Framer-style exaggerated motion
 - Continuous decorative animations in operational screens
-- Bouncy or playful spring behavior
+- Bouncy, elastic, or playful spring behavior
+- Oversized hover effects
+- Flashy page transitions
+- Motion-heavy dashboards
 - Heavy glow, blur spectacle, or gimmick motion
+
+### Timing
+
+- `120ms-220ms` for most interactions
+- `240ms` maximum for overlays and drawers
 
 ### Reduced motion
 
 All non-essential motion must degrade cleanly for users who prefer reduced motion.
+
+## Table philosophy
+
+Tables are core operational surfaces inside NexusCRM.
+
+They must feel:
+
+- Lightweight
+- Highly scannable
+- Operationally efficient
+- Enterprise-grade
+- Compact but readable
+
+Avoid:
+
+- Excessive borders
+- Zebra striping
+- Oversized row heights
+- Boxed table designs
+- Noisy grid systems
+
+Prefer:
+
+- Subtle separators
+- Soft hover states
+- Contextual row actions
+- Typographic hierarchy
+- Compact spacing rhythm
+- Clean alignment
+
+Table interactions should prioritize:
+
+- Quick scanning
+- Keyboard navigation
+- Rapid filtering
+- Operational clarity
 
 ## Accessibility and UX quality
 
@@ -440,6 +627,22 @@ The redesign is complete only if:
 - Tasks, Activities, Finance, and Settings feel like one product family
 - The app is responsive and keyboard-usable
 - The result does not resemble a generic AI-generated dashboard
+
+## Final UX quality bar
+
+The redesign is only successful if the final product feels:
+
+- Cohesive
+- Premium
+- Operationally efficient
+- Visually calm
+- Trustworthy
+- Modern
+- Intentional
+
+The interface should disappear behind the workflow. Users should feel oriented, focused, fast, and in control.
+
+The product should look like a mature SaaS platform built by a highly disciplined product team.
 
 ## Out of scope for this refactor
 
