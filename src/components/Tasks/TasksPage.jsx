@@ -25,6 +25,8 @@ function DropdownAction({
         type="button"
         className={`page-action-bar__button ${active ? 'active-filter' : ''}`}
         onClick={onToggle}
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         {Icon ? <Icon size={16} /> : null}
         <span>{label}</span>

@@ -224,15 +224,15 @@ const KanbanView = ({ tasks, columns, onAddTask, onUpdateTask, onDeleteTask, onE
                         <button className="icon-btn sm danger" title="Confirmar exclusão" onClick={() => {
                           onDeleteColumn(column.id)
                           setDeletingColumn(null)
-                        }}>
+                        }} aria-label={`Confirmar exclusão da coluna ${column.name}`}>
                           <Check size={14} />
                         </button>
-                        <button className="icon-btn sm" title="Cancelar" onClick={() => setDeletingColumn(null)}>
+                        <button className="icon-btn sm" title="Cancelar" aria-label={`Cancelar exclusão da coluna ${column.name}`} onClick={() => setDeletingColumn(null)}>
                           <X size={14} />
                         </button>
                       </div>
                     ) : (
-                      <button className="icon-btn sm danger" title="Excluir coluna" onClick={() => setDeletingColumn(column.id)}>
+                      <button className="icon-btn sm danger" title="Excluir coluna" aria-label={`Excluir coluna ${column.name}`} onClick={() => setDeletingColumn(column.id)}>
                         <Trash2 size={14} />
                       </button>
                     )

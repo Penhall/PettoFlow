@@ -5,15 +5,25 @@ const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluíd
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
 
 const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
-  const getNextStatus = (current) => {
-    if (!columns.length) return current
+  const orderedColumns = [...columns].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
 
-    const orderedColumns = [...columns].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+  const getNextStatus = (current) => {
+    if (!orderedColumns.length) return current
     const currentIndex = orderedColumns.findIndex((column) => column.name === current)
 
     if (currentIndex === -1) return orderedColumns[0]?.name || current
 
     return orderedColumns[(currentIndex + 1) % orderedColumns.length]?.name || current
+  }
+
+  const getStatusClass = (status) => {
+    if (STATUS_CLASS[status]) return STATUS_CLASS[status]
+    if (!orderedColumns.length) return 'todo'
+
+    const currentIndex = orderedColumns.findIndex((column) => column.name === status)
+    if (currentIndex <= 0) return 'todo'
+    if (currentIndex === orderedColumns.length - 1) return 'done'
+    return 'progress'
   }
 
   if (tasks.length === 0) {
@@ -44,7 +54,7 @@ const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
             <tr key={task.id}>
               <td>{task.title || 'Sem título'}</td>
               <td>
-                <span className={`status-badge ${STATUS_CLASS[task.status] || 'todo'}`}>
+                <span className={`status-badge ${getStatusClass(task.status)}`}>
                   {task.status || 'A Fazer'}
                 </span>
               </td>

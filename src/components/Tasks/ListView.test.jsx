@@ -32,4 +32,30 @@ describe('ListView', () => {
 
     expect(onUpdateTask).toHaveBeenCalledWith(1, { status: 'Doing' })
   })
+
+  it('maps custom workflow positions to shared status badge styles', () => {
+    render(
+      <ListView
+        tasks={[
+          {
+            id: 2,
+            title: 'Revisar contrato',
+            status: 'Done',
+            priority: 'Média',
+            owner: 'Lia',
+            progress: 100,
+          },
+        ]}
+        columns={[
+          { id: 1, name: 'Backlog', order_index: 1 },
+          { id: 2, name: 'Doing', order_index: 2 },
+          { id: 3, name: 'Done', order_index: 3 },
+        ]}
+        onUpdateTask={() => {}}
+        onDeleteTask={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Done')).toHaveClass('status-badge', 'done')
+  })
 })
