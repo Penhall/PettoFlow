@@ -34,7 +34,11 @@ describe('TenantSwitcher', () => {
 
     render(<TenantSwitcher />)
 
-    fireEvent.change(screen.getByLabelText('Selecionar workspace ativo'), {
+    const combobox = screen.getByRole('combobox', { name: /workspace ativo/i })
+
+    expect(screen.queryByText('Selecione um workspace')).not.toBeInTheDocument()
+
+    fireEvent.change(combobox, {
       target: { value: 'tenant-2' },
     })
 
