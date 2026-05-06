@@ -1,44 +1,55 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react'
 
-const ThemeContext = createContext();
+const ThemeContext = createContext()
+const PRODUCT_THEMES = [
+  { id: 'light', name: 'Claro' },
+  { id: 'dark', name: 'Escuro' },
+]
+
+function resolveTheme(theme) {
+  return theme === 'dark' ? 'dark' : 'light'
+}
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    // Try to get saved theme, otherwise default to "ledger"
-    const savedTheme = localStorage.getItem('pettoflow_theme');
-    return savedTheme || 'ledger';
-  });
+  const [theme, setThemeState] = useState(() => {
+    const savedTheme = localStorage.getItem('pettoflow_theme')
+    return resolveTheme(savedTheme)
+  })
+
+  const setTheme = (nextTheme) => {
+    setThemeState((currentTheme) => {
+      const resolvedTheme =
+        typeof nextTheme === 'function' ? nextTheme(currentTheme) : nextTheme
+
+      return resolveTheme(resolvedTheme)
+    })
+  }
 
   useEffect(() => {
-    // Apply theme to the HTML element
-    document.documentElement.setAttribute('data-theme', theme);
-    // Save to local storage
-    localStorage.setItem('pettoflow_theme', theme);
-  }, [theme]);
-
-  const value = {
-    theme,
-    setTheme,
-    themes: [
-      { id: 'ledger', name: 'Livro-Razão (Ledger)' },
-      { id: 'classic', name: 'Clássico SaaS' },
-      { id: 'dark', name: 'Modo Noturno' },
-      { id: 'twenty', name: 'Twenty (Grafite)' },
-    ]
-  };
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('pettoflow_theme', theme)
+  }, [theme])
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        setTheme,
+        themes: PRODUCT_THEMES,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
-  );
+  )
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext);
+  const context = useContext(ThemeContext)
+
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error('useTheme must be used within a ThemeProvider')
   }
-  return context;
+
+  return context
 }
