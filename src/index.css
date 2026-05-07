@@ -3003,6 +3003,34 @@ body {
   min-width: 120px;
 }
 
+.activities-page {
+  max-width: 1120px;
+  display: grid;
+  gap: 16px;
+}
+
+.activities-page__surface {
+  min-width: 0;
+}
+
+.templates-header {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.templates-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.templates-header p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
 /* --- Rules list --- */
 .rules-list { display: flex; flex-direction: column; gap: 8px; }
 

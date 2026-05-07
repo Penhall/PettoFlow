@@ -1,6 +1,6 @@
 // src/components/Activities/TemplatesTab.jsx
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import EmptyState from '../shared/EmptyState.jsx'
 
 const TemplatesTab = ({ templates, onNew, onEdit, onDelete }) => {
   const [confirmingId, setConfirmingId] = useState(null)
@@ -20,18 +20,18 @@ const TemplatesTab = ({ templates, onNew, onEdit, onDelete }) => {
 
   return (
     <div className="templates-tab">
-      <div className="templates-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <h4 style={{ margin: 0 }}>Modelos de Atividade</h4>
-        <button className="add-member-btn" onClick={onNew}>
-          <Plus size={16} /> Novo Modelo
-        </button>
+      <div className="templates-header">
+        <h4>Modelos de atividade</h4>
+        <p>Padronize abordagens recorrentes e acelere a criação de atividades operacionais.</p>
       </div>
 
       {templates.length === 0 ? (
-        <div className="empty-state" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #888)' }}>
-          <p>Nenhum modelo cadastrado ainda.</p>
-          <p style={{ fontSize: '0.875rem' }}>Crie modelos para agilizar o preenchimento de atividades.</p>
-        </div>
+        <EmptyState
+          title="Nenhum modelo cadastrado"
+          description="Os modelos reduzem repetição e mantêm consistência no preenchimento de atividades."
+          detail="Crie o primeiro modelo para agilizar o fluxo operacional do time."
+          action={<button className="page-action-bar__button page-action-bar__button--primary" onClick={onNew}>Novo modelo</button>}
+        />
       ) : (
         <div className="templates-list">
           {templates.map(template => (

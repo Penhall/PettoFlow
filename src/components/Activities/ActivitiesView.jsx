@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Plus } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
 import { useActivityTemplates } from '../../hooks/useActivityTemplates'
 import { useReceivables } from '../../hooks/useReceivables'
@@ -13,10 +12,19 @@ import ActivityForm from './ActivityForm'
 import TemplatesTab from './TemplatesTab'
 import ActivityTemplateForm from './ActivityTemplateForm'
 import CalendarView from '../Calendar/CalendarView'
+import PageHeader from '../shared/PageHeader.jsx'
+import PageTabs from '../shared/PageTabs.jsx'
+import PageActionBar from '../shared/PageActionBar.jsx'
+import SurfaceCard from '../shared/SurfaceCard.jsx'
 
 const EMPTY_FILTERS = {}
+const ACTIVITY_TABS = [
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'modelos', label: 'Modelos' },
+  { id: 'calendario', label: 'Calendario' },
+]
 
-const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' }) => {
+const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '', onSearch = () => {} }) => {
   const { activities, loading, addActivity, updateActivity, deleteActivity } = useActivities()
   const { templates, createTemplate, updateTemplate, deleteTemplate, applyTemplate } = useActivityTemplates()
   const { createReceivableFromActivity } = useReceivables()
@@ -30,9 +38,24 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
   const [showTemplateForm, setShowTemplateForm] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
 
-  const filteredActivities = activities.filter(activity => {
-    if (!searchQuery) return true
-    return (activity.title || '').toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredActivities = useMemo(() => {
+    const normalized = searchQuery.toLowerCase()
+    return activities.filter((activity) => {
+      if (!normalized) return true
+      return (activity.title || '').toLowerCase().includes(normalized)
+    })
+  }, [activities, searchQuery])
+
+  const metrics = [
+    { label: 'Pendentes', value: String(activities.filter((activity) => activity.status === 'pending').length) },
+    { label: 'Concluidas', value: String(activities.filter((activity) => activity.status === 'done').length) },
+    { label: 'Modelos', value: String(templates.length) },
+  ]
+
+  const tabItems = ACTIVITY_TABS.map((tab) => {
+    if (tab.id === 'timeline') return { ...tab, count: filteredActivities.length }
+    if (tab.id === 'modelos') return { ...tab, count: templates.length }
+    return tab
   })
 
   const handleToggleStatus = (id, newStatus) => {
@@ -50,7 +73,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
     } else {
       saved = await addActivity(form)
     }
-    if (!saved) return null  // error already logged by the hook; don't close the form
+    if (!saved) return null
     setShowForm(false)
     setEditingActivity(null)
     return saved
@@ -70,7 +93,6 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
     return applyTemplate(templateId)
   }
 
-  // Template handlers
   const handleNewTemplate = () => {
     setEditingTemplate(null)
     setShowTemplateForm(true)
@@ -102,63 +124,59 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
 
   if (loading) {
     return (
-      <div className="activities-view">
-        <div className="board-container">
-          <p>Carregando atividades...</p>
-        </div>
+      <div className="activities-page">
+        <PageHeader
+          eyebrow="Operacao"
+          title="Atividades"
+          subtitle="Carregando timeline operacional do workspace."
+        />
       </div>
     )
   }
 
   return (
-    <div className="activities-view">
-      <div className="view-header">
-        <h3>Atividades</h3>
-        <div className="view-controls">
-          <div className="actions">
-            {activeTab === 'timeline' && (
-              <button className="add-member-btn" onClick={handleOpenNew}>
-                <Plus size={16} /> Nova Atividade
-              </button>
-            )}
-            {activeTab === 'modelos' && (
-              <button className="add-member-btn" onClick={handleNewTemplate}>
-                <Plus size={16} /> Novo Modelo
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="activities-page">
+      <PageHeader
+        eyebrow="Operacao"
+        title="Atividades"
+        subtitle="Acompanhe follow-ups, cadência comercial e próximos movimentos em uma timeline compacta."
+        metrics={metrics}
+      />
 
-      <div className="tabs" style={{ marginBottom: '1rem' }}>
-        <button
-          className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
-          onClick={() => setActiveTab('timeline')}
-        >
-          Timeline
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'modelos' ? 'active' : ''}`}
-          onClick={() => setActiveTab('modelos')}
-        >
-          Modelos
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'calendario' ? 'active' : ''}`}
-          onClick={() => setActiveTab('calendario')}
-        >
-          📅 Calendário
-        </button>
-      </div>
+      <PageTabs
+        items={tabItems}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        ariaLabel="Areas de atividades"
+      />
 
-      <div className="board-container">
+      <PageActionBar
+        searchValue={activeTab === 'calendario' ? undefined : searchQuery}
+        onSearch={activeTab === 'calendario' ? undefined : onSearch}
+        primaryAction={
+          activeTab === 'timeline'
+            ? { label: 'Nova atividade', onClick: handleOpenNew }
+            : activeTab === 'modelos'
+              ? { label: 'Novo modelo', onClick: handleNewTemplate }
+              : null
+        }
+        meta={
+          activeTab === 'timeline'
+            ? `${filteredActivities.length} ${filteredActivities.length === 1 ? 'atividade' : 'atividades'}`
+            : activeTab === 'modelos'
+              ? `${templates.length} ${templates.length === 1 ? 'modelo' : 'modelos'}`
+              : null
+        }
+      />
+
+      <SurfaceCard className="activities-page__surface" padded={activeTab !== 'timeline'}>
         {activeTab === 'timeline' && (
           <ActivityTimeline
             activities={filteredActivities}
             onToggleStatus={handleToggleStatus}
             onDelete={handleDelete}
             onEdit={(activity) => { setEditingActivity(activity); setShowForm(true) }}
-            emptyMessage="Nenhuma atividade encontrada."
+            emptyMessage="Nenhuma atividade corresponde à busca atual."
           />
         )}
 
@@ -172,9 +190,6 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
         )}
 
         {activeTab === 'calendario' && (
-          // columns e onAddTask omitidos intencionalmente:
-          // filterTypes=['activity'] nunca exibe eventos de task/receivable/transaction,
-          // portanto criação de tarefas não é acionada neste contexto.
           <CalendarView
             filterTypes={['activity']}
             contextArea="atividades"
@@ -183,7 +198,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '' 
             team={team}
           />
         )}
-      </div>
+      </SurfaceCard>
 
       <AnimatePresence>
         {showForm && (

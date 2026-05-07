@@ -1,15 +1,16 @@
 // src/components/Activities/ActivityTimeline.jsx
 import { AnimatePresence } from 'framer-motion'
-import { Activity } from 'lucide-react'
 import ActivityCard from './ActivityCard'
+import EmptyState from '../shared/EmptyState.jsx'
 
 const ActivityTimeline = ({ activities, onToggleStatus, onDelete, onEdit, emptyMessage }) => {
   if (!activities || activities.length === 0) {
     return (
-      <div className="timeline-empty">
-        <Activity size={28} />
-        <p>{emptyMessage || 'Nenhuma atividade registrada ainda.'}</p>
-      </div>
+      <EmptyState
+        title="Nenhuma atividade encontrada"
+        description="A timeline mostra cadência, responsáveis e próximos movimentos da operação em ordem temporal."
+        detail={emptyMessage || 'Esta área está vazia porque ainda não existem atividades registradas.'}
+      />
     )
   }
 

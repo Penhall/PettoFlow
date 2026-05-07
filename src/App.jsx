@@ -37,6 +37,7 @@ import {
 const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
 
 const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'settings'])
+const PAGE_OWNED_CHROME_TABS = new Set(['tarefas', 'atividades', 'financas', 'settings'])
 
 function readInitialAppTab() {
   if (typeof window === 'undefined') return 'tarefas'
@@ -300,9 +301,9 @@ function App() {
     }
   }
 
-  const headerSearchHandler = activeTab === 'tarefas' ? null : setSearchQuery
-  const headerExportHandler = activeTab === 'tarefas' ? null : exportCSV
-  const headerTitle = activeTab === 'tarefas' ? null : getPageTitle()
+  const headerSearchHandler = PAGE_OWNED_CHROME_TABS.has(activeTab) ? null : setSearchQuery
+  const headerExportHandler = PAGE_OWNED_CHROME_TABS.has(activeTab) ? null : exportCSV
+  const headerTitle = PAGE_OWNED_CHROME_TABS.has(activeTab) ? null : getPageTitle()
 
   const renderContent = () => {
     switch (activeTab) {
@@ -381,7 +382,7 @@ function App() {
       case 'clientes':
         return <ClientesView clients={clients} tasks={tasks} onRefresh={fetchClients} searchQuery={searchQuery} />
       case 'atividades':
-        return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} />
+        return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} onSearch={setSearchQuery} />
       case 'financas':
         return <FinanceView clients={clients} tasks={tasks} team={team} onAddTask={addTask} columns={columns} />
       case 'arquivo':
@@ -493,4 +494,5 @@ function App() {
 }
 
 export default App
+
 
