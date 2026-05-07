@@ -2,6 +2,7 @@
 import { useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Building2, CheckSquare, Activity, Plus } from 'lucide-react'
+import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
 
 const TYPE_ICONS = {
   client:   Building2,
@@ -36,7 +37,7 @@ const CommandPalette = ({ isOpen, query, setQuery, results, onClose, onSelect, o
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.15 }}
+            transition={MOTION_TRANSITIONS.fade}
           >
             <div className="palette-search">
               <Search size={16} className="palette-search-icon" />

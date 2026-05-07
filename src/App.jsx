@@ -1,31 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, startTransition, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import AppShell from './components/shell/AppShell.jsx'
 import ProfileMenu from './components/shell/ProfileMenu.jsx'
 import SidebarRail from './components/shell/SidebarRail.jsx'
 import Topbar from './components/shell/Topbar.jsx'
-import ActivitiesView from './components/Activities/ActivitiesView.jsx'
-import ArchiveView from './components/Archive/ArchiveView.jsx'
-import CalendarView from './components/Calendar/CalendarView.jsx'
-import CalendarWorkspacePage from './components/Calendar/CalendarWorkspacePage.jsx'
-import ClientesView from './components/Clients/ClientesView.jsx'
-import Dashboard from './components/Dashboard/Dashboard.jsx'
-import FinanceView from './components/Finance/FinanceView.jsx'
-import SettingsView from './components/Settings/SettingsView.jsx'
-import TaskModal from './components/Tasks/TaskModal.jsx'
 import KanbanView from './components/Tasks/KanbanView.jsx'
 import ListView from './components/Tasks/ListView.jsx'
 import OverviewView from './components/Tasks/OverviewView.jsx'
 import TasksPage from './components/Tasks/TasksPage.jsx'
-import TimeView from './components/Team/TimeView.jsx'
 import EmptyState from './components/shared/EmptyState.jsx'
-import CommandPalette from './components/shared/CommandPalette.jsx'
-import ReminderToast from './components/shared/ReminderToast.jsx'
+import DeferredSurface from './components/shared/DeferredSurface.jsx'
 import { useActivities } from './hooks/useActivities'
 import { useAuth } from './hooks/useAuth.js'
 import { useCommandPalette } from './hooks/useCommandPalette'
 import { useReceivables } from './hooks/useReceivables'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
+import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import {
   archiveTaskRecord,
   createColumnRecord,
@@ -38,10 +28,34 @@ import {
   updateTaskRecord,
 } from './lib/workspaceCore'
 
+const ActivitiesView = lazy(() => import('./components/Activities/ActivitiesView.jsx'))
+const ArchiveView = lazy(() => import('./components/Archive/ArchiveView.jsx'))
+const CalendarView = lazy(() => import('./components/Calendar/CalendarView.jsx'))
+const CalendarWorkspacePage = lazy(() => import('./components/Calendar/CalendarWorkspacePage.jsx'))
+const ClientesView = lazy(() => import('./components/Clients/ClientesView.jsx'))
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard.jsx'))
+const FinanceView = lazy(() => import('./components/Finance/FinanceView.jsx'))
+const SettingsView = lazy(() => import('./components/Settings/SettingsView.jsx'))
+const TaskModal = lazy(() => import('./components/Tasks/TaskModal.jsx'))
+const TimeView = lazy(() => import('./components/Team/TimeView.jsx'))
+const CommandPalette = lazy(() => import('./components/shared/CommandPalette.jsx'))
+const ReminderToast = lazy(() => import('./components/shared/ReminderToast.jsx'))
+
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
 const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'settings'])
 const CONTENT_SEARCH_TABS = new Set(['time', 'clientes'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
+const TAB_LOADING_LABELS = {
+  dashboard: 'Carregando dashboard...',
+  tarefas: 'Carregando tarefas...',
+  atividades: 'Carregando atividades...',
+  financas: 'Carregando financas...',
+  time: 'Carregando time...',
+  clientes: 'Carregando clientes...',
+  arquivo: 'Carregando arquivo...',
+  calendario: 'Carregando calendario...',
+  settings: 'Carregando configuracoes...',
+}
 
 function readInitialAppTab() {
   if (typeof window === 'undefined') return 'tarefas'
@@ -176,11 +190,13 @@ function App() {
   }, [tasks, searchQuery, filterTag, sortBy])
 
   const handleTabChange = (tab) => {
-    setActiveTab(tab)
-    setSearchQuery('')
-    setShowFilterMenu(false)
-    setShowSortMenu(false)
-    closePalette()
+    startTransition(() => {
+      setActiveTab(tab)
+      setSearchQuery('')
+      setShowFilterMenu(false)
+      setShowSortMenu(false)
+      closePalette()
+    })
   }
 
   const addTask = async (task) => {
@@ -412,15 +428,17 @@ function App() {
                   </div>
                 )}
                 {viewType === 'calendar' && (
-                  <CalendarView
-                    filterTypes={['task']}
-                    tasks={filteredTasks}
-                    clients={clients}
-                    team={team}
-                    columns={columns}
-                    onUpdateTask={updateTask}
-                    onAddTask={addTask}
-                  />
+                  <Suspense fallback={<DeferredSurface label="Carregando calendario de tarefas..." />}>
+                    <CalendarView
+                      filterTypes={['task']}
+                      tasks={filteredTasks}
+                      clients={clients}
+                      team={team}
+                      columns={columns}
+                      onUpdateTask={updateTask}
+                      onAddTask={addTask}
+                    />
+                  </Suspense>
                 )}
               </div>
             )}
@@ -495,65 +513,75 @@ function App() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
+            transition={MOTION_TRANSITIONS.fade}
             className="view-wrapper"
           >
-            {renderContent()}
+            <Suspense fallback={<DeferredSurface label={TAB_LOADING_LABELS[activeTab] || 'Carregando area...'} />}>
+              {renderContent()}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </AppShell>
 
-      <ReminderToast activities={activities} />
+      <Suspense fallback={null}>
+        <ReminderToast activities={activities} />
+      </Suspense>
 
-      <CommandPalette
-        isOpen={paletteOpen}
-        query={query}
-        setQuery={setQuery}
-        results={results}
-        onClose={closePalette}
-        onSelect={(item) => {
-          if (item.type === 'client') handleTabChange('clientes')
-          else if (item.type === 'task') handleTabChange('tarefas')
-          else if (item.type === 'activity') handleTabChange('atividades')
-          closePalette()
-        }}
-        onCreateActivity={() => {
-          handleTabChange('atividades')
-          closePalette()
-        }}
-      />
+      {(paletteOpen || query) ? (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={paletteOpen}
+            query={query}
+            setQuery={setQuery}
+            results={results}
+            onClose={closePalette}
+            onSelect={(item) => {
+              if (item.type === 'client') handleTabChange('clientes')
+              else if (item.type === 'task') handleTabChange('tarefas')
+              else if (item.type === 'activity') handleTabChange('atividades')
+              closePalette()
+            }}
+            onCreateActivity={() => {
+              handleTabChange('atividades')
+              closePalette()
+            }}
+          />
+        </Suspense>
+      ) : null}
 
       <AnimatePresence>
         {(showAddModal || showEditModal) && (
-          <TaskModal
-            task={selectedTask}
-            onSave={async (entry) => {
-              if (selectedTask) {
-                const { id, ...updates } = entry
-                const updated = await updateTask(id, updates)
-                if (!updated) return
+          <Suspense fallback={null}>
+            <TaskModal
+              task={selectedTask}
+              onSave={async (entry) => {
+                if (selectedTask) {
+                  const { id, ...updates } = entry
+                  const updated = await updateTask(id, updates)
+                  if (!updated) return
+                  setShowEditModal(false)
+                  setSelectedTask(null)
+                  return
+                }
+
+                const created = await addTask(entry)
+                if (!created) return
+                setShowAddModal(false)
+                setSelectedTask(null)
+              }}
+              onClose={() => {
+                setShowAddModal(false)
                 setShowEditModal(false)
                 setSelectedTask(null)
-                return
-              }
-
-              const created = await addTask(entry)
-              if (!created) return
-              setShowAddModal(false)
-              setSelectedTask(null)
-            }}
-            onClose={() => {
-              setShowAddModal(false)
-              setShowEditModal(false)
-              setSelectedTask(null)
-            }}
-            defaultStatus={addModalStatus}
-            team={team}
-            clients={clients}
-            tasks={tasks}
-            columns={columns}
-            onArchive={archiveTask}
-          />
+              }}
+              defaultStatus={addModalStatus}
+              team={team}
+              clients={clients}
+              tasks={tasks}
+              columns={columns}
+              onArchive={archiveTask}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
     </div>

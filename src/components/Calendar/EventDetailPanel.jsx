@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle, DollarSign, Edit, Phone, Plus, X } from 'lucide-react'
 import { centsToReal, realToCents } from '../../lib/finUtils'
+import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
 
 function DetailAction({ icon: Icon, label, onClick }) {
   return (
@@ -96,7 +97,7 @@ export default function EventDetailPanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
+      transition={MOTION_TRANSITIONS.fade}
     >
       <motion.div
         className="modal calendar-detail-modal"
@@ -104,7 +105,7 @@ export default function EventDetailPanel({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
-        transition={{ duration: 0.18 }}
+        transition={MOTION_TRANSITIONS.modal}
       >
         <div className="modal-header">
           <div>

@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, X, AlertCircle } from 'lucide-react'
 import { useReminders } from '../../hooks/useReminders'
+import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
 
 const VARIANT_ICONS = {
   reminder: Bell,
@@ -18,7 +19,7 @@ const Toast = ({ toast, onDismiss }) => {
       initial={{ opacity: 0, x: 60 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 60 }}
-      transition={{ duration: 0.2 }}
+      transition={MOTION_TRANSITIONS.fade}
     >
       <div className="toast-icon"><Icon size={16} /></div>
       <div className="toast-body">

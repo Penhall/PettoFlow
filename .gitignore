@@ -10,3 +10,5 @@ dist-ssr
 server/
 .superpowers/
 .vercel
+playwright-report/
+test-results/

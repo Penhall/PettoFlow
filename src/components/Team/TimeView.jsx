@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Mail, PencilLine, Trash2, X } from 'lucide-react'
+import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
 import { deleteTeamMemberRecord, saveTeamMemberRecord } from '../../lib/workspaceCore'
 import EmptyState from '../shared/EmptyState.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
@@ -24,14 +25,14 @@ function MemberModal({ member, onSave, onClose }) {
   }
 
   return (
-    <motion.div className="modal-overlay" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+    <motion.div className="modal-overlay" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={MOTION_TRANSITIONS.fade}>
       <motion.div
         className="modal"
         onClick={(event) => event.stopPropagation()}
         initial={{ opacity: 0, y: 10, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.985 }}
-        transition={{ duration: 0.18 }}
+        transition={MOTION_TRANSITIONS.modal}
       >
         <div className="modal-header">
           <h2>{member ? 'Editar membro' : 'Novo membro'}</h2>

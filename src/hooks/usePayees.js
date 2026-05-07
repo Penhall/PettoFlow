@@ -1,13 +1,20 @@
-// src/hooks/usePayees.js
-// Nota: deletePayee nao existe - payee_id usa ON DELETE SET NULL; deletar quebraria historico.
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { listPayeeRecords, savePayeeRecord } from '../lib/workspaceCore'
+import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function usePayees() {
-  const [payees, setPayees] = useState([])
-  const [loading, setLoading] = useState(true)
+  const visualMode = isVisualRegressionMode()
+  const fixturePayees = getVisualFixture('payees', [])
+  const [payees, setPayees] = useState(visualMode ? fixturePayees : [])
+  const [loading, setLoading] = useState(!visualMode)
 
   useEffect(() => {
+    if (visualMode) {
+      setPayees(fixturePayees)
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -25,12 +32,14 @@ export function usePayees() {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [visualMode, fixturePayees])
 
   const addPayee = async (name) => {
+    if (visualMode) return { id: `visual-${name}`, name }
+
     try {
       const created = await savePayeeRecord({ name })
-      setPayees(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
+      setPayees((current) => [...current, created].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR')))
       return created
     } catch (error) {
       console.error('Error adding payee:', error)
@@ -39,9 +48,11 @@ export function usePayees() {
   }
 
   const updatePayee = async (id, updates) => {
+    if (visualMode) return { id, ...updates }
+
     try {
       const updated = await savePayeeRecord({ id, ...updates })
-      setPayees(prev => prev.map(p => p.id === id ? updated : p))
+      setPayees((current) => current.map((payee) => (payee.id === id ? updated : payee)))
       return updated
     } catch (error) {
       console.error('Error updating payee:', error)

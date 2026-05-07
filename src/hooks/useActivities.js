@@ -1,16 +1,24 @@
-// src/hooks/useActivities.js
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   listActivityRecords,
   saveActivityRecord,
   deleteActivityRecord,
 } from '../lib/workspaceCore'
+import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useActivities() {
-  const [activities, setActivities] = useState([])
-  const [loading, setLoading] = useState(true)
+  const visualMode = isVisualRegressionMode()
+  const fixtureActivities = getVisualFixture('activities', [])
+  const [activities, setActivities] = useState(visualMode ? fixtureActivities : [])
+  const [loading, setLoading] = useState(!visualMode)
 
   useEffect(() => {
+    if (visualMode) {
+      setActivities(fixtureActivities)
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -28,12 +36,14 @@ export function useActivities() {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [visualMode, fixtureActivities])
 
   const addActivity = async (activity) => {
+    if (visualMode) return activity
+
     try {
       const created = await saveActivityRecord(activity)
-      setActivities(prev => [created, ...prev])
+      setActivities((current) => [created, ...current])
       return created
     } catch (error) {
       console.error('Error adding activity:', error)
@@ -42,9 +52,11 @@ export function useActivities() {
   }
 
   const updateActivity = async (id, updates) => {
+    if (visualMode) return { id, ...updates }
+
     try {
       const updated = await saveActivityRecord({ id, ...updates })
-      setActivities(prev => prev.map(a => a.id === id ? updated : a))
+      setActivities((current) => current.map((activity) => (activity.id === id ? updated : activity)))
       return updated
     } catch (error) {
       console.error('Error updating activity:', error)
@@ -53,9 +65,11 @@ export function useActivities() {
   }
 
   const deleteActivity = async (id) => {
+    if (visualMode) return true
+
     try {
       await deleteActivityRecord(id)
-      setActivities(prev => prev.filter(a => a.id !== id))
+      setActivities((current) => current.filter((activity) => activity.id !== id))
       return true
     } catch (error) {
       console.error('Error deleting activity:', error)
@@ -64,9 +78,9 @@ export function useActivities() {
   }
 
   const getActivitiesFor = (type, id) =>
-    activities.filter(a =>
-      Array.isArray(a.related_to) &&
-      a.related_to.some(r => r.type === type && String(r.id) === String(id))
+    activities.filter((activity) =>
+      Array.isArray(activity.related_to) &&
+      activity.related_to.some((relation) => relation.type === type && String(relation.id) === String(id))
     )
 
   return { activities, loading, addActivity, updateActivity, deleteActivity, getActivitiesFor }

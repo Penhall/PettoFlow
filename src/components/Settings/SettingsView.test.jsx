@@ -23,31 +23,31 @@ vi.mock('../tenant/AuditTimeline.jsx', () => ({
 }))
 
 describe('SettingsView', () => {
-  it('renderiza o cabecalho premium e as tabs semanticas de configuracoes', () => {
+  it('renderiza o cabecalho premium e as tabs semanticas de configuracoes', async () => {
     render(<SettingsView />)
 
-    expect(screen.getByRole('heading', { name: 'Configurações' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Configuracoes' })).toBeInTheDocument()
     expect(
-      screen.getByText(/membros, integrações, auditoria e preferências do workspace/i)
+      screen.getByText(/membros, integracoes, auditoria e preferencias do workspace/i)
     ).toBeInTheDocument()
 
-    expect(screen.getByRole('tablist', { name: 'Seções de configurações' })).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: 'Secoes de configuracoes' })).toBeInTheDocument()
 
     const membersTab = screen.getByRole('tab', { name: 'Membros' })
     expect(membersTab).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText('Members Page')).toBeInTheDocument()
+    expect(await screen.findByText('Members Page')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Telegram' }))
 
     expect(screen.getByRole('tab', { name: 'Telegram' })).toHaveAttribute('aria-selected', 'true')
     expect(membersTab).toHaveAttribute('aria-selected', 'false')
-    expect(screen.getByText('Telegram Section')).toBeInTheDocument()
+    expect(await screen.findByText('Telegram Section')).toBeInTheDocument()
   })
 
-  it('aceita tab inicial para abrir billing diretamente', () => {
+  it('aceita tab inicial para abrir billing diretamente', async () => {
     render(<SettingsView initialTab="billing" />)
 
     expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText('Billing Page')).toBeInTheDocument()
+    expect(await screen.findByText('Billing Page')).toBeInTheDocument()
   })
 })

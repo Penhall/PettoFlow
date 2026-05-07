@@ -1,17 +1,24 @@
-// src/hooks/useFinRules.js
-// Prioridade e campo numerico - sem reorderRules nem drag-and-drop.
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   listFinRuleRecords,
   saveFinRuleRecord,
   deleteFinRuleRecord,
 } from '../lib/workspaceCore'
+import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useFinRules() {
-  const [rules, setRules] = useState([])
-  const [loading, setLoading] = useState(true)
+  const visualMode = isVisualRegressionMode()
+  const fixtureRules = getVisualFixture('finRules', [])
+  const [rules, setRules] = useState(visualMode ? fixtureRules : [])
+  const [loading, setLoading] = useState(!visualMode)
 
   useEffect(() => {
+    if (visualMode) {
+      setRules(fixtureRules)
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -29,12 +36,14 @@ export function useFinRules() {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [visualMode, fixtureRules])
 
   const addRule = async (rule) => {
+    if (visualMode) return rule
+
     try {
       const created = await saveFinRuleRecord(rule)
-      setRules(prev => [...prev, created])
+      setRules((current) => [...current, created])
       return created
     } catch (error) {
       console.error('Error adding fin_rule:', error)
@@ -43,9 +52,11 @@ export function useFinRules() {
   }
 
   const updateRule = async (id, updates) => {
+    if (visualMode) return { id, ...updates }
+
     try {
       const updated = await saveFinRuleRecord({ id, ...updates })
-      setRules(prev => prev.map(r => r.id === id ? updated : r))
+      setRules((current) => current.map((rule) => (rule.id === id ? updated : rule)))
       return updated
     } catch (error) {
       console.error('Error updating fin_rule:', error)
@@ -54,9 +65,11 @@ export function useFinRules() {
   }
 
   const deleteRule = async (id) => {
+    if (visualMode) return true
+
     try {
       await deleteFinRuleRecord(id)
-      setRules(prev => prev.filter(r => r.id !== id))
+      setRules((current) => current.filter((rule) => rule.id !== id))
       return true
     } catch (error) {
       console.error('Error deleting fin_rule:', error)

@@ -1,30 +1,44 @@
-// src/hooks/useReceivables.js
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   listReceivableRecords,
   createReceivableRecord,
   updateReceivableRecord,
 } from '../lib/workspaceCore'
+import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useReceivables() {
-  const [receivables, setReceivables] = useState([])
-  const [loading, setLoading] = useState(true)
+  const visualMode = isVisualRegressionMode()
+  const fixtureReceivables = getVisualFixture('receivables', [])
+  const [receivables, setReceivables] = useState(visualMode ? fixtureReceivables : [])
+  const [loading, setLoading] = useState(!visualMode)
 
   const fetch = useCallback(async () => {
+    if (visualMode) {
+      setReceivables(fixtureReceivables)
+      setLoading(false)
+      return fixtureReceivables
+    }
+
     setLoading(true)
     try {
       const data = await listReceivableRecords()
       setReceivables(data || [])
+      return data || []
     } catch (error) {
       console.error('Error fetching receivables:', error)
+      return []
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [visualMode, fixtureReceivables])
 
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => {
+    fetch()
+  }, [fetch])
 
   const createReceivable = async (taskId, amount, targetAccountId) => {
+    if (visualMode) return { task_id: taskId, amount, target_account_id: targetAccountId }
+
     try {
       const created = await createReceivableRecord({
         task_id: taskId,
@@ -40,14 +54,9 @@ export function useReceivables() {
     }
   }
 
-  /**
-   * Creates a receivable originated from an activity.
-   * @param {number} activityId
-   * @param {number} amount - in cents
-   * @param {number|null} targetAccountId
-   * @param {string|null} dueDate - YYYY-MM-DD
-   */
   const createReceivableFromActivity = async (activityId, amount, targetAccountId, dueDate = null) => {
+    if (visualMode) return { activity_id: activityId, amount, target_account_id: targetAccountId, due_date: dueDate }
+
     try {
       const created = await createReceivableRecord({
         activity_id: activityId,
@@ -64,39 +73,35 @@ export function useReceivables() {
     }
   }
 
-  /**
-   * Marks a receivable as invoiced and creates a real transaction.
-   * Uses addTransaction from useTransactions for rules engine + needs_review logic.
-   * @param {number} receivableId
-   * @param {number} adjustedAmount - in cents
-   * @param {string} date - YYYY-MM-DD
-   * @param {Function} addTransaction - from useTransactions hook
-   */
   const invoiceReceivable = async (receivableId, adjustedAmount, date, addTransaction) => {
-    const rec = receivables.find(r => r.id === receivableId)
-    if (!rec) return null
+    if (visualMode) {
+      return receivables.find((receivable) => receivable.id === receivableId) ?? { amount: adjustedAmount, date }
+    }
 
-    const sourceName = rec.tasks?.title ?? rec.activities?.title ?? 'lancamento'
-    const sourceLink = rec.task_id
-      ? { type: 'task', id: rec.task_id }
-      : { type: 'activity', id: rec.activity_id }
+    const receivable = receivables.find((item) => item.id === receivableId)
+    if (!receivable) return null
 
-    const tx = await addTransaction({
-      account_id: rec.target_account_id,
+    const sourceName = receivable.tasks?.title ?? receivable.activities?.title ?? 'lancamento'
+    const sourceLink = receivable.task_id
+      ? { type: 'task', id: receivable.task_id }
+      : { type: 'activity', id: receivable.activity_id }
+
+    const transaction = await addTransaction({
+      account_id: receivable.target_account_id,
       amount: adjustedAmount,
       date,
       notes: `Faturamento: ${sourceName}`,
       related_to: [sourceLink],
     })
-    if (!tx) return null
+    if (!transaction) return null
 
     try {
       const updated = await updateReceivableRecord(receivableId, {
         status: 'invoiced',
-        transaction_id: tx.id,
+        transaction_id: transaction.id,
         invoiced_at: new Date().toISOString(),
       })
-      setReceivables(prev => prev.map(r => r.id === receivableId ? { ...r, ...updated } : r))
+      setReceivables((current) => current.map((item) => (item.id === receivableId ? { ...item, ...updated } : item)))
       return updated
     } catch (error) {
       console.error('Error invoicing receivable:', error)
@@ -104,13 +109,12 @@ export function useReceivables() {
     }
   }
 
-  const listReceivables = ({ status, taskId } = {}) => {
-    return receivables.filter(r => {
-      if (status && r.status !== status) return false
-      if (taskId !== undefined && r.task_id !== taskId) return false
+  const listReceivables = ({ status, taskId } = {}) =>
+    receivables.filter((receivable) => {
+      if (status && receivable.status !== status) return false
+      if (taskId !== undefined && receivable.task_id !== taskId) return false
       return true
     })
-  }
 
   return { receivables, loading, createReceivable, createReceivableFromActivity, invoiceReceivable, listReceivables, refresh: fetch }
 }

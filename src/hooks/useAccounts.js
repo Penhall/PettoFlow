@@ -1,13 +1,21 @@
-// src/hooks/useAccounts.js
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getPrincipalAccount as findPrincipal } from '../lib/financeUtils'
 import { listAccountRecords, saveAccountRecord } from '../lib/workspaceCore'
+import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useAccounts() {
-  const [accounts, setAccounts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const visualMode = isVisualRegressionMode()
+  const fixtureAccounts = getVisualFixture('accounts', [])
+  const [accounts, setAccounts] = useState(visualMode ? fixtureAccounts : [])
+  const [loading, setLoading] = useState(!visualMode)
 
   useEffect(() => {
+    if (visualMode) {
+      setAccounts(fixtureAccounts)
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -25,12 +33,14 @@ export function useAccounts() {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [visualMode, fixtureAccounts])
 
   const addAccount = async (account) => {
+    if (visualMode) return account
+
     try {
       const created = await saveAccountRecord(account)
-      setAccounts(prev => [...prev, created])
+      setAccounts((current) => [...current, created])
       return created
     } catch (error) {
       console.error('Error adding account:', error)
@@ -39,9 +49,11 @@ export function useAccounts() {
   }
 
   const updateAccount = async (id, updates) => {
+    if (visualMode) return { id, ...updates }
+
     try {
       const updated = await saveAccountRecord({ id, ...updates })
-      setAccounts(prev => prev.map(a => a.id === id ? updated : a))
+      setAccounts((current) => current.map((account) => (account.id === id ? updated : account)))
       return updated
     } catch (error) {
       console.error('Error updating account:', error)
@@ -50,11 +62,15 @@ export function useAccounts() {
   }
 
   const closeAccount = async (id) => {
+    if (visualMode) return true
+
     try {
       const updated = await saveAccountRecord({ id, is_active: false })
-      setAccounts(prev => prev.map(a => a.id === id ? updated : a))
+      setAccounts((current) => current.map((account) => (account.id === id ? updated : account)))
+      return updated
     } catch (error) {
       console.error('Error closing account:', error)
+      return null
     }
   }
 
@@ -62,17 +78,20 @@ export function useAccounts() {
 
   const getUniqueCategories = () => {
     const defaults = ['principal', 'reserva', 'extras']
-    const custom = accounts.map(a => a.category).filter(Boolean)
+    const custom = accounts.map((account) => account.category).filter(Boolean)
     return [...new Set([...defaults, ...custom])]
   }
 
   const setAccountCategory = async (accountId, category, demotedCategory = 'extras') => {
+    if (visualMode) return { accountId, category, demotedCategory }
+
     if (category === 'principal') {
       const current = getPrincipalAccount()
       if (current && current.id !== accountId) {
         await updateAccount(current.id, { category: demotedCategory })
       }
     }
+
     return updateAccount(accountId, { category })
   }
 

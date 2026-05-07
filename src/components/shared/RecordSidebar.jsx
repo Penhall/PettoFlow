@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
+import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
 
 const RecordSidebar = ({ isOpen, onClose = () => {}, title, subtitle, children }) => {
   // Fecha com Escape
@@ -22,7 +23,7 @@ const RecordSidebar = ({ isOpen, onClose = () => {}, title, subtitle, children }
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={MOTION_TRANSITIONS.fade}
           />
           {/* Painel */}
           <motion.aside
@@ -30,7 +31,7 @@ const RecordSidebar = ({ isOpen, onClose = () => {}, title, subtitle, children }
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+            transition={MOTION_TRANSITIONS.overlay}
           >
             <div className="record-sidebar-header">
               <div>

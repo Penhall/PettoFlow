@@ -10,6 +10,7 @@ import {
 } from '../../lib/workspaceCore'
 import TransactionList from '../Finance/TransactionList'
 import RecordSidebar from '../shared/RecordSidebar'
+import { getVisualFixture, isVisualRegressionMode } from '../../visual/fixtureRuntime.js'
 
 const LOG_TYPES = ['Ligacao', 'Email', 'Reuniao', 'WhatsApp', 'Outro']
 
@@ -55,6 +56,13 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
 
   const fetchLogs = useCallback(async () => {
     if (!client?.id) return
+
+    if (isVisualRegressionMode()) {
+      const fixtureLogs = getVisualFixture('interactionLogs', {})
+      setLogs(fixtureLogs[client.id] || [])
+      setLoadingLogs(false)
+      return
+    }
 
     setLoadingLogs(true)
 

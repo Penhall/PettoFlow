@@ -1,19 +1,27 @@
-// src/hooks/useFinCategories.js
-// Carrega grupos e categorias via workspace-core.
-// is_income fica somente no grupo (category_groups.is_income); categorias herdam via consumer.
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   listFinCategoryRecords,
   createCategoryGroupRecord,
   saveFinCategoryRecord,
 } from '../lib/workspaceCore'
+import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useFinCategories() {
-  const [groups, setGroups] = useState([])
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
+  const visualMode = isVisualRegressionMode()
+  const fixtureGroups = getVisualFixture('finCategoryGroups', [])
+  const fixtureCategories = getVisualFixture('finCategories', [])
+  const [groups, setGroups] = useState(visualMode ? fixtureGroups : [])
+  const [categories, setCategories] = useState(visualMode ? fixtureCategories : [])
+  const [loading, setLoading] = useState(!visualMode)
 
   useEffect(() => {
+    if (visualMode) {
+      setGroups(fixtureGroups)
+      setCategories(fixtureCategories)
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -32,12 +40,14 @@ export function useFinCategories() {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [visualMode, fixtureGroups, fixtureCategories])
 
   const addGroup = async (group) => {
+    if (visualMode) return group
+
     try {
       const created = await createCategoryGroupRecord(group)
-      setGroups(prev => [...prev, created])
+      setGroups((current) => [...current, created])
       return created
     } catch (error) {
       console.error('Error adding category_group:', error)
@@ -46,9 +56,11 @@ export function useFinCategories() {
   }
 
   const addCategory = async (category) => {
+    if (visualMode) return category
+
     try {
       const created = await saveFinCategoryRecord(category)
-      setCategories(prev => [...prev, created])
+      setCategories((current) => [...current, created])
       return created
     } catch (error) {
       console.error('Error adding fin_category:', error)
@@ -57,9 +69,11 @@ export function useFinCategories() {
   }
 
   const updateCategory = async (id, updates) => {
+    if (visualMode) return { id, ...updates }
+
     try {
       const updated = await saveFinCategoryRecord({ id, ...updates })
-      setCategories(prev => prev.map(c => c.id === id ? updated : c))
+      setCategories((current) => current.map((category) => (category.id === id ? updated : category)))
       return updated
     } catch (error) {
       console.error('Error updating fin_category:', error)

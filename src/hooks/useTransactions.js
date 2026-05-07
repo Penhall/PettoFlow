@@ -1,7 +1,4 @@
-// src/hooks/useTransactions.js
-// filters: { accountId?, categoryId?, dateFrom?, dateTo?, needsReview?, relatedTo?: {type, id} }
-// rules: FinRule[] pre-ordenada (recebida de FinanceView via useFinRules)
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { runRulesEngine } from '../lib/rulesEngine'
 import {
   listTransactionRecords,
@@ -9,17 +6,30 @@ import {
   updateTransactionRecord,
   deleteTransactionRecord,
 } from '../lib/workspaceCore'
+import { filterFixtureTransactions, getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useTransactions(filters = {}, rules = []) {
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
-
+  const visualMode = isVisualRegressionMode()
+  const fixtureTransactions = getVisualFixture('transactions', [])
+  const [transactions, setTransactions] = useState(
+    visualMode ? filterFixtureTransactions(fixtureTransactions, filters) : []
+  )
+  const [loading, setLoading] = useState(!visualMode)
   const rulesRef = useRef(rules)
-  useEffect(() => { rulesRef.current = rules }, [rules])
+
+  useEffect(() => {
+    rulesRef.current = rules
+  }, [rules])
 
   const filtersKey = JSON.stringify(filters)
 
   useEffect(() => {
+    if (visualMode) {
+      setTransactions(filterFixtureTransactions(fixtureTransactions, filters))
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -37,14 +47,16 @@ export function useTransactions(filters = {}, rules = []) {
       })
 
     return () => { cancelled = true }
-  }, [filtersKey])
+  }, [filters, filtersKey, visualMode, fixtureTransactions])
 
   const getSortedRules = () =>
-    [...(rulesRef.current || [])].sort((a, b) =>
-      a.priority !== b.priority ? a.priority - b.priority : a.id - b.id
+    [...(rulesRef.current || [])].sort((left, right) =>
+      left.priority !== right.priority ? left.priority - right.priority : left.id - right.id
     )
 
   const addTransaction = async (form) => {
+    if (visualMode) return form
+
     const { enriched, ruleMatched } = runRulesEngine(form, getSortedRules())
     const dbPayload = { ...enriched }
     delete dbPayload.payee_name
@@ -52,7 +64,7 @@ export function useTransactions(filters = {}, rules = []) {
 
     try {
       const created = await createTransactionRecord(payload)
-      setTransactions(prev => [created, ...prev])
+      setTransactions((current) => [created, ...current])
       return created
     } catch (error) {
       console.error('Error adding transaction:', error)
@@ -61,12 +73,14 @@ export function useTransactions(filters = {}, rules = []) {
   }
 
   const updateTransaction = async (id, updates) => {
+    if (visualMode) return { id, ...updates }
+
     const dbUpdates = { ...updates }
     delete dbUpdates.payee_name
 
     try {
       const updated = await updateTransactionRecord(id, dbUpdates)
-      setTransactions(prev => prev.map(t => t.id === id ? updated : t))
+      setTransactions((current) => current.map((transaction) => (transaction.id === id ? updated : transaction)))
       return updated
     } catch (error) {
       console.error('Error updating transaction:', error)
@@ -75,9 +89,11 @@ export function useTransactions(filters = {}, rules = []) {
   }
 
   const deleteTransaction = async (id) => {
+    if (visualMode) return true
+
     try {
       await deleteTransactionRecord(id)
-      setTransactions(prev => prev.filter(t => t.id !== id))
+      setTransactions((current) => current.filter((transaction) => transaction.id !== id))
       return true
     } catch (error) {
       console.error('Error deleting transaction:', error)
@@ -86,14 +102,19 @@ export function useTransactions(filters = {}, rules = []) {
   }
 
   const applyRules = async () => {
+    if (visualMode) return true
+
     const sortedRules = getSortedRules()
-    const pending = transactions.filter(t => t.needs_review)
-    for (const tx of pending) {
-      const { enriched, ruleMatched } = runRulesEngine(tx, sortedRules)
+    const pendingTransactions = transactions.filter((transaction) => transaction.needs_review)
+
+    for (const transaction of pendingTransactions) {
+      const { enriched, ruleMatched } = runRulesEngine(transaction, sortedRules)
       if (ruleMatched) {
-        await updateTransaction(tx.id, { ...enriched, needs_review: false })
+        await updateTransaction(transaction.id, { ...enriched, needs_review: false })
       }
     }
+
+    return true
   }
 
   return { transactions, loading, addTransaction, updateTransaction, deleteTransaction, applyRules }

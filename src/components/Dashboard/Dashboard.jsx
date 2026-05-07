@@ -120,7 +120,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
                     <div className="dashboard-progress-row__bar" aria-hidden="true">
                       <div
                         className="dashboard-progress-row__fill"
-                        style={{ width: `${Math.max(0, Math.min(Number(task.progress || 0), 100))}%` }}
+                        style={{ '--progress-width': `${Math.max(0, Math.min(Number(task.progress || 0), 100))}%` }}
                       />
                     </div>
                     <strong className="dashboard-progress-row__value">{Number(task.progress || 0)}%</strong>
@@ -149,7 +149,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
                           <span>{count} ocorrencias</span>
                         </div>
                         <div className="dashboard-tag-row__bar" aria-hidden="true">
-                          <div className="dashboard-tag-row__fill" style={{ width: `${share}%` }} />
+                          <div className="dashboard-tag-row__fill" style={{ '--progress-width': `${share}%` }} />
                         </div>
                       </div>
                     )
