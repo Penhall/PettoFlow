@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { AuthContext } from './authContext.js'
 
 function getMissingConfigError() {
-  return new Error('O cliente Supabase não está configurado com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.')
+  return new Error('O cliente Supabase nao esta configurado com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.')
 }
 
 export function AuthProvider({ children }) {
@@ -41,18 +41,27 @@ export function AuthProvider({ children }) {
         return
       }
 
-      const { data, error } = await supabase.auth.getSession()
-      if (!active) return
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (!active) return
 
-      if (error) {
-        console.error('Erro ao carregar sessão inicial:', error)
+        if (error) {
+          console.error('Erro ao carregar sessao inicial:', error)
+        }
+
+        const nextSession = data?.session ?? null
+        setSession(nextSession)
+        setUser(nextSession?.user ?? null)
+        await syncPlatformAdmin(nextSession, () => active)
+      } catch (error) {
+        if (!active) return
+        console.error('Erro ao inicializar autenticacao:', error)
+        setSession(null)
+        setUser(null)
+        setIsPlatformAdmin(false)
+      } finally {
+        if (active) setLoading(false)
       }
-
-      const nextSession = data?.session ?? null
-      setSession(nextSession)
-      setUser(nextSession?.user ?? null)
-      await syncPlatformAdmin(nextSession, () => active)
-      setLoading(false)
     }
 
     loadSession()
