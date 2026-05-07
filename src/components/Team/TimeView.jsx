@@ -1,55 +1,75 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Plus, Trash2, X } from 'lucide-react'
-import { saveTeamMemberRecord, deleteTeamMemberRecord } from '../../lib/workspaceCore'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Mail, PencilLine, Trash2, X } from 'lucide-react'
+import { deleteTeamMemberRecord, saveTeamMemberRecord } from '../../lib/workspaceCore'
+import EmptyState from '../shared/EmptyState.jsx'
+import PageActionBar from '../shared/PageActionBar.jsx'
+import PageHeader from '../shared/PageHeader.jsx'
+import SurfaceCard from '../shared/SurfaceCard.jsx'
 
-const MemberModal = ({ member, onSave, onClose }) => {
-  const [form, setForm] = useState(member || {
-    name: '',
-    role: '',
-    email: '',
-    phone: '',
-    status: 'Ativo'
-  })
+function MemberModal({ member, onSave, onClose }) {
+  const [form, setForm] = useState(
+    member || {
+      name: '',
+      role: '',
+      email: '',
+      phone: '',
+      status: 'Ativo',
+    }
+  )
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = (event) => {
+    event.preventDefault()
     onSave(form)
   }
 
   return (
-    <motion.div className="modal-overlay" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <motion.div className="modal" onClick={e => e.stopPropagation()} initial={{ scale: 0.9 }} animate={{ scale: 1 }}>
+    <motion.div className="modal-overlay" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+      <motion.div
+        className="modal"
+        onClick={(event) => event.stopPropagation()}
+        initial={{ opacity: 0, y: 10, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.985 }}
+        transition={{ duration: 0.18 }}
+      >
         <div className="modal-header">
-          <h2>{member ? 'Editar Membro' : 'Novo Membro'}</h2>
-          <button className="icon-btn" onClick={onClose}><X size={20} /></button>
+          <h2>{member ? 'Editar membro' : 'Novo membro'}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar">
+            <X size={18} />
+          </button>
         </div>
+
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label>Nome Completo *</label>
-            <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+            <label>Nome completo *</label>
+            <input required type="text" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
           </div>
+
           <div className="form-group">
-            <label>Cargo / Função</label>
-            <input type="text" value={form.role} onChange={e => setForm({...form, role: e.target.value})} />
+            <label>Cargo ou funcao</label>
+            <input type="text" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} />
           </div>
+
           <div className="form-row">
             <div className="form-group">
               <label>Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+              <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
             </div>
+
             <div className="form-group">
               <label>Status</label>
-              <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+              <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
                 <option>Ativo</option>
                 <option>Ocupado</option>
                 <option>Ausente</option>
               </select>
             </div>
           </div>
+
           <div className="modal-actions">
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="add-member-btn">Salvar</button>
+            <button type="submit" className="add-member-btn">Salvar membro</button>
           </div>
         </form>
       </motion.div>
@@ -57,33 +77,54 @@ const MemberModal = ({ member, onSave, onClose }) => {
   )
 }
 
-const TimeView = ({ tasks, team, onRefresh, searchQuery }) => {
+function getMemberStatusTone(status) {
+  if (status === 'Ativo') return 'done'
+  if (status === 'Ocupado') return 'progress'
+  return 'todo'
+}
+
+export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery }) {
   const [editingMember, setEditingMember] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
-  const members = (team || []).map(member => {
-    const memberTasks = tasks.filter(t => t.owner === member.name)
-    const done = memberTasks.filter(t => t.status === 'Concluído').length
-    const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
-    return { ...member, initials, memberTasks, done }
-  }).filter(member => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return (member.name || '').toLowerCase().includes(q) || 
-           (member.role || '').toLowerCase().includes(q)
-  })
+  const members = (team || [])
+    .map((member) => {
+      const memberTasks = tasks.filter((task) => task.owner === member.name)
+      const completedCount = memberTasks.filter((task) => task.completed_at).length
+      const initials = member.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+
+      return {
+        ...member,
+        initials,
+        memberTasks,
+        completedCount,
+      }
+    })
+    .filter((member) => {
+      if (!searchQuery) return true
+      const query = searchQuery.toLowerCase()
+      return (member.name || '').toLowerCase().includes(query) || (member.role || '').toLowerCase().includes(query)
+    })
+
+  const totalAssignedTasks = members.reduce((sum, member) => sum + member.memberTasks.length, 0)
+  const activeMembers = members.filter((member) => member.status === 'Ativo').length
+
+  const closeModal = () => {
+    setShowModal(false)
+    setEditingMember(null)
+  }
 
   const handleSave = async (form) => {
     const payload = { ...form }
     const { id } = payload
+
     delete payload.initials
     delete payload.memberTasks
-    delete payload.done
+    delete payload.completedCount
 
     try {
       await saveTeamMemberRecord({ ...payload, id })
-      setShowModal(false)
-      setEditingMember(null)
+      closeModal()
       onRefresh()
     } catch (error) {
       console.error('Error saving member:', error)
@@ -92,6 +133,7 @@ const TimeView = ({ tasks, team, onRefresh, searchQuery }) => {
 
   const handleDelete = async (id) => {
     if (!confirm('Deseja remover este membro do time?')) return
+
     try {
       await deleteTeamMemberRecord(id)
       onRefresh()
@@ -101,53 +143,117 @@ const TimeView = ({ tasks, team, onRefresh, searchQuery }) => {
   }
 
   return (
-    <div className="team-view">
-      <div className="section-header-row">
-        <h3 className="section-title">Membros do Time</h3>
-        <button className="add-member-btn" onClick={() => setShowModal(true)}>
-          <Plus size={16} /> Novo Membro
-        </button>
-      </div>
+    <div className="team-page">
+      <PageHeader
+        eyebrow="Workspace"
+        title="Time"
+        subtitle="Gerencie membros, distribuicao de trabalho e sinais operacionais da equipe sem perder densidade."
+        metrics={[
+          { label: 'Membros visiveis', value: String(members.length) },
+          { label: 'Ativos agora', value: String(activeMembers) },
+          { label: 'Tarefas alocadas', value: String(totalAssignedTasks) },
+        ]}
+      />
 
-      <div className="team-grid">
-        {members.map((member) => (
-          <div key={member.id} className="member-card" onClick={() => { setEditingMember(member); setShowModal(true) }}>
-            <div className="member-header">
-              <div className="avatar">{member.initials}</div>
-              <div className="member-info">
-                <h3>{member.name}</h3>
-                <span className="role">{member.memberTasks.length} tarefa{member.memberTasks.length !== 1 ? 's' : ''} · {member.done} concluída{member.done !== 1 ? 's' : ''}</span>
-              </div>
+      <PageActionBar
+        meta={`${members.length} ${members.length === 1 ? 'membro encontrado' : 'membros encontrados'}`}
+        primaryAction={{
+          label: 'Novo membro',
+          onClick: () => {
+            setEditingMember(null)
+            setShowModal(true)
+          },
+        }}
+      />
+
+      <div className="team-page__content">
+        {members.length === 0 ? (
+          <SurfaceCard>
+            <EmptyState
+              title="O time aparece aqui como camada operacional"
+              description="Acompanhe distribuicao de trabalho, responsaveis e sinais de capacidade da equipe."
+              detail={
+                searchQuery
+                  ? 'Nenhum membro corresponde aos filtros atuais.'
+                  : 'Esta area esta vazia porque nenhum membro foi cadastrado no workspace.'
+              }
+            />
+          </SurfaceCard>
+        ) : (
+          <SurfaceCard className="team-page__list" padded={false}>
+            <div className="team-page__list-header" role="presentation">
+              <span>Pessoa</span>
+              <span>Capacidade</span>
+              <span>Foco recente</span>
+              <span>Acoes</span>
             </div>
-            <div className="member-actions" onClick={e => e.stopPropagation()}>
-              <button className="action-icon-btn"><Mail size={16} /></button>
-              <button className="delete-task-btn" onClick={() => handleDelete(member.id)}><Trash2 size={16} /></button>
-            </div>
-            <div className="member-tasks">
-              {member.memberTasks.slice(0, 3).map(t => (
-                <div key={t.id} className="member-task-row">
-                  <span>{t.title}</span>
+
+            {members.map((member) => (
+              <article key={member.id} className="team-member-row">
+                <div className="team-member-row__identity">
+                  <span className="team-member-row__avatar" aria-hidden="true">{member.initials}</span>
+                  <div className="team-member-row__copy">
+                    <strong>{member.name}</strong>
+                    <span>{member.role || 'Funcao nao definida'}</span>
+                  </div>
                 </div>
-              ))}
-              {member.memberTasks.length > 3 && (
-                <div className="more-tasks-count">+{member.memberTasks.length - 3} mais</div>
-              )}
-            </div>
-          </div>
-        ))}
+
+                <div className="team-member-row__metrics">
+                  <span>{member.memberTasks.length} tarefa{member.memberTasks.length === 1 ? '' : 's'}</span>
+                  <span>{member.completedCount} concluidas</span>
+                  <span className={`status-badge ${getMemberStatusTone(member.status)}`}>{member.status || 'Ativo'}</span>
+                </div>
+
+                <div className="team-member-row__tasks">
+                  {member.memberTasks.length ? (
+                    member.memberTasks.slice(0, 3).map((task) => (
+                      <span key={task.id} className="team-member-row__task-chip">{task.title}</span>
+                    ))
+                  ) : (
+                    <span className="team-member-row__placeholder">Sem tarefas vinculadas</span>
+                  )}
+                </div>
+
+                <div className="team-member-row__actions">
+                  {member.email ? (
+                    <a className="page-action-bar__button" href={`mailto:${member.email}`}>
+                      <Mail size={14} />
+                      <span>Email</span>
+                    </a>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="page-action-bar__button"
+                    onClick={() => {
+                      setEditingMember(member)
+                      setShowModal(true)
+                    }}
+                  >
+                    <PencilLine size={14} />
+                    <span>Editar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="page-action-bar__button team-member-row__danger"
+                    onClick={() => handleDelete(member.id)}
+                  >
+                    <Trash2 size={14} />
+                    <span>Remover</span>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </SurfaceCard>
+        )}
       </div>
 
       <AnimatePresence>
-        {showModal && (
-          <MemberModal 
-            member={editingMember} 
-            onSave={handleSave} 
-            onClose={() => { setShowModal(false); setEditingMember(null) }} 
-          />
-        )}
+        {showModal ? (
+          <MemberModal member={editingMember} onSave={handleSave} onClose={closeModal} />
+        ) : null}
       </AnimatePresence>
     </div>
   )
 }
-
-export default TimeView

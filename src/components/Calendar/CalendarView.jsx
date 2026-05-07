@@ -1,39 +1,45 @@
-// src/components/Calendar/CalendarView.jsx
 import { useState } from 'react'
-import FullCalendar from '@fullcalendar/react'
-import dayGridPlugin from '@fullcalendar/daygrid'
-import timeGridPlugin from '@fullcalendar/timegrid'
-import listPlugin from '@fullcalendar/list'
-import ptBrLocale from '@fullcalendar/core/locales/pt-br'
 import { AnimatePresence } from 'framer-motion'
-import { useCalendarEvents } from '../../hooks/useCalendarEvents'
-import CalendarFilters from './CalendarFilters'
-import EventDetailPanel from './EventDetailPanel'
+import FullCalendar from '@fullcalendar/react'
+import ptBrLocale from '@fullcalendar/core/locales/pt-br'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import listPlugin from '@fullcalendar/list'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import { useAccounts } from '../../hooks/useAccounts'
 import { useActivities } from '../../hooks/useActivities'
+import { useCalendarEvents } from '../../hooks/useCalendarEvents'
+import { useFinRules } from '../../hooks/useFinRules'
 import { useReceivables } from '../../hooks/useReceivables'
 import { useTransactions } from '../../hooks/useTransactions'
-import { useFinRules } from '../../hooks/useFinRules'
-import { useAccounts } from '../../hooks/useAccounts'
 import { getPrincipalAccount } from '../../lib/financeUtils'
 import ActivityForm from '../Activities/ActivityForm'
+import CalendarFilters from './CalendarFilters'
+import EventDetailPanel from './EventDetailPanel'
 
 const ALL_TYPES = ['task', 'activity', 'receivable', 'transaction']
 const EMPTY_FILTERS = {}
 
 export default function CalendarView({
-  filterTypes,      // undefined = unified view; ['task'] = tasks only
+  filterTypes,
   tasks = [],
   clients = [],
   team = [],
   columns = [],
-  onUpdateTask,     // (id, updates) => void — from App.jsx
-  onAddTask,        // (form) => void — from App.jsx
-  onEmptyDateClick, // (dateStr: string) => void — substitui o padrão (ActivityForm)
-  contextArea,      // 'global'|'tarefas'|'atividades'|'financas'|undefined — passado para EventDetailPanel
+  onUpdateTask,
+  onAddTask,
+  onEmptyDateClick,
+  contextArea,
+  activeTypes: controlledActiveTypes,
+  onActiveTypesChange,
+  showFilters,
 }) {
-  const [activeTypes, setActiveTypes] = useState(filterTypes ?? ALL_TYPES)
+  const [internalActiveTypes, setInternalActiveTypes] = useState(filterTypes ?? ALL_TYPES)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [dateClickDate, setDateClickDate] = useState(null)
+
+  const activeTypes = controlledActiveTypes ?? internalActiveTypes
+  const setActiveTypes = onActiveTypesChange ?? setInternalActiveTypes
+  const shouldShowFilters = showFilters ?? !filterTypes
 
   const { addActivity, updateActivity } = useActivities()
   const { invoiceReceivable, createReceivableFromActivity } = useReceivables()
@@ -47,22 +53,16 @@ export default function CalendarView({
     types: filterTypes ?? activeTypes,
   })
 
-  const fcEvents = events.map(ev => ({
-    id: ev.id,
-    title: ev.title,
-    date: ev.date,
-    backgroundColor: ev.color,
-    borderColor: ev.color,
-    extendedProps: { calendarEvent: ev },
+  const fcEvents = events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    backgroundColor: event.color,
+    borderColor: event.color,
+    extendedProps: { calendarEvent: event },
   }))
 
-  const handleEventClick = ({ event }) => {
-    setSelectedEvent(event.extendedProps.calendarEvent)
-  }
-
-  // Em mobile: view inicial lista (mais legível), toolbar simplificada
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-
   const calendarProps = isMobile
     ? {
         initialView: 'listMonth',
@@ -83,34 +83,32 @@ export default function CalendarView({
 
   return (
     <div className="calendar-view-wrapper">
-      {!filterTypes && (
+      {shouldShowFilters ? (
         <CalendarFilters active={activeTypes} onChange={setActiveTypes} />
-      )}
+      ) : null}
 
-      {loading && (
-        <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>Carregando eventos...</p>
-      )}
+      {loading ? <p className="calendar-view-wrapper__loading">Carregando eventos...</p> : null}
 
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
         locale={ptBrLocale}
         {...calendarProps}
         events={fcEvents}
-        eventClick={handleEventClick}
+        eventClick={({ event }) => setSelectedEvent(event.extendedProps.calendarEvent)}
         dateClick={({ dateStr }) => {
           if (onEmptyDateClick) {
             onEmptyDateClick(dateStr)
-          } else {
-            setDateClickDate(dateStr)
+            return
           }
+
+          setDateClickDate(dateStr)
         }}
         height="auto"
         editable={false}
       />
 
-      {/* EventDetailPanel */}
       <AnimatePresence>
-        {selectedEvent && (
+        {selectedEvent ? (
           <EventDetailPanel
             event={selectedEvent}
             onClose={() => setSelectedEvent(null)}
@@ -127,14 +125,13 @@ export default function CalendarView({
             principalAccountId={principalAccount?.id ?? null}
             contextArea={contextArea}
           />
-        )}
+        ) : null}
       </AnimatePresence>
 
-      {/* Date click → new activity */}
       <AnimatePresence>
-        {dateClickDate && (
+        {dateClickDate ? (
           <ActivityForm
-            activity={{ scheduled_at: dateClickDate + 'T09:00' }}
+            activity={{ scheduled_at: `${dateClickDate}T09:00` }}
             clients={clients}
             tasks={tasks}
             team={team}
@@ -145,7 +142,7 @@ export default function CalendarView({
             }}
             onClose={() => setDateClickDate(null)}
           />
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   )

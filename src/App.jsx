@@ -1,43 +1,47 @@
-import { useState, useMemo, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import Sidebar from './components/Sidebar'
-import Header from './components/Header'
-import TasksPage from './components/Tasks/TasksPage'
-import KanbanView from './components/Tasks/KanbanView'
-import ListView from './components/Tasks/ListView'
-import OverviewView from './components/Tasks/OverviewView'
-import TaskModal from './components/Tasks/TaskModal'
-import Dashboard from './components/Dashboard/Dashboard'
-import TimeView from './components/Team/TimeView'
-import ClientesView from './components/Clients/ClientesView'
-import ActivitiesView from './components/Activities/ActivitiesView'
-import FinanceView from './components/Finance/FinanceView'
-import ArchiveView from './components/Archive/ArchiveView'
-import CalendarView from './components/Calendar/CalendarView'
-import SettingsView from './components/Settings/SettingsView'
-import EmptyState from './components/shared/EmptyState'
-import ReminderToast from './components/shared/ReminderToast'
-import CommandPalette from './components/shared/CommandPalette'
+import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import AppShell from './components/shell/AppShell.jsx'
+import ProfileMenu from './components/shell/ProfileMenu.jsx'
+import SidebarRail from './components/shell/SidebarRail.jsx'
+import Topbar from './components/shell/Topbar.jsx'
+import ActivitiesView from './components/Activities/ActivitiesView.jsx'
+import ArchiveView from './components/Archive/ArchiveView.jsx'
+import CalendarView from './components/Calendar/CalendarView.jsx'
+import CalendarWorkspacePage from './components/Calendar/CalendarWorkspacePage.jsx'
+import ClientesView from './components/Clients/ClientesView.jsx'
+import Dashboard from './components/Dashboard/Dashboard.jsx'
+import FinanceView from './components/Finance/FinanceView.jsx'
+import SettingsView from './components/Settings/SettingsView.jsx'
+import TaskModal from './components/Tasks/TaskModal.jsx'
+import KanbanView from './components/Tasks/KanbanView.jsx'
+import ListView from './components/Tasks/ListView.jsx'
+import OverviewView from './components/Tasks/OverviewView.jsx'
+import TasksPage from './components/Tasks/TasksPage.jsx'
+import TimeView from './components/Team/TimeView.jsx'
+import EmptyState from './components/shared/EmptyState.jsx'
+import CommandPalette from './components/shared/CommandPalette.jsx'
+import ReminderToast from './components/shared/ReminderToast.jsx'
 import { useActivities } from './hooks/useActivities'
+import { useAuth } from './hooks/useAuth.js'
 import { useCommandPalette } from './hooks/useCommandPalette'
 import { useReceivables } from './hooks/useReceivables'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import {
-  fetchWorkspaceBootstrap,
-  createTaskRecord,
-  updateTaskRecord,
-  deleteTaskRecord,
   archiveTaskRecord,
-  restoreTaskRecord,
   createColumnRecord,
+  createTaskRecord,
   deleteColumnRecord,
+  deleteTaskRecord,
+  fetchWorkspaceBootstrap,
   listActiveAccounts,
+  restoreTaskRecord,
+  updateTaskRecord,
 } from './lib/workspaceCore'
 
-const PRIORITY_ORDER = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
-
+const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
 const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'settings'])
-const PAGE_OWNED_CHROME_TABS = new Set(['tarefas', 'atividades', 'financas', 'settings'])
+const CONTENT_SEARCH_TABS = new Set(['time', 'clientes'])
+const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
 
 function readInitialAppTab() {
   if (typeof window === 'undefined') return 'tarefas'
@@ -69,11 +73,20 @@ function App() {
   const [addModalStatus, setAddModalStatus] = useState('A Fazer')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [initialSettingsTab] = useState(readInitialSettingsTab)
 
+  const { user, signOut, isPlatformAdmin } = useAuth()
   const { activities } = useActivities()
-  const { isOpen: paletteOpen, query, setQuery, results, close: closePalette } = useCommandPalette(tasks, clients, activities)
+  const {
+    isOpen: paletteOpen,
+    query,
+    setQuery,
+    open: openPalette,
+    close: closePalette,
+    results,
+  } = useCommandPalette(tasks, clients, activities)
   const { createReceivable, listReceivables } = useReceivables()
 
   const fetchWorkspaceData = async () => {
@@ -113,25 +126,52 @@ function App() {
     fetchWorkspaceData()
   }, [])
 
-  const allTags = useMemo(() => [...new Set((tasks || []).flatMap(t => t.tags || []))], [tasks])
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    const mediaQuery = window.matchMedia('(max-width: 768px)')
+    const handleViewportChange = (event) => {
+      if (!event.matches) {
+        setMobileSidebarOpen(false)
+      }
+    }
+
+    handleViewportChange(mediaQuery)
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleViewportChange)
+      return () => mediaQuery.removeEventListener('change', handleViewportChange)
+    }
+
+    mediaQuery.addListener(handleViewportChange)
+    return () => mediaQuery.removeListener(handleViewportChange)
+  }, [])
+
+  const allTags = useMemo(() => [...new Set((tasks || []).flatMap((task) => task.tags || []))], [tasks])
 
   const filteredTasks = useMemo(() => {
     let result = tasks || []
+
     if (searchQuery) {
-      result = result.filter(t => (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()))
+      result = result.filter((task) => (task.title || '').toLowerCase().includes(searchQuery.toLowerCase()))
     }
+
     if (filterTag) {
-      result = result.filter(t => t.tags && Array.isArray(t.tags) && t.tags.includes(filterTag))
+      result = result.filter((task) => Array.isArray(task.tags) && task.tags.includes(filterTag))
     }
+
     if (sortBy === 'priority') {
       result = [...result].sort((a, b) => (PRIORITY_ORDER[b.priority] || 0) - (PRIORITY_ORDER[a.priority] || 0))
     }
+
     if (sortBy === 'title') {
       result = [...result].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'pt-BR'))
     }
+
     if (sortBy === 'progress') {
       result = [...result].sort((a, b) => (b.progress || 0) - (a.progress || 0))
     }
+
     return result
   }, [tasks, searchQuery, filterTag, sortBy])
 
@@ -140,14 +180,16 @@ function App() {
     setSearchQuery('')
     setShowFilterMenu(false)
     setShowSortMenu(false)
+    closePalette()
   }
 
   const addTask = async (task) => {
     const payload = { ...task }
-    delete payload.related_to // tasks.related_to does not exist in the current schema
+    delete payload.related_to
+
     try {
       const created = await createTaskRecord({ ...payload, created_at: new Date().toISOString() })
-      setTasks(prev => [created, ...prev])
+      setTasks((prev) => [created, ...prev])
       setShowAddModal(false)
       return created
     } catch (error) {
@@ -161,22 +203,16 @@ function App() {
     const cleanUpdates = { ...updates }
     delete cleanUpdates.related_to
 
-    // Detect if task is moving to the terminal column for the first time
     const terminalColumnName = columns[columns.length - 1]?.name
-    const task = tasks.find(t => t.id === id)
-    const movingToTerminal = (
-      terminalColumnName &&
+    const task = tasks.find((item) => item.id === id)
+    const movingToTerminal = terminalColumnName &&
       cleanUpdates.status === terminalColumnName &&
       task?.status !== terminalColumnName
-    )
-    const leavingTerminal = (
-      terminalColumnName &&
+    const leavingTerminal = terminalColumnName &&
       task?.status === terminalColumnName &&
       cleanUpdates.status &&
       cleanUpdates.status !== terminalColumnName
-    )
 
-    // Set completed_at the first time a task enters the terminal column
     if (movingToTerminal && !task?.completed_at) {
       cleanUpdates.completed_at = new Date().toISOString()
     } else if (leavingTerminal) {
@@ -189,22 +225,20 @@ function App() {
     } catch (error) {
       console.error('Error updating task:', error)
       alert('Erro ao atualizar tarefa: ' + error.message)
-      return
+      return null
     }
 
-    setTasks(prev => prev.map(t => t.id === id ? updatedTask : t))
+    setTasks((prev) => prev.map((item) => (item.id === id ? updatedTask : item)))
 
-    // Auto-create receivable when a Vendas task reaches the terminal column
     if (movingToTerminal) {
       const existing = listReceivables({ taskId: Number(id) })
       if (shouldCreateReceivable(updatedTask, existing)) {
-        // Fetch accounts directly — useAccounts lives in FinanceView scope, not here
         const allAccounts = await listActiveAccounts()
         const principal = findPrincipal(allAccounts || [])
         if (principal) {
           await createReceivable(id, updatedTask.deal_value, principal.id)
         } else {
-          alert('Nenhuma conta Principal definida. Acesse Finanças → Contas para definir uma conta como Principal.')
+          alert('Nenhuma conta Principal definida. Acesse Financas -> Contas para definir uma conta como Principal.')
         }
       }
     }
@@ -215,7 +249,7 @@ function App() {
   const deleteTask = async (id) => {
     try {
       await deleteTaskRecord(id)
-      setTasks(prev => prev.filter(t => t.id !== id))
+      setTasks((prev) => prev.filter((task) => task.id !== id))
     } catch (error) {
       console.error('Error deleting task:', error)
     }
@@ -224,7 +258,7 @@ function App() {
   const archiveTask = async (id) => {
     try {
       await archiveTaskRecord(id)
-      setTasks(prev => prev.filter(t => t.id !== id))
+      setTasks((prev) => prev.filter((task) => task.id !== id))
     } catch (error) {
       console.error('Error archiving task:', error)
     }
@@ -234,7 +268,7 @@ function App() {
     try {
       const restored = await restoreTaskRecord(id)
       if (restored) {
-        setTasks(prev => [restored, ...prev.filter(t => t.id !== id)])
+        setTasks((prev) => [restored, ...prev.filter((task) => task.id !== id)])
       } else {
         console.error('restoreTask: no data returned for task', id)
       }
@@ -244,10 +278,10 @@ function App() {
   }
 
   const addColumn = async (name) => {
-    const order_index = columns.length > 0 ? Math.max(...columns.map(c => c.order_index)) + 1 : 1
+    const orderIndex = columns.length > 0 ? Math.max(...columns.map((column) => column.order_index)) + 1 : 1
     try {
-      const created = await createColumnRecord({ name, order_index })
-      setColumns(prev => [...prev, created])
+      const created = await createColumnRecord({ name, order_index: orderIndex })
+      setColumns((prev) => [...prev, created])
     } catch (error) {
       console.error('Error adding column:', error)
       alert('Erro ao adicionar coluna Kanban: ' + error.message)
@@ -257,7 +291,7 @@ function App() {
   const deleteColumn = async (id) => {
     try {
       await deleteColumnRecord(id)
-      setColumns(prev => prev.filter(c => c.id !== id))
+      setColumns((prev) => prev.filter((column) => column.id !== id))
     } catch (error) {
       console.error('Error deleting column:', error)
     }
@@ -268,42 +302,52 @@ function App() {
     setShowAddModal(true)
   }
 
-  const exportCSV = () => {
-    const header = 'Tarefa,Status,Prioridade,Responsável,Progresso'
-    const rows = tasks.map(t => `"${t.title}","${t.status}","${t.priority}","${t.owner}","${t.progress}%"`)
-    const csv = [header, ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'nexuscrm-tarefas.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const closeMenus = () => {
     setShowFilterMenu(false)
     setShowSortMenu(false)
   }
 
-  const getPageTitle = () => {
-    switch (activeTab) {
-      case 'dashboard': return 'Dashboard'
-      case 'tarefas': return 'Minhas Tarefas'
-      case 'time': return 'Time'
-      case 'clientes': return 'Clientes'
-      case 'atividades': return 'Atividades'
-      case 'financas': return 'Finanças'
-      case 'arquivo': return 'Arquivo'
-      case 'calendario': return 'Calendário'
-      case 'settings': return 'Configurações'
-      default: return 'NexusCRM'
+  const handleShellMenuToggle = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+      setMobileSidebarOpen((current) => !current)
+      return
+    }
+
+    setSidebarCollapsed((current) => !current)
+  }
+
+  const handleProfileSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Erro ao encerrar sessao:', error)
+      alert('Nao foi possivel sair do NexusCRM agora.')
     }
   }
 
-  const headerSearchHandler = PAGE_OWNED_CHROME_TABS.has(activeTab) ? null : setSearchQuery
-  const headerExportHandler = PAGE_OWNED_CHROME_TABS.has(activeTab) ? null : exportCSV
-  const headerTitle = PAGE_OWNED_CHROME_TABS.has(activeTab) ? null : getPageTitle()
+  const pageSearchConfig = CONTENT_SEARCH_TABS.has(activeTab)
+    ? {
+        value: searchQuery,
+        onSearch: setSearchQuery,
+        onSearchFocus: undefined,
+        placeholder: activeTab === 'time' ? 'Buscar membro ou funcao' : 'Buscar cliente ou industria',
+      }
+    : COMMAND_PALETTE_SEARCH_TABS.has(activeTab)
+      ? {
+          value: query,
+          onSearch: (value) => {
+            if (!paletteOpen) openPalette()
+            setQuery(value)
+          },
+          onSearchFocus: openPalette,
+          placeholder: 'Ir para cliente, tarefa ou atividade',
+        }
+      : {
+          value: '',
+          onSearch: () => {},
+          onSearchFocus: undefined,
+          placeholder: 'Pesquisar',
+        }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -336,7 +380,10 @@ function App() {
                     onAddTask={openAddModal}
                     onUpdateTask={updateTask}
                     onDeleteTask={deleteTask}
-                    onEditTask={(task) => { setSelectedTask(task); setShowEditModal(true) }}
+                    onEditTask={(task) => {
+                      setSelectedTask(task)
+                      setShowEditModal(true)
+                    }}
                     onAddColumn={addColumn}
                     onDeleteColumn={deleteColumn}
                     onArchive={archiveTask}
@@ -355,10 +402,12 @@ function App() {
                   <div className="tasks-files-view">
                     <EmptyState
                       title="Nenhum arquivo vinculado"
-                      description="Centralize anexos e materiais de apoio da operação em uma camada organizada por tarefa."
-                      detail={searchQuery || filterTag
-                        ? 'Nenhuma tarefa com os filtros atuais possui arquivos vinculados.'
-                        : 'Esta área está vazia porque nenhum arquivo foi relacionado às tarefas ainda.'}
+                      description="Centralize anexos e materiais de apoio da operacao em uma camada organizada por tarefa."
+                      detail={
+                        searchQuery || filterTag
+                          ? 'Nenhuma tarefa com os filtros atuais possui arquivos vinculados.'
+                          : 'Esta area esta vazia porque nenhum arquivo foi relacionado as tarefas ainda.'
+                      }
                     />
                   </div>
                 )}
@@ -389,7 +438,7 @@ function App() {
         return <ArchiveView restoreTask={restoreTask} />
       case 'calendario':
         return (
-          <CalendarView
+          <CalendarWorkspacePage
             tasks={filteredTasks}
             clients={clients}
             team={team}
@@ -405,39 +454,54 @@ function App() {
     }
   }
 
-  if (loading) return <div className="loading-screen">Carregando NexusCRM...</div>
+  if (loading) {
+    return <div className="loading-screen">Carregando NexusCRM...</div>
+  }
 
   return (
-    <div className="app-container" onClick={closeMenus}>
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={handleTabChange}
-        mobileOpen={mobileSidebarOpen}
-        onMobileClose={() => setMobileSidebarOpen(false)}
-      />
-
-      <main className="content">
-        <Header
-          title={headerTitle}
-          searchQuery={searchQuery}
-          onSearch={headerSearchHandler}
-          onExport={headerExportHandler}
-          onMenuToggle={() => setMobileSidebarOpen(prev => !prev)}
-        />
-
+    <div onClick={closeMenus}>
+      <AppShell
+        sidebarCollapsed={sidebarCollapsed}
+        sidebar={(
+          <SidebarRail
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            collapsed={sidebarCollapsed}
+            mobileOpen={mobileSidebarOpen}
+            onMobileClose={() => setMobileSidebarOpen(false)}
+          />
+        )}
+        topbar={(
+          <Topbar
+            searchQuery={pageSearchConfig.value}
+            onSearch={pageSearchConfig.onSearch}
+            onSearchFocus={pageSearchConfig.onSearchFocus}
+            searchPlaceholder={pageSearchConfig.placeholder}
+            showSearch
+            onMenuToggle={handleShellMenuToggle}
+            isPlatformAdmin={isPlatformAdmin}
+            profileMenu={(
+              <ProfileMenu
+                user={user}
+                onSignOut={handleProfileSignOut}
+              />
+            )}
+          />
+        )}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
             className="view-wrapper"
           >
             {renderContent()}
           </motion.div>
         </AnimatePresence>
-      </main>
+      </AppShell>
 
       <ReminderToast activities={activities} />
 
@@ -453,7 +517,10 @@ function App() {
           else if (item.type === 'activity') handleTabChange('atividades')
           closePalette()
         }}
-        onCreateActivity={() => { handleTabChange('atividades'); closePalette() }}
+        onCreateActivity={() => {
+          handleTabChange('atividades')
+          closePalette()
+        }}
       />
 
       <AnimatePresence>
@@ -494,5 +561,3 @@ function App() {
 }
 
 export default App
-
-

@@ -69,6 +69,8 @@ export default function SidebarRail({
               type="button"
               className={`sidebar-rail__item ${activeTab === id ? 'is-active' : ''}`}
               aria-current={activeTab === id ? 'page' : undefined}
+              aria-label={label}
+              title={collapsed ? label : undefined}
               onClick={() => {
                 onChange?.(id)
                 onMobileClose?.()

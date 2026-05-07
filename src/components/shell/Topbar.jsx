@@ -1,10 +1,13 @@
-import { Bell, Menu, Search, Shield } from 'lucide-react'
+import { Menu, Search, Shield } from 'lucide-react'
 import TenantSwitcher from '../tenant/TenantSwitcher.jsx'
 
 export default function Topbar({
   searchQuery = '',
   onSearch = () => {},
   onMenuToggle,
+  onSearchFocus,
+  searchPlaceholder = 'Pesquisar',
+  showSearch = true,
   profileMenu = null,
   isPlatformAdmin = false,
   onOpenAdmin = () => { window.location.hash = '/admin' },
@@ -17,7 +20,7 @@ export default function Topbar({
           type="button"
           className="topbar-shell__menu"
           onClick={onMenuToggle}
-          aria-label="Abrir navegação"
+          aria-label="Abrir navegacao"
         >
           <Menu size={18} />
         </button>
@@ -26,19 +29,18 @@ export default function Topbar({
       </div>
 
       <div className="topbar-shell__right">
-        <label className="topbar-shell__search" aria-label="Pesquisar">
-          <Search size={16} />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(event) => onSearch(event.target.value)}
-            placeholder="Pesquisar"
-          />
-        </label>
-
-        <button type="button" className="topbar-shell__icon" aria-label="Notificações">
-          <Bell size={16} />
-        </button>
+        {showSearch ? (
+          <label className="topbar-shell__search" aria-label="Pesquisar">
+            <Search size={16} />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => onSearch(event.target.value)}
+              onFocus={onSearchFocus}
+              placeholder={searchPlaceholder}
+            />
+          </label>
+        ) : null}
 
         {isPlatformAdmin ? (
           <button

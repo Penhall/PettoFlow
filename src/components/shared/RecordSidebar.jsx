@@ -30,7 +30,7 @@ const RecordSidebar = ({ isOpen, onClose = () => {}, title, subtitle, children }
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
           >
             <div className="record-sidebar-header">
               <div>
