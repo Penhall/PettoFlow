@@ -139,9 +139,9 @@ export default function AdminPanel() {
               Painel administrativo NexusCRM
             </span>
             <div>
-              <h1 style={{ margin: 0, fontSize: 30 }}>Operacao global da plataforma</h1>
+              <h1 style={{ margin: 0, fontSize: 30 }}>Operação global da plataforma</h1>
               <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)' }}>
-                {profile ? `Sessao administrativa ativa para ${profile.email}.` : 'Carregando perfil administrativo.'}
+                {profile ? `Sessão administrativa ativa para ${profile.email}.` : 'Carregando perfil administrativo.'}
               </p>
             </div>
           </div>
@@ -151,8 +151,8 @@ export default function AdminPanel() {
               type="button"
               className="icon-btn"
               onClick={() => { window.location.hash = '' }}
-              title="Voltar ao workspace"
-              aria-label="Voltar ao workspace"
+              title="Voltar ao espaço de trabalho"
+              aria-label="Voltar ao espaço de trabalho"
             >
               <ArrowLeft size={18} />
             </button>
@@ -176,10 +176,10 @@ export default function AdminPanel() {
         )}
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-          <MetricCard icon={Building2} label="Tenants" value={counts.tenants ?? '—'} />
-          <MetricCard icon={Users} label="Usuarios" value={userTotal || '—'} />
-          <MetricCard icon={ReceiptText} label="Subscriptions" value={counts.subscriptions ?? '—'} />
-          <MetricCard icon={ScrollText} label="Audit logs" value={counts.auditLogs ?? '—'} />
+          <MetricCard icon={Building2} label="Espaços" value={counts.tenants ?? '—'} />
+          <MetricCard icon={Users} label="Usuários" value={userTotal || '—'} />
+          <MetricCard icon={ReceiptText} label="Assinaturas" value={counts.subscriptions ?? '—'} />
+          <MetricCard icon={ScrollText} label="Auditoria" value={counts.auditLogs ?? '—'} />
         </section>
 
         {loading ? (
@@ -189,14 +189,14 @@ export default function AdminPanel() {
         ) : (
           <>
             <DataTable
-              title="Tenants e uso"
-              emptyMessage="Nenhum tenant encontrado."
+              title="Espaços de trabalho e uso"
+              emptyMessage="Nenhum espaço de trabalho encontrado."
               columns={[
-                { key: 'name', label: 'Tenant' },
+                { key: 'name', label: 'Espaço' },
                 { key: 'slug', label: 'Slug' },
                 { key: 'usage', label: 'Uso', render: (row) => {
                   const usage = row.usage ?? {}
-                  return `${usage.active_members ?? 0} usuarios · ${usage.clients ?? 0} clientes · ${usage.tasks ?? 0} tarefas`
+                  return `${usage.active_members ?? 0} usuários · ${usage.clients ?? 0} clientes · ${usage.tasks ?? 0} tarefas`
                 } },
                 { key: 'created_at', label: 'Criado em', render: (row) => formatDate(row.created_at) },
               ]}
@@ -204,25 +204,25 @@ export default function AdminPanel() {
             />
 
             <DataTable
-              title="Usuarios autenticados"
-              emptyMessage="Nenhum usuario encontrado."
+              title="Usuários autenticados"
+              emptyMessage="Nenhum usuário encontrado."
               columns={[
                 { key: 'email', label: 'Email' },
                 { key: 'createdAt', label: 'Criado em', render: (row) => formatDate(row.createdAt) },
-                { key: 'lastSignInAt', label: 'Ultimo login', render: (row) => formatDate(row.lastSignInAt) },
+                { key: 'lastSignInAt', label: 'Último login', render: (row) => formatDate(row.lastSignInAt) },
               ]}
               rows={users}
             />
 
             <DataTable
-              title="Subscriptions"
-              emptyMessage="Nenhuma subscription encontrada."
+              title="Assinaturas"
+              emptyMessage="Nenhuma assinatura encontrada."
               columns={[
-                { key: 'tenant_id', label: 'Tenant' },
+                { key: 'tenant_id', label: 'Espaço' },
                 { key: 'status', label: 'Status' },
-                { key: 'provider', label: 'Provider' },
+                { key: 'provider', label: 'Provedor' },
                 { key: 'plan', label: 'Plano', render: (row) => row.plan?.name ?? '—' },
-                { key: 'current_period_end', label: 'Fim do periodo', render: (row) => formatDate(row.current_period_end) },
+                { key: 'current_period_end', label: 'Fim do período', render: (row) => formatDate(row.current_period_end) },
               ]}
               rows={subscriptions}
             />
@@ -232,21 +232,21 @@ export default function AdminPanel() {
               emptyMessage="Nenhum evento de auditoria recente."
               columns={[
                 { key: 'created_at', label: 'Quando', render: (row) => formatDate(row.created_at) },
-                { key: 'tenant_id', label: 'Tenant' },
-                { key: 'action', label: 'Acao' },
+                { key: 'tenant_id', label: 'Espaço' },
+                { key: 'action', label: 'Ação' },
                 { key: 'resource_type', label: 'Recurso' },
               ]}
               rows={auditLogs}
             />
 
             <DataTable
-              title="Eventos operacionais de billing"
-              emptyMessage="Nenhum evento de billing recente."
+              title="Eventos operacionais de faturamento"
+              emptyMessage="Nenhum evento de faturamento recente."
               columns={[
                 { key: 'created_at', label: 'Quando', render: (row) => formatDate(row.created_at) },
                 { key: 'event_type', label: 'Evento' },
                 { key: 'status', label: 'Status' },
-                { key: 'tenant_id', label: 'Tenant' },
+                { key: 'tenant_id', label: 'Espaço' },
                 { key: 'error_message', label: 'Falha', render: (row) => row.error_message || '—' },
               ]}
               rows={billingEvents}

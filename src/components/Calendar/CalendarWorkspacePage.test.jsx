@@ -22,7 +22,7 @@ describe('CalendarWorkspacePage', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { name: 'Calendario' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Calendário' })).toBeInTheDocument()
     expect(screen.getByText('Tarefas abertas')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tarefas' })).toBeInTheDocument()
     expect(screen.getByTestId('calendar-view')).toBeInTheDocument()

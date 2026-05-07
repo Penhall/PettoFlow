@@ -20,7 +20,7 @@ async function parseResponse(res, fallbackMessage) {
 
 export async function listMyTenants() {
   const res = await authenticatedFetch(`${TENANT_CORE_URL}/tenants`, { method: 'GET' })
-  const data = await parseResponse(res, 'Erro ao carregar workspaces')
+  const data = await parseResponse(res, 'Erro ao carregar espaços de trabalho')
   return data.items ?? []
 }
 
@@ -30,7 +30,7 @@ export async function createTenant({ name, slug }) {
     body: JSON.stringify({ name, slug }),
   })
 
-  return parseResponse(res, 'Erro ao criar workspace')
+  return parseResponse(res, 'Erro ao criar espaço de trabalho')
 }
 
 export async function getTenantSettings(tenantId) {
@@ -40,7 +40,7 @@ export async function getTenantSettings(tenantId) {
     requireTenant: true,
   })
 
-  return parseResponse(res, 'Erro ao carregar configuracoes do workspace')
+  return parseResponse(res, 'Erro ao carregar configurações do espaço de trabalho')
 }
 
 export async function updateTenantSettings(tenantId, value) {
@@ -51,5 +51,5 @@ export async function updateTenantSettings(tenantId, value) {
     body: JSON.stringify({ value }),
   })
 
-  return parseResponse(res, 'Erro ao atualizar configuracoes do workspace')
+  return parseResponse(res, 'Erro ao atualizar configurações do espaço de trabalho')
 }

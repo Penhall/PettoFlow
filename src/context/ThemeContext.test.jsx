@@ -14,7 +14,7 @@ function Probe() {
   )
 }
 
-test('ThemeProvider falls back to light and exposes only light,dark themes', () => {
+test('ThemeProvider falls back to light and exposes the premium + legacy-compatible themes', () => {
   localStorage.setItem('pettoflow_theme', 'ledger')
 
   render(
@@ -24,5 +24,5 @@ test('ThemeProvider falls back to light and exposes only light,dark themes', () 
   )
 
   expect(screen.getByText('light')).toBeInTheDocument()
-  expect(screen.getByText('light,dark')).toBeInTheDocument()
+  expect(screen.getByText('light,dark,classic,twenty')).toBeInTheDocument()
 })

@@ -21,7 +21,7 @@ const EMPTY_FILTERS = {}
 const ACTIVITY_TABS = [
   { id: 'timeline', label: 'Timeline' },
   { id: 'modelos', label: 'Modelos' },
-  { id: 'calendario', label: 'Calendario' },
+  { id: 'calendario', label: 'Calendário' },
 ]
 
 const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '', onSearch = () => {} }) => {
@@ -48,7 +48,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '',
 
   const metrics = [
     { label: 'Pendentes', value: String(activities.filter((activity) => activity.status === 'pending').length) },
-    { label: 'Concluidas', value: String(activities.filter((activity) => activity.status === 'done').length) },
+    { label: 'Concluídas', value: String(activities.filter((activity) => activity.status === 'done').length) },
     { label: 'Modelos', value: String(templates.length) },
   ]
 
@@ -126,9 +126,9 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '',
     return (
       <div className="activities-page">
         <PageHeader
-          eyebrow="Operacao"
+          eyebrow="Operação"
           title="Atividades"
-          subtitle="Carregando timeline operacional do workspace."
+          subtitle="Carregando timeline operacional do espaço de trabalho."
         />
       </div>
     )
@@ -137,7 +137,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '',
   return (
     <div className="activities-page">
       <PageHeader
-        eyebrow="Operacao"
+        eyebrow="Operação"
         title="Atividades"
         subtitle="Acompanhe follow-ups, cadência comercial e próximos movimentos em uma timeline compacta."
         metrics={metrics}
@@ -147,7 +147,7 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '',
         items={tabItems}
         activeId={activeTab}
         onChange={setActiveTab}
-        ariaLabel="Areas de atividades"
+        ariaLabel="Áreas de atividades"
       />
 
       <PageActionBar

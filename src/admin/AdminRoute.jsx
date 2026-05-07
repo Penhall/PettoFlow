@@ -9,14 +9,14 @@ export default function AdminRoute() {
     return (
       <AuthLayout
         title="Acesso administrativo negado"
-        description="Esta area interna do NexusCRM exige flag administrativa global."
+        description="Esta área interna do NexusCRM exige flag administrativa global."
       >
         <button
           type="button"
           className="auth-submit"
           onClick={() => { window.location.hash = '' }}
         >
-          Voltar ao workspace
+          Voltar ao espaço de trabalho
         </button>
       </AuthLayout>
     )

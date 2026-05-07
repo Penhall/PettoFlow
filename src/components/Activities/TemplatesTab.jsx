@@ -13,13 +13,13 @@ export default function TemplatesTab({ templates, onNew, onEdit, onDelete }) {
     <div className="templates-tab">
       <div className="templates-header">
         <h4>Modelos de atividade</h4>
-        <p>Padronize abordagens recorrentes e acelere a criacao de atividades operacionais.</p>
+        <p>Padronize abordagens recorrentes e acelere a criação de atividades operacionais.</p>
       </div>
 
       {templates.length === 0 ? (
         <EmptyState
           title="Nenhum modelo cadastrado"
-          description="Os modelos reduzem repeticao e mantem consistencia no preenchimento de atividades."
+          description="Os modelos reduzem repetição e mantêm consistência no preenchimento de atividades."
           detail="Crie o primeiro modelo para agilizar o fluxo operacional do time."
           action={<button className="page-action-bar__button page-action-bar__button--primary" onClick={onNew}>Novo modelo</button>}
         />
@@ -40,9 +40,9 @@ export default function TemplatesTab({ templates, onNew, onEdit, onDelete }) {
 
               {confirmingId === template.id ? (
                 <div className="template-row__confirm">
-                  <span className="template-row__confirm-copy">Confirmar exclusao?</span>
+                  <span className="template-row__confirm-copy">Confirmar exclusão?</span>
                   <button className="action-btn sm" onClick={() => handleConfirmDelete(template.id)}>Sim</button>
-                  <button className="action-btn sm" onClick={() => setConfirmingId(null)}>Nao</button>
+                  <button className="action-btn sm" onClick={() => setConfirmingId(null)}>Não</button>
                 </div>
               ) : (
                 <div className="template-row__actions">

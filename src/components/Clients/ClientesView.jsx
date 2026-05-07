@@ -53,7 +53,7 @@ function ClientModal({ client, onSave, onClose }) {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Industria</label>
+              <label>Indústria</label>
               <input type="text" value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })} />
             </div>
 
@@ -61,7 +61,7 @@ function ClientModal({ client, onSave, onClose }) {
               <label>Status</label>
               <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
                 <option>Ativo</option>
-                <option>Em negociacao</option>
+                <option>Em negociação</option>
                 <option>Inativo</option>
               </select>
             </div>
@@ -165,12 +165,12 @@ export default function ClientesView({ clients = [], tasks = [], onRefresh, sear
   return (
     <div className="clients-page">
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Espaço de trabalho"
         title="Clientes"
-        subtitle="Consulte carteira, contexto comercial e historico principal sem perder ritmo operacional."
+        subtitle="Consulte carteira, contexto comercial e histórico principal sem perder ritmo operacional."
         metrics={[
-          { label: 'Clientes visiveis', value: String(visibleClients.length) },
-          { label: 'Industrias ativas', value: String(industriesCount) },
+          { label: 'Clientes visíveis', value: String(visibleClients.length) },
+          { label: 'Indústrias ativas', value: String(industriesCount) },
           { label: 'Tarefas relacionadas', value: String(openTaskCount) },
         ]}
       />
@@ -195,7 +195,7 @@ export default function ClientesView({ clients = [], tasks = [], onRefresh, sear
               detail={
                 searchQuery
                   ? 'Nenhum cliente corresponde aos filtros atuais.'
-                  : 'Esta area esta vazia porque nenhum cliente foi cadastrado no workspace.'
+                  : 'Esta área está vazia porque nenhum cliente foi cadastrado no espaço de trabalho.'
               }
             />
           </SurfaceCard>
@@ -205,7 +205,7 @@ export default function ClientesView({ clients = [], tasks = [], onRefresh, sear
               <span>Conta</span>
               <span>Relacionamento</span>
               <span>Receita e projetos</span>
-              <span>Acoes</span>
+              <span>Ações</span>
             </div>
 
             {visibleClients.map((client) => (
@@ -216,7 +216,7 @@ export default function ClientesView({ clients = [], tasks = [], onRefresh, sear
                   </span>
                   <div className="client-row__copy">
                     <strong>{client.name}</strong>
-                    <span>{client.industry || 'Industria nao definida'}</span>
+                    <span>{client.industry || 'Indústria não definida'}</span>
                   </div>
                 </div>
 

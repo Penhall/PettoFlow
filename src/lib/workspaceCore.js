@@ -45,7 +45,7 @@ async function request(path, options = {}) {
 }
 
 export async function fetchWorkspaceBootstrap() {
-  return request('/bootstrap', { fallbackMessage: 'Erro ao carregar workspace' })
+  return request('/bootstrap', { fallbackMessage: 'Erro ao carregar o espaço de trabalho' })
 }
 
 export async function createTaskRecord(task) {

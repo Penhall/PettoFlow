@@ -9,9 +9,20 @@ import {
   getAssignableRoles,
 } from '../../lib/memberPermissions.js'
 
+const ROLE_LABELS = {
+  owner: 'Proprietário',
+  admin: 'Admin',
+  member: 'Membro',
+  viewer: 'Leitor',
+}
+
 function inviteLinkFor(token) {
   if (typeof window === 'undefined') return `?invite=${token}`
   return `${window.location.origin}${window.location.pathname}?invite=${token}`
+}
+
+function formatRole(role) {
+  return ROLE_LABELS[role] || role
 }
 
 export default function MembersPage() {
@@ -56,7 +67,7 @@ export default function MembersPage() {
       setInviteEmail('')
       setInviteRole('member')
     } catch (submitError) {
-      setInviteError(submitError instanceof Error ? submitError.message : 'Nao foi possivel enviar o convite.')
+      setInviteError(submitError instanceof Error ? submitError.message : 'Não foi possível enviar o convite.')
     } finally {
       setSubmitLoading(false)
     }
@@ -72,7 +83,7 @@ export default function MembersPage() {
     try {
       await updateMemberRole(memberId, nextRole)
     } catch (memberError) {
-      setActionError(memberError instanceof Error ? memberError.message : 'Nao foi possivel atualizar a role do membro.')
+      setActionError(memberError instanceof Error ? memberError.message : 'Não foi possível atualizar o perfil do membro.')
     }
   }
 
@@ -82,7 +93,7 @@ export default function MembersPage() {
     try {
       await setMemberStatus(memberId, nextStatus)
     } catch (memberError) {
-      setActionError(memberError instanceof Error ? memberError.message : 'Nao foi possivel atualizar o status do membro.')
+      setActionError(memberError instanceof Error ? memberError.message : 'Não foi possível atualizar o status do membro.')
     }
   }
 
@@ -92,23 +103,23 @@ export default function MembersPage() {
     try {
       await removeMember(memberId)
     } catch (memberError) {
-      setActionError(memberError instanceof Error ? memberError.message : 'Nao foi possivel remover o membro.')
+      setActionError(memberError instanceof Error ? memberError.message : 'Não foi possível remover o membro.')
     }
   }
 
   return (
     <div style={{ display: 'grid', gap: 24 }}>
       <section>
-        <h2 style={{ margin: '0 0 8px' }}>Membros do workspace</h2>
+        <h2 style={{ margin: '0 0 8px' }}>Membros do espaço de trabalho</h2>
         <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-          Gerencie acesso colaborativo ao workspace {activeTenant.name}.
+          Gerencie acesso colaborativo ao espaço de trabalho {activeTenant.name}.
         </p>
       </section>
 
       {!manageable && (
         <section className="empty-state">
-          <h3>Acesso administrativo necessario</h3>
-          <p>Apenas owners e admins podem gerenciar membros.</p>
+          <h3>Acesso administrativo necessário</h3>
+          <p>Apenas proprietários e admins podem gerenciar membros.</p>
         </section>
       )}
 
@@ -126,16 +137,16 @@ export default function MembersPage() {
                 placeholder="colaborador@empresa.com"
               />
 
-              <label htmlFor="invite-role">Role do convite</label>
+              <label htmlFor="invite-role">Perfil do convite</label>
               <select
                 id="invite-role"
-                aria-label="Role do convite"
+                aria-label="Perfil do convite"
                 value={inviteRole}
                 onChange={(event) => setInviteRole(event.target.value)}
               >
                 {assignableRoles.map((role) => (
                   <option key={role} value={role}>
-                    {role}
+                    {formatRole(role)}
                   </option>
                 ))}
               </select>
@@ -157,7 +168,7 @@ export default function MembersPage() {
                   <article key={invitation.id} style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}>
                     <strong>{invitation.email}</strong>
                     <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
-                      Role: {invitation.role} · Status: {invitation.status}
+                      Perfil: {formatRole(invitation.role)} · Status: {invitation.status}
                     </div>
                     <div style={{ color: 'var(--text-secondary)', marginTop: 8, wordBreak: 'break-all' }}>
                       Link do convite: {inviteLinkFor(invitation.token)}
@@ -189,24 +200,24 @@ export default function MembersPage() {
                     <div>
                       <strong>{member.email}</strong>
                       <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
-                        Role: {member.role} · Status: {member.status}
-                        {member.isCurrentUser ? ' · Voce' : ''}
+                        Perfil: {formatRole(member.role)} · Status: {member.status}
+                        {member.isCurrentUser ? ' · Você' : ''}
                       </div>
                     </div>
 
                     {manageable && (
                       <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
                         <label style={{ display: 'grid', gap: 4 }}>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Role de {member.email}</span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Perfil de {member.email}</span>
                           <select
-                            aria-label={`Role de ${member.email}`}
+                            aria-label={`Perfil de ${member.email}`}
                             value={member.role}
                             disabled={!canEdit}
                             onChange={(event) => handleRoleChange(member.id, event.target.value)}
                           >
                             {assignableRoles.map((role) => (
                               <option key={role} value={role}>
-                                {role}
+                                {formatRole(role)}
                               </option>
                             ))}
                           </select>

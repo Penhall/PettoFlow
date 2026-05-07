@@ -26,7 +26,7 @@ describe('BillingPage', () => {
     })
   })
 
-  it('mostra mensagem de permissoes quando o billing nao e gerenciavel', async () => {
+  it('mostra mensagem de permissões quando o faturamento não é gerenciável', async () => {
     fetchTenantBillingOverviewMock.mockResolvedValue({
       manageable: false,
       stripeConfigured: true,
@@ -48,7 +48,7 @@ describe('BillingPage', () => {
     render(<BillingPage />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Apenas owner\/admin podem iniciar upgrade/i)).toBeInTheDocument()
+      expect(screen.getByText(/Apenas proprietários e admins podem iniciar upgrade/i)).toBeInTheDocument()
     })
   })
 

@@ -1,4 +1,4 @@
-import { Suspense, lazy, startTransition, useEffect, useMemo, useState } from 'react'
+import { Suspense, startTransition, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import AppShell from './components/shell/AppShell.jsx'
 import ProfileMenu from './components/shell/ProfileMenu.jsx'
@@ -10,11 +10,13 @@ import OverviewView from './components/Tasks/OverviewView.jsx'
 import TasksPage from './components/Tasks/TasksPage.jsx'
 import EmptyState from './components/shared/EmptyState.jsx'
 import DeferredSurface from './components/shared/DeferredSurface.jsx'
+import ViewErrorBoundary from './components/shared/ViewErrorBoundary.jsx'
 import { useActivities } from './hooks/useActivities'
 import { useAuth } from './hooks/useAuth.js'
 import { useCommandPalette } from './hooks/useCommandPalette'
 import { useReceivables } from './hooks/useReceivables'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
+import { lazyWithRetry } from './lib/lazyWithRetry.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import {
   archiveTaskRecord,
@@ -28,18 +30,18 @@ import {
   updateTaskRecord,
 } from './lib/workspaceCore'
 
-const ActivitiesView = lazy(() => import('./components/Activities/ActivitiesView.jsx'))
-const ArchiveView = lazy(() => import('./components/Archive/ArchiveView.jsx'))
-const CalendarView = lazy(() => import('./components/Calendar/CalendarView.jsx'))
-const CalendarWorkspacePage = lazy(() => import('./components/Calendar/CalendarWorkspacePage.jsx'))
-const ClientesView = lazy(() => import('./components/Clients/ClientesView.jsx'))
-const Dashboard = lazy(() => import('./components/Dashboard/Dashboard.jsx'))
-const FinanceView = lazy(() => import('./components/Finance/FinanceView.jsx'))
-const SettingsView = lazy(() => import('./components/Settings/SettingsView.jsx'))
-const TaskModal = lazy(() => import('./components/Tasks/TaskModal.jsx'))
-const TimeView = lazy(() => import('./components/Team/TimeView.jsx'))
-const CommandPalette = lazy(() => import('./components/shared/CommandPalette.jsx'))
-const ReminderToast = lazy(() => import('./components/shared/ReminderToast.jsx'))
+const ActivitiesView = lazyWithRetry(() => import('./components/Activities/ActivitiesView.jsx'), 'activities')
+const ArchiveView = lazyWithRetry(() => import('./components/Archive/ArchiveView.jsx'), 'archive')
+const CalendarView = lazyWithRetry(() => import('./components/Calendar/CalendarView.jsx'), 'calendar-view')
+const CalendarWorkspacePage = lazyWithRetry(() => import('./components/Calendar/CalendarWorkspacePage.jsx'), 'calendar-workspace')
+const ClientesView = lazyWithRetry(() => import('./components/Clients/ClientesView.jsx'), 'clients')
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard/Dashboard.jsx'), 'dashboard')
+const FinanceView = lazyWithRetry(() => import('./components/Finance/FinanceView.jsx'), 'finance')
+const SettingsView = lazyWithRetry(() => import('./components/Settings/SettingsView.jsx'), 'settings')
+const TaskModal = lazyWithRetry(() => import('./components/Tasks/TaskModal.jsx'), 'task-modal')
+const TimeView = lazyWithRetry(() => import('./components/Team/TimeView.jsx'), 'team')
+const CommandPalette = lazyWithRetry(() => import('./components/shared/CommandPalette.jsx'), 'command-palette')
+const ReminderToast = lazyWithRetry(() => import('./components/shared/ReminderToast.jsx'), 'reminder-toast')
 
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
 const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'settings'])
@@ -49,12 +51,24 @@ const TAB_LOADING_LABELS = {
   dashboard: 'Carregando dashboard...',
   tarefas: 'Carregando tarefas...',
   atividades: 'Carregando atividades...',
-  financas: 'Carregando financas...',
+  financas: 'Carregando finanças...',
   time: 'Carregando time...',
   clientes: 'Carregando clientes...',
   arquivo: 'Carregando arquivo...',
-  calendario: 'Carregando calendario...',
-  settings: 'Carregando configuracoes...',
+  calendario: 'Carregando calendário...',
+  settings: 'Carregando configurações...',
+}
+
+const TAB_ERROR_LABELS = {
+  dashboard: 'o dashboard',
+  tarefas: 'a área de tarefas',
+  atividades: 'a área de atividades',
+  financas: 'a área de finanças',
+  time: 'a área de time',
+  clientes: 'a área de clientes',
+  arquivo: 'a área de arquivo',
+  calendario: 'a área de calendário',
+  settings: 'a área de configurações',
 }
 
 function readInitialAppTab() {
@@ -254,7 +268,7 @@ function App() {
         if (principal) {
           await createReceivable(id, updatedTask.deal_value, principal.id)
         } else {
-          alert('Nenhuma conta Principal definida. Acesse Financas -> Contas para definir uma conta como Principal.')
+          alert('Nenhuma conta principal definida. Acesse Finanças -> Contas para definir uma conta principal.')
         }
       }
     }
@@ -336,8 +350,8 @@ function App() {
     try {
       await signOut()
     } catch (error) {
-      console.error('Erro ao encerrar sessao:', error)
-      alert('Nao foi possivel sair do NexusCRM agora.')
+      console.error('Erro ao encerrar sessão:', error)
+      alert('Não foi possível sair do NexusCRM agora.')
     }
   }
 
@@ -346,7 +360,7 @@ function App() {
         value: searchQuery,
         onSearch: setSearchQuery,
         onSearchFocus: undefined,
-        placeholder: activeTab === 'time' ? 'Buscar membro ou funcao' : 'Buscar cliente ou industria',
+        placeholder: activeTab === 'time' ? 'Buscar membro ou função' : 'Buscar cliente ou indústria',
       }
     : COMMAND_PALETTE_SEARCH_TABS.has(activeTab)
       ? {
@@ -418,17 +432,17 @@ function App() {
                   <div className="tasks-files-view">
                     <EmptyState
                       title="Nenhum arquivo vinculado"
-                      description="Centralize anexos e materiais de apoio da operacao em uma camada organizada por tarefa."
+                      description="Centralize anexos e materiais de apoio da operação em uma camada organizada por tarefa."
                       detail={
                         searchQuery || filterTag
                           ? 'Nenhuma tarefa com os filtros atuais possui arquivos vinculados.'
-                          : 'Esta area esta vazia porque nenhum arquivo foi relacionado as tarefas ainda.'
+                          : 'Esta área está vazia porque nenhum arquivo foi relacionado às tarefas ainda.'
                       }
                     />
                   </div>
                 )}
                 {viewType === 'calendar' && (
-                  <Suspense fallback={<DeferredSurface label="Carregando calendario de tarefas..." />}>
+                  <Suspense fallback={<DeferredSurface label="Carregando calendário de tarefas..." />}>
                     <CalendarView
                       filterTypes={['task']}
                       tasks={filteredTasks}
@@ -516,9 +530,11 @@ function App() {
             transition={MOTION_TRANSITIONS.fade}
             className="view-wrapper"
           >
-            <Suspense fallback={<DeferredSurface label={TAB_LOADING_LABELS[activeTab] || 'Carregando area...'} />}>
-              {renderContent()}
-            </Suspense>
+            <ViewErrorBoundary resetKey={activeTab} areaLabel={TAB_ERROR_LABELS[activeTab] || 'esta área'}>
+              <Suspense fallback={<DeferredSurface label={TAB_LOADING_LABELS[activeTab] || 'Carregando área...'} />}>
+                {renderContent()}
+              </Suspense>
+            </ViewErrorBoundary>
           </motion.div>
         </AnimatePresence>
       </AppShell>

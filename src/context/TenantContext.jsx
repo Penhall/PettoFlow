@@ -103,7 +103,7 @@ export function TenantProvider({ children }) {
         if (!active) return
         setTenants([])
         setActiveTenantIdState(null)
-        setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar workspaces.')
+        setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
       } finally {
         if (active) setLoading(false)
       }
@@ -142,7 +142,7 @@ export function TenantProvider({ children }) {
     } catch (loadError) {
       setTenants([])
       setActiveTenantIdState(null)
-      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar workspaces.')
+      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
       throw loadError
     } finally {
       setLoading(false)
@@ -172,7 +172,7 @@ export function TenantProvider({ children }) {
 
     const hasAccess = tenants.some((tenant) => tenant.id === nextTenantId)
     if (!hasAccess) {
-      setError('O tenant selecionado nao pertence ao usuario autenticado.')
+      setError('O espaço de trabalho selecionado não pertence ao usuário autenticado.')
       return
     }
 

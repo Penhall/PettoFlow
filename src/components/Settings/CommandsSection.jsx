@@ -4,13 +4,13 @@ export default function CommandsSection() {
       <div style={{ padding: '16px 18px', border: '1px solid var(--border-color)', borderRadius: 12, background: 'var(--bg-secondary)' }}>
         <strong style={{ display: 'block', marginBottom: 8 }}>Comandos administrativos do Telegram temporariamente bloqueados</strong>
         <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          A configuracao avancada do Telegram sera reestruturada para o modelo SaaS nas proximas fases.
+          A configuração avançada do Telegram será reestruturada para o modelo SaaS nas próximas fases.
         </p>
       </div>
 
       <div style={{ padding: '16px 18px', border: '1px solid var(--border-color)', borderRadius: 12 }}>
         <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Os comandos do bot continuam fora do fluxo principal ate que NexusCRM tenha tenants, memberships e autorizacao granular para operacoes sensiveis.
+          Os comandos do bot continuam fora do fluxo principal até que o NexusCRM tenha espaços de trabalho, memberships e autorização granular para operações sensíveis.
         </p>
       </div>
     </div>

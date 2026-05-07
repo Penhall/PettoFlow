@@ -12,6 +12,13 @@ import {
 import { useAuth } from '../../hooks/useAuth.js'
 import { useTenant } from '../../hooks/useTenant.js'
 
+const ROLE_LABELS = {
+  owner: 'Proprietário',
+  admin: 'Admin',
+  member: 'Membro',
+  viewer: 'Leitor',
+}
+
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'tarefas', label: 'Tarefas', icon: CheckSquare },
@@ -57,7 +64,7 @@ export default function SidebarRail({
           {!collapsed ? (
             <div className="sidebar-rail__workspace">
               <strong>{activeTenant?.name || 'NexusCRM'}</strong>
-              <span>{activeTenant?.role || 'Workspace ativo'}</span>
+              <span>{ROLE_LABELS[activeTenant?.role] || 'Espaço ativo'}</span>
             </div>
           ) : null}
         </div>

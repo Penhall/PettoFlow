@@ -26,12 +26,12 @@ describe('SettingsView', () => {
   it('renderiza o cabecalho premium e as tabs semanticas de configuracoes', async () => {
     render(<SettingsView />)
 
-    expect(screen.getByRole('heading', { name: 'Configuracoes' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Configurações' })).toBeInTheDocument()
     expect(
-      screen.getByText(/membros, integracoes, auditoria e preferencias do workspace/i)
+      screen.getByText(/membros, integrações, auditoria e preferências do espaço de trabalho/i)
     ).toBeInTheDocument()
 
-    expect(screen.getByRole('tablist', { name: 'Secoes de configuracoes' })).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: 'Seções de configurações' })).toBeInTheDocument()
 
     const membersTab = screen.getByRole('tab', { name: 'Membros' })
     expect(membersTab).toHaveAttribute('aria-selected', 'true')
@@ -47,7 +47,7 @@ describe('SettingsView', () => {
   it('aceita tab inicial para abrir billing diretamente', async () => {
     render(<SettingsView initialTab="billing" />)
 
-    expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Faturamento' })).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByText('Billing Page')).toBeInTheDocument()
   })
 })

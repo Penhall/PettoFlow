@@ -7,7 +7,7 @@ export default function TenantSwitcher() {
 
   if (tenants.length === 1) {
     return (
-      <div className="tenant-switcher tenant-switcher--single" aria-label="Workspace ativo">
+      <div className="tenant-switcher tenant-switcher--single" aria-label="Espaço de trabalho ativo">
         <strong>{tenants[0].name}</strong>
       </div>
     )
@@ -18,7 +18,7 @@ export default function TenantSwitcher() {
       <select
         id="tenant-switcher-select"
         className="tenant-switcher__select"
-        aria-label="Workspace ativo"
+        aria-label="Espaço de trabalho ativo"
         value={activeTenantId ?? ''}
         onChange={(event) => setActiveTenant(event.target.value)}
       >

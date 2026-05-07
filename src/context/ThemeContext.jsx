@@ -3,12 +3,14 @@ import { createContext, useContext, useEffect, useState } from 'react'
 
 const ThemeContext = createContext()
 const PRODUCT_THEMES = [
-  { id: 'light', name: 'Claro' },
-  { id: 'dark', name: 'Escuro' },
+  { id: 'light', name: 'Claro Premium' },
+  { id: 'dark', name: 'Noturno Premium' },
+  { id: 'classic', name: 'Clássico SaaS' },
+  { id: 'twenty', name: 'Twenty (Grafite)' },
 ]
 
 function resolveTheme(theme) {
-  return theme === 'dark' ? 'dark' : 'light'
+  return PRODUCT_THEMES.some((item) => item.id === theme) ? theme : 'light'
 }
 
 export function ThemeProvider({ children }) {

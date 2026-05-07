@@ -31,7 +31,7 @@ describe('EventDetailPanel — contextArea', () => {
       />
     )
     expect(screen.getByText('Follow-up')).toBeInTheDocument()
-    expect(screen.getByText('Criar Tarefa')).toBeInTheDocument()
+    expect(screen.getByText('Criar tarefa')).toBeInTheDocument()
   })
 
   it('oculta Follow-up e Criar Tarefa em receivable com contextArea="financas"', () => {
@@ -67,8 +67,8 @@ describe('EventDetailPanel — contextArea', () => {
         onClose={vi.fn()}
       />
     )
-    expect(screen.getByText('Criar Tarefa')).toBeInTheDocument()
-    expect(screen.getByText('Criar Atividade')).toBeInTheDocument()
+    expect(screen.getByText('Criar tarefa')).toBeInTheDocument()
+    expect(screen.getByText('Criar atividade')).toBeInTheDocument()
   })
 
   it('não suprime nada em contextArea="atividades"', () => {
@@ -80,6 +80,6 @@ describe('EventDetailPanel — contextArea', () => {
       />
     )
     expect(screen.getByText('Follow-up')).toBeInTheDocument()
-    expect(screen.getByText('Criar Tarefa')).toBeInTheDocument()
+    expect(screen.getByText('Criar tarefa')).toBeInTheDocument()
   })
 })

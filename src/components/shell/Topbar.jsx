@@ -1,4 +1,5 @@
 import { Menu, Search, Shield } from 'lucide-react'
+import ThemeSwitcher from './ThemeSwitcher.jsx'
 import TenantSwitcher from '../tenant/TenantSwitcher.jsx'
 
 export default function Topbar({
@@ -20,7 +21,7 @@ export default function Topbar({
           type="button"
           className="topbar-shell__menu"
           onClick={onMenuToggle}
-          aria-label="Abrir navegacao"
+          aria-label="Abrir navegação"
         >
           <Menu size={18} />
         </button>
@@ -41,6 +42,8 @@ export default function Topbar({
             />
           </label>
         ) : null}
+
+        <ThemeSwitcher />
 
         {isPlatformAdmin ? (
           <button

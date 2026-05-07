@@ -3,7 +3,7 @@ import { createTenantRequiredError } from './activeTenant.js'
 
 export async function authenticatedFetch(url, options = {}) {
   if (!supabase) {
-    const error = new Error('Cliente Supabase nao configurado.')
+    const error = new Error('Cliente Supabase não configurado.')
     error.code = 'SUPABASE_NOT_CONFIGURED'
     throw error
   }
@@ -13,7 +13,7 @@ export async function authenticatedFetch(url, options = {}) {
 
   const accessToken = data?.session?.access_token ?? ''
   if (!accessToken) {
-    const error = new Error('Sessao autenticada obrigatoria.')
+    const error = new Error('Sessão autenticada obrigatória.')
     error.code = 'AUTH_SESSION_MISSING'
     throw error
   }

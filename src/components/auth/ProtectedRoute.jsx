@@ -12,9 +12,9 @@ export default function ProtectedRoute({ children }) {
     return (
       <AuthLayout
         title="Carregando NexusCRM..."
-        description="Validando a sessao atual antes de liberar o dashboard."
+        description="Validando a sessão atual antes de liberar o dashboard."
       >
-        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Aguarde enquanto sua autenticacao e verificada.</p>
+        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Aguarde enquanto sua autenticação é verificada.</p>
       </AuthLayout>
     )
   }
@@ -22,8 +22,8 @@ export default function ProtectedRoute({ children }) {
   if (!isConfigured) {
     return (
       <AuthLayout
-        title="Configuracao incompleta"
-        description="O cliente Supabase nao esta configurado corretamente para iniciar o NexusCRM."
+        title="Configuração incompleta"
+        description="O cliente Supabase não está configurado corretamente para iniciar o NexusCRM."
       >
         <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
           Defina `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` para continuar.

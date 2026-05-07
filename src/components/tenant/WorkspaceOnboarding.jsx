@@ -30,12 +30,12 @@ export default function WorkspaceOnboarding() {
     const normalizedSlug = slugifyWorkspaceName(slug)
 
     if (!trimmedName) {
-      setError('Informe o nome do workspace.')
+      setError('Informe o nome do espaço de trabalho.')
       return
     }
 
     if (!normalizedSlug) {
-      setError('Informe um slug valido para o workspace.')
+      setError('Informe um slug válido para o espaço de trabalho.')
       return
     }
 
@@ -45,7 +45,7 @@ export default function WorkspaceOnboarding() {
     try {
       await createWorkspace({ name: trimmedName, slug: normalizedSlug })
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Nao foi possivel criar o workspace.')
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível criar o espaço de trabalho.')
     } finally {
       setLoading(false)
     }
@@ -56,12 +56,12 @@ export default function WorkspaceOnboarding() {
       <section className="auth-card" aria-labelledby="workspace-onboarding-title">
         <div className="auth-copy">
           <span className="auth-eyebrow">NexusCRM</span>
-          <h1 id="workspace-onboarding-title">Criar seu workspace</h1>
-          <p>Organize clientes, tarefas, atividades e financas em um unico workspace.</p>
+          <h1 id="workspace-onboarding-title">Criar seu espaço de trabalho</h1>
+          <p>Organize clientes, tarefas, atividades e finanças em um único espaço de trabalho.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label htmlFor="workspace-name">Nome do workspace</label>
+          <label htmlFor="workspace-name">Nome do espaço de trabalho</label>
           <input
             id="workspace-name"
             name="workspace-name"
@@ -72,7 +72,7 @@ export default function WorkspaceOnboarding() {
             autoComplete="organization"
           />
 
-          <label htmlFor="workspace-slug">Slug do workspace</label>
+          <label htmlFor="workspace-slug">Slug do espaço de trabalho</label>
           <input
             id="workspace-slug"
             name="workspace-slug"
@@ -91,7 +91,7 @@ export default function WorkspaceOnboarding() {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Criando workspace...' : 'Criar workspace'}
+            {loading ? 'Criando espaço de trabalho...' : 'Criar espaço de trabalho'}
           </button>
         </form>
       </section>

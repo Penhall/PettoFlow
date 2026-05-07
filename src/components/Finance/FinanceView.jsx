@@ -1,4 +1,3 @@
-// src/components/Finance/FinanceView.jsx
 import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useAccounts } from '../../hooks/useAccounts'
@@ -29,7 +28,7 @@ const FINANCE_TABS = [
   { id: 'contas', label: 'Contas' },
   { id: 'regras', label: 'Regras' },
   { id: 'receber', label: 'A receber' },
-  { id: 'calendario', label: 'Calendario' },
+  { id: 'calendario', label: 'Calendário' },
 ]
 
 const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns = [] }) => {
@@ -264,7 +263,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
   return (
     <div className="finance-page">
       <PageHeader
-        eyebrow="Operacao"
+        eyebrow="Operação"
         title="Finanças"
         subtitle="Acompanhe extrato, contas, regras e previsões com leitura operacional compacta."
         metrics={[
@@ -289,7 +288,7 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
         items={tabItems}
         activeId={activeTab}
         onChange={setActiveTab}
-        ariaLabel="Areas de finanças"
+        ariaLabel="Áreas de finanças"
       />
 
       <PageActionBar

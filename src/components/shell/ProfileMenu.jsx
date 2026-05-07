@@ -1,9 +1,7 @@
-import { LogOut, MoonStar, Palette, SunMedium } from 'lucide-react'
+import { LogOut, Palette } from 'lucide-react'
 import { useState } from 'react'
-import { useTheme } from '../../context/ThemeContext'
 
 export default function ProfileMenu({ user, onSignOut = () => {} }) {
-  const { theme, themes, setTheme } = useTheme()
   const [open, setOpen] = useState(false)
 
   return (
@@ -26,24 +24,6 @@ export default function ProfileMenu({ user, onSignOut = () => {} }) {
 
       {open ? (
         <div className="profile-menu__content" role="menu">
-          <div className="profile-menu__section">
-            <span className="profile-menu__section-title">Aparência</span>
-            {themes.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`profile-menu__item ${theme === item.id ? 'is-active' : ''}`}
-                onClick={() => {
-                  setTheme(item.id)
-                  setOpen(false)
-                }}
-              >
-                {item.id === 'dark' ? <MoonStar size={15} /> : <SunMedium size={15} />}
-                <span>{item.name}</span>
-              </button>
-            ))}
-          </div>
-
           <div className="profile-menu__section">
             <span className="profile-menu__section-title">Conta</span>
             <div className="profile-menu__identity">

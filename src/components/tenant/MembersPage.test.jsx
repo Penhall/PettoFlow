@@ -31,7 +31,7 @@ describe('MembersPage', () => {
 
     render(<MembersPage />)
 
-    expect(screen.getByText('Apenas owners e admins podem gerenciar membros.')).toBeTruthy()
+    expect(screen.getByText('Apenas proprietários e admins podem gerenciar membros.')).toBeTruthy()
   })
 
   it('permite criar convite quando o tenant ativo e administravel', async () => {
@@ -56,7 +56,7 @@ describe('MembersPage', () => {
     fireEvent.change(screen.getByLabelText('Email do convidado'), {
       target: { value: 'colab@example.com' },
     })
-    fireEvent.change(screen.getByLabelText('Role do convite'), {
+    fireEvent.change(screen.getByLabelText('Perfil do convite'), {
       target: { value: 'member' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Enviar convite' }))
@@ -90,7 +90,7 @@ describe('MembersPage', () => {
 
     render(<MembersPage />)
 
-    fireEvent.change(screen.getByLabelText('Role de user@example.com'), {
+    fireEvent.change(screen.getByLabelText('Perfil de user@example.com'), {
       target: { value: 'admin' },
     })
 

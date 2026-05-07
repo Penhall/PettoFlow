@@ -8,7 +8,7 @@ const STATUS_CLASS = {
   'A Fazer': 'todo',
   'Em Progresso': 'progress',
   Concluido: 'done',
-  'Concluído': 'done',
+  Concluído: 'done',
 }
 
 function formatCurrency(value) {
@@ -24,7 +24,7 @@ function getStatusClass(status) {
 }
 
 export default function Dashboard({ tasks = [], columns = [] }) {
-  const doneColumnName = columns.length > 0 ? columns[columns.length - 1].name : 'Concluido'
+  const doneColumnName = columns.length > 0 ? columns[columns.length - 1].name : 'Concluído'
   const firstColumnName = columns.length > 0 ? columns[0].name : 'A Fazer'
   const activeTasks = tasks.filter((task) => task.status !== doneColumnName)
   const stalledTasks = tasks.filter((task) => task.status === firstColumnName && Number(task.progress || 0) === 0)
@@ -58,13 +58,13 @@ export default function Dashboard({ tasks = [], columns = [] }) {
   return (
     <div className="dashboard-page">
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Espaço de trabalho"
         title="Dashboard"
-        subtitle="Acompanhe capacidade, ritmo de entrega e sinais recentes do workspace em uma leitura objetiva."
+        subtitle="Acompanhe capacidade, ritmo de entrega e sinais recentes do espaço de trabalho em uma leitura objetiva."
         metrics={[
           { label: 'Pipeline ativo', value: formatCurrency(pipelineValue), icon: DollarSign },
           { label: 'Tarefas ativas', value: String(activeTasks.length) },
-          { label: 'Sem inicio', value: String(stalledTasks.length), icon: AlertCircle },
+          { label: 'Sem início', value: String(stalledTasks.length), icon: AlertCircle },
           { label: 'Time envolvido', value: String(totalMembers), icon: Users },
         ]}
       />
@@ -74,9 +74,9 @@ export default function Dashboard({ tasks = [], columns = [] }) {
       {tasks.length === 0 ? (
         <SurfaceCard className="dashboard-page__empty">
           <EmptyState
-            title="O dashboard aparece quando a operacao comeca a ganhar volume"
-            description="Acompanhe pipeline, capacidade e gargalos do workspace em uma camada unica."
-            detail="Esta area esta vazia porque ainda nao existem tarefas suficientes para formar uma leitura operacional."
+            title="O dashboard aparece quando a operação começa a ganhar volume"
+            description="Acompanhe pipeline, capacidade e gargalos do espaço de trabalho em uma camada única."
+            detail="Esta área está vazia porque ainda não existem tarefas suficientes para formar uma leitura operacional."
           />
         </SurfaceCard>
       ) : (
@@ -84,7 +84,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
           <SurfaceCard className="dashboard-page__hero">
             <div className="dashboard-page__hero-copy">
               <span className="dashboard-page__kicker">Leitura do ciclo atual</span>
-              <strong className="dashboard-page__headline">{avgProgress}% de progresso medio</strong>
+              <strong className="dashboard-page__headline">{avgProgress}% de progresso médio</strong>
               <p className="dashboard-page__summary">
                 {activeTasks.length} frentes seguem em andamento e {stalledTasks.length} ainda precisam sair do zero.
               </p>
@@ -104,7 +104,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
             <SurfaceCard className="dashboard-panel">
               <div className="dashboard-panel__header">
                 <div>
-                  <span className="dashboard-panel__eyebrow">Execucao</span>
+                  <span className="dashboard-panel__eyebrow">Execução</span>
                   <h2>Progresso por tarefa</h2>
                 </div>
                 <BarChart size={18} strokeWidth={1.75} />
@@ -114,8 +114,8 @@ export default function Dashboard({ tasks = [], columns = [] }) {
                 {tasks.slice(0, 8).map((task) => (
                   <div key={task.id} className="dashboard-progress-row">
                     <div className="dashboard-progress-row__copy">
-                      <strong>{task.title || 'Sem titulo'}</strong>
-                      <span>{task.owner || task.client_name || 'Sem responsavel definido'}</span>
+                      <strong>{task.title || 'Sem título'}</strong>
+                      <span>{task.owner || task.client_name || 'Sem responsável definido'}</span>
                     </div>
                     <div className="dashboard-progress-row__bar" aria-hidden="true">
                       <div
@@ -133,7 +133,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
               <div className="dashboard-panel__header">
                 <div>
                   <span className="dashboard-panel__eyebrow">Foco</span>
-                  <h2>Tags em circulacao</h2>
+                  <h2>Tags em circulação</h2>
                 </div>
                 <PieChart size={18} strokeWidth={1.75} />
               </div>
@@ -146,7 +146,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
                       <div key={tag} className="dashboard-tag-row">
                         <div className="dashboard-tag-row__copy">
                           <strong>{tag}</strong>
-                          <span>{count} ocorrencias</span>
+                          <span>{count} ocorrências</span>
                         </div>
                         <div className="dashboard-tag-row__bar" aria-hidden="true">
                           <div className="dashboard-tag-row__fill" style={{ '--progress-width': `${share}%` }} />
@@ -157,7 +157,7 @@ export default function Dashboard({ tasks = [], columns = [] }) {
                 </div>
               ) : (
                 <div className="dashboard-panel__placeholder">
-                  <p>As tags passam a aparecer aqui quando as tarefas comecarem a usar classificacao contextual.</p>
+                  <p>As tags passam a aparecer aqui quando as tarefas começarem a usar classificação contextual.</p>
                 </div>
               )}
             </SurfaceCard>
@@ -176,11 +176,11 @@ export default function Dashboard({ tasks = [], columns = [] }) {
                 <div key={task.id} className="dashboard-recent-row">
                   <div className="dashboard-recent-row__identity">
                     <span className="dashboard-recent-row__avatar">
-                      {task.owner ? task.owner.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'WS'}
+                      {task.owner ? task.owner.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'ND'}
                     </span>
                     <div className="dashboard-recent-row__copy">
-                      <strong>{task.title || 'Sem titulo'}</strong>
-                      <span>{task.owner || task.client_name || 'Sem responsavel definido'}</span>
+                      <strong>{task.title || 'Sem título'}</strong>
+                      <span>{task.owner || task.client_name || 'Sem responsável definido'}</span>
                     </div>
                   </div>
                   <span className={`status-badge ${getStatusClass(task.status)}`}>

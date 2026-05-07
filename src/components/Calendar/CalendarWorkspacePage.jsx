@@ -22,18 +22,18 @@ export default function CalendarWorkspacePage({
   return (
     <div className="calendar-page">
       <PageHeader
-        eyebrow="Workspace"
-        title="Calendario"
-        subtitle="Centralize tarefas, atividades e sinais financeiros em uma agenda unica do workspace."
+        eyebrow="Espaço de trabalho"
+        title="Calendário"
+        subtitle="Centralize tarefas, atividades e sinais financeiros em uma agenda única do espaço de trabalho."
         metrics={[
           { label: 'Tarefas abertas', value: String(dueTaskCount) },
-          { label: 'Concluidas', value: String(completedTaskCount) },
+          { label: 'Concluídas', value: String(completedTaskCount) },
           { label: 'Clientes ativos', value: String(clients.length) },
           { label: 'Pessoas no time', value: String(team.length) },
         ]}
       />
 
-      <PageActionBar meta="Agenda unificada com filtros por operacao e financeiro">
+      <PageActionBar meta="Agenda unificada com filtros por operação e financeiro">
         <CalendarFilters active={activeTypes} onChange={setActiveTypes} />
       </PageActionBar>
 

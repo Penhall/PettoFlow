@@ -7,11 +7,11 @@ function TenantSelection({ tenants, onSelect }) {
       <section className="auth-card" aria-labelledby="tenant-selection-title">
         <div className="auth-copy">
           <span className="auth-eyebrow">NexusCRM</span>
-          <h1 id="tenant-selection-title">Selecione um workspace</h1>
-          <p>Escolha o workspace em que deseja operar antes de acessar o dashboard.</p>
+          <h1 id="tenant-selection-title">Selecione um espaço de trabalho</h1>
+          <p>Escolha o espaço de trabalho em que deseja operar antes de acessar o dashboard.</p>
         </div>
 
-        <div className="auth-form" role="list" aria-label="Workspaces disponiveis">
+        <div className="auth-form" role="list" aria-label="Espaços de trabalho disponíveis">
           {tenants.map((tenant) => (
             <button
               key={tenant.id}
@@ -32,7 +32,7 @@ export default function TenantGate({ children }) {
   const { loading, error, hasTenant, activeTenantId, tenants, setActiveTenant, refreshTenants } = useTenant()
 
   if (loading) {
-    return <div className="loading-screen">Carregando workspaces do NexusCRM...</div>
+    return <div className="loading-screen">Carregando espaços de trabalho do NexusCRM...</div>
   }
 
   if (error) {
@@ -41,7 +41,7 @@ export default function TenantGate({ children }) {
         <section className="auth-card">
           <div className="auth-copy">
             <span className="auth-eyebrow">NexusCRM</span>
-            <h1>Erro ao carregar workspaces</h1>
+            <h1>Erro ao carregar espaços de trabalho</h1>
             <p>{error}</p>
           </div>
 

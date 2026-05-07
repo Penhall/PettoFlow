@@ -34,11 +34,11 @@ describe('AdminPanel', () => {
     render(<AdminPanel />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Operacao global da plataforma/i)).toBeInTheDocument()
+      expect(screen.getByText(/Operação global da plataforma/i)).toBeInTheDocument()
     })
 
     expect(screen.getAllByText(/root@nexuscrm.test/i).length).toBeGreaterThan(0)
-    expect(screen.getByText('Tenants')).toBeInTheDocument()
+    expect(screen.getByText('Espaços')).toBeInTheDocument()
     expect(screen.getByText('Workspace A')).toBeInTheDocument()
   })
 })

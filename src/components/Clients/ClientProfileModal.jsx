@@ -12,7 +12,7 @@ import TransactionList from '../Finance/TransactionList'
 import RecordSidebar from '../shared/RecordSidebar'
 import { getVisualFixture, isVisualRegressionMode } from '../../visual/fixtureRuntime.js'
 
-const LOG_TYPES = ['Ligacao', 'Email', 'Reuniao', 'WhatsApp', 'Outro']
+const LOG_TYPES = ['Ligação', 'Email', 'Reunião', 'WhatsApp', 'Outro']
 
 const normalizeLogType = (value) =>
   String(value || '')
@@ -31,7 +31,7 @@ function ClientTransactions({ clientId }) {
       <div className="client-profile-section__header">
         <div>
           <span className="client-profile-section__eyebrow">Financeiro</span>
-          <h3>Transacoes vinculadas</h3>
+          <h3>Transações vinculadas</h3>
         </div>
       </div>
 
@@ -51,7 +51,7 @@ function ClientTransactions({ clientId }) {
 
 export default function ClientProfileModal({ isOpen, client, clientTasks = [], onEdit, onClose }) {
   const [logs, setLogs] = useState([])
-  const [newLog, setNewLog] = useState({ type: 'Ligacao', notes: '' })
+  const [newLog, setNewLog] = useState({ type: 'Ligação', notes: '' })
   const [loadingLogs, setLoadingLogs] = useState(false)
 
   const fetchLogs = useCallback(async () => {
@@ -95,7 +95,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
       })
 
       setLogs((current) => [created, ...current])
-      setNewLog({ type: 'Ligacao', notes: '' })
+      setNewLog({ type: 'Ligação', notes: '' })
     } catch (error) {
       console.error('Error adding interaction log:', error)
     }
@@ -106,7 +106,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
       isOpen={isOpen}
       onClose={onClose}
       title={client?.name}
-      subtitle={client ? `${client.industry || 'Industria nao definida'} · ${client.status || 'Status nao definido'}` : ''}
+      subtitle={client ? `${client.industry || 'Indústria não definida'} · ${client.status || 'Status não definido'}` : ''}
     >
       {client ? (
         <div className="client-profile">
@@ -131,7 +131,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
                   </div>
                   <div className="client-profile-card__row">
                     <Building2 size={14} />
-                    <span>{client.company_size || 'Porte nao informado'}</span>
+                    <span>{client.company_size || 'Porte não informado'}</span>
                   </div>
                 </div>
               </section>
@@ -140,7 +140,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
                 <div className="client-profile-card__header">
                   <div>
                     <span className="client-profile-card__eyebrow">Comercial</span>
-                    <h3>Negocio atual</h3>
+                    <h3>Negócio atual</h3>
                   </div>
                 </div>
 
@@ -163,7 +163,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
               <section className="client-profile-card">
                 <div className="client-profile-card__header">
                   <div>
-                    <span className="client-profile-card__eyebrow">Operacao</span>
+                    <span className="client-profile-card__eyebrow">Operação</span>
                     <h3>Tarefas relacionadas</h3>
                   </div>
                 </div>
@@ -176,7 +176,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
                       <div key={task.id} className="client-profile-task-row">
                         <div className="client-profile-task-row__copy">
                           <strong>{task.title}</strong>
-                          <span>{task.owner || 'Sem responsavel definido'}</span>
+                          <span>{task.owner || 'Sem responsável definido'}</span>
                         </div>
                         <span className={`status-badge ${task.completed_at ? 'done' : 'progress'}`}>
                           {task.status || 'A Fazer'}
@@ -197,7 +197,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
               <div className="client-profile-section__header">
                 <div>
                   <span className="client-profile-section__eyebrow">Relacionamento</span>
-                  <h3>Historico de interacoes</h3>
+                  <h3>Histórico de interações</h3>
                 </div>
               </div>
 
@@ -218,7 +218,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
                 <div className="client-log-form__composer">
                   <input
                     type="text"
-                    placeholder="Registro de reuniao, detalhes da ligacao ou proximos passos"
+                    placeholder="Registro de reunião, detalhes da ligação ou próximos passos"
                     value={newLog.notes}
                     onChange={(event) => setNewLog((current) => ({ ...current, notes: event.target.value }))}
                   />
@@ -231,12 +231,12 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
 
               <div className="client-log-list">
                 {loadingLogs ? (
-                  <p className="client-log-list__loading">Carregando historico...</p>
+                  <p className="client-log-list__loading">Carregando histórico...</p>
                 ) : logs.length === 0 ? (
                   <div className="client-log-list__empty">
                     <MessageSquare size={26} />
-                    <strong>Nenhuma interacao registrada</strong>
-                    <p>Documente contatos, reunioes e follow-ups para manter o relacionamento utilizavel por toda a equipe.</p>
+                    <strong>Nenhuma interação registrada</strong>
+                    <p>Documente contatos, reuniões e follow-ups para manter o relacionamento utilizável por toda a equipe.</p>
                   </div>
                 ) : (
                   logs.map((log) => (

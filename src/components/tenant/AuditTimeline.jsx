@@ -56,7 +56,7 @@ export default function AuditTimeline() {
         <div>
           <h2 style={{ margin: '0 0 6px' }}>Timeline de auditoria</h2>
           <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-            Eventos recentes de seguranca e operacao para {activeTenant?.name ?? 'o workspace ativo'}.
+            Eventos recentes de segurança e operação para {activeTenant?.name ?? 'o espaço de trabalho ativo'}.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export default function AuditTimeline() {
           type="text"
           value={actionFilter}
           onChange={(event) => setActionFilter(event.target.value)}
-          placeholder="Filtrar por prefixo de acao"
+          placeholder="Filtrar por prefixo de ação"
           style={{
             minWidth: 240,
             borderRadius: 12,

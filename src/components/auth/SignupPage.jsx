@@ -3,7 +3,7 @@ import AuthLayout from './AuthLayout.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 
 function getSignupErrorMessage() {
-  return 'Nao foi possivel criar sua conta agora.'
+  return 'Não foi possível criar sua conta agora.'
 }
 
 export default function SignupPage({ onSwitchToLogin }) {
@@ -22,7 +22,7 @@ export default function SignupPage({ onSwitchToLogin }) {
     setNotice('')
 
     if (password !== confirmPassword) {
-      setError('As senhas nao coincidem.')
+      setError('As senhas não coincidem.')
       return
     }
 
@@ -31,7 +31,7 @@ export default function SignupPage({ onSwitchToLogin }) {
     try {
       const data = await signUp(email.trim(), password, name.trim() ? { name: name.trim() } : undefined)
       if (!data.session) {
-        setNotice('Conta criada. Verifique seu email para concluir o acesso, se a confirmacao estiver habilitada.')
+        setNotice('Conta criada. Verifique seu email para concluir o acesso, se a confirmação estiver habilitada.')
       }
     } catch (err) {
       console.error('Erro ao criar conta:', err)
@@ -44,14 +44,14 @@ export default function SignupPage({ onSwitchToLogin }) {
   return (
     <AuthLayout
       title="Criar conta no NexusCRM"
-      description="Comece com autenticacao real e uma base segura para a evolucao SaaS do produto."
+      description="Comece com autenticação real e uma base segura para a evolução SaaS do produto."
       footer={(
         <button
           type="button"
           onClick={onSwitchToLogin}
           style={{ border: 'none', background: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, font: 'inherit' }}
         >
-          Ja tenho conta no NexusCRM
+          Já tenho conta no NexusCRM
         </button>
       )}
     >

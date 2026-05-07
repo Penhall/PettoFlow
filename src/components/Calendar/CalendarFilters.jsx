@@ -2,12 +2,12 @@ const FILTER_OPTIONS = [
   { type: 'task', label: 'Tarefas' },
   { type: 'activity', label: 'Atividades' },
   { type: 'receivable', label: 'A receber' },
-  { type: 'transaction', label: 'Transacoes' },
+  { type: 'transaction', label: 'Transações' },
 ]
 
 export default function CalendarFilters({ active, onChange }) {
   return (
-    <div className="calendar-filter-group" role="group" aria-label="Filtros do calendario">
+    <div className="calendar-filter-group" role="group" aria-label="Filtros do calendário">
       {FILTER_OPTIONS.map((option) => {
         const isActive = active.includes(option.type)
 

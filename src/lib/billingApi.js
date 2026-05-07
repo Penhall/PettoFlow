@@ -25,7 +25,7 @@ export async function fetchTenantBillingOverview(tenantId) {
     requireTenant: true,
   })
 
-  return parseResponse(res, 'Erro ao carregar billing do workspace')
+  return parseResponse(res, 'Erro ao carregar faturamento do espaço de trabalho')
 }
 
 export async function createBillingCheckoutSession(tenantId, payload) {
@@ -36,7 +36,7 @@ export async function createBillingCheckoutSession(tenantId, payload) {
     body: JSON.stringify(payload),
   })
 
-  return parseResponse(res, 'Erro ao iniciar checkout de billing')
+  return parseResponse(res, 'Erro ao iniciar checkout de faturamento')
 }
 
 export async function createBillingPortalSession(tenantId) {
@@ -46,7 +46,7 @@ export async function createBillingPortalSession(tenantId) {
     requireTenant: true,
   })
 
-  return parseResponse(res, 'Erro ao abrir portal de billing')
+  return parseResponse(res, 'Erro ao abrir portal de faturamento')
 }
 
 export async function listTenantAuditLogs(tenantId, { action = '', limit = 50 } = {}) {

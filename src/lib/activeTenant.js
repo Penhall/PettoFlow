@@ -27,7 +27,7 @@ export function getRuntimeActiveTenantId() {
 }
 
 export function createTenantRequiredError() {
-  const error = new Error('Tenant ativo obrigatorio para operacao de negocio.')
+  const error = new Error('Espaço de trabalho ativo obrigatório para operação de negócio.')
   error.code = 'TENANT_REQUIRED'
   return error
 }

@@ -48,7 +48,7 @@ function MemberModal({ member, onSave, onClose }) {
           </div>
 
           <div className="form-group">
-            <label>Cargo ou funcao</label>
+            <label>Cargo ou função</label>
             <input type="text" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} />
           </div>
 
@@ -146,11 +146,11 @@ export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery
   return (
     <div className="team-page">
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Espaço de trabalho"
         title="Time"
-        subtitle="Gerencie membros, distribuicao de trabalho e sinais operacionais da equipe sem perder densidade."
+        subtitle="Gerencie membros, distribuição de trabalho e sinais operacionais da equipe sem perder densidade."
         metrics={[
-          { label: 'Membros visiveis', value: String(members.length) },
+          { label: 'Membros visíveis', value: String(members.length) },
           { label: 'Ativos agora', value: String(activeMembers) },
           { label: 'Tarefas alocadas', value: String(totalAssignedTasks) },
         ]}
@@ -172,11 +172,11 @@ export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery
           <SurfaceCard>
             <EmptyState
               title="O time aparece aqui como camada operacional"
-              description="Acompanhe distribuicao de trabalho, responsaveis e sinais de capacidade da equipe."
+              description="Acompanhe distribuição de trabalho, responsáveis e sinais de capacidade da equipe."
               detail={
                 searchQuery
                   ? 'Nenhum membro corresponde aos filtros atuais.'
-                  : 'Esta area esta vazia porque nenhum membro foi cadastrado no workspace.'
+                  : 'Esta área está vazia porque nenhum membro foi cadastrado no espaço de trabalho.'
               }
             />
           </SurfaceCard>
@@ -186,7 +186,7 @@ export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery
               <span>Pessoa</span>
               <span>Capacidade</span>
               <span>Foco recente</span>
-              <span>Acoes</span>
+              <span>Ações</span>
             </div>
 
             {members.map((member) => (
@@ -195,13 +195,13 @@ export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery
                   <span className="team-member-row__avatar" aria-hidden="true">{member.initials}</span>
                   <div className="team-member-row__copy">
                     <strong>{member.name}</strong>
-                    <span>{member.role || 'Funcao nao definida'}</span>
+                    <span>{member.role || 'Função não definida'}</span>
                   </div>
                 </div>
 
                 <div className="team-member-row__metrics">
                   <span>{member.memberTasks.length} tarefa{member.memberTasks.length === 1 ? '' : 's'}</span>
-                  <span>{member.completedCount} concluidas</span>
+                  <span>{member.completedCount} concluídas</span>
                   <span className={`status-badge ${getMemberStatusTone(member.status)}`}>{member.status || 'Ativo'}</span>
                 </div>
 

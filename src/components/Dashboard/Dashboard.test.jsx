@@ -20,7 +20,7 @@ describe('Dashboard', () => {
 
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.getByText('Progresso por tarefa')).toBeInTheDocument()
-    expect(screen.getByText('Tags em circulacao')).toBeInTheDocument()
+    expect(screen.getByText('Tags em circulação')).toBeInTheDocument()
     expect(screen.getAllByText('Migracao Boreal').length).toBeGreaterThan(0)
   })
 })

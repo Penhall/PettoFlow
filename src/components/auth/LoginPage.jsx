@@ -3,7 +3,7 @@ import AuthLayout from './AuthLayout.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 
 function getLoginErrorMessage() {
-  return 'Nao foi possivel entrar com esse email e senha.'
+  return 'Não foi possível entrar com este email e esta senha.'
 }
 
 export default function LoginPage({ onSwitchToSignup }) {
@@ -21,7 +21,7 @@ export default function LoginPage({ onSwitchToSignup }) {
     try {
       await signIn(email.trim(), password)
     } catch (err) {
-      console.error('Erro ao autenticar usuario:', err)
+      console.error('Erro ao autenticar usuário:', err)
       setError(getLoginErrorMessage())
     } finally {
       setLoading(false)
@@ -31,7 +31,7 @@ export default function LoginPage({ onSwitchToSignup }) {
   return (
     <AuthLayout
       title="Entrar no NexusCRM"
-      description="Organize clientes, tarefas, atividades e financas em um unico workspace."
+      description="Organize clientes, tarefas, atividades e finanças em um único espaço de trabalho."
       footer={(
         <button
           type="button"

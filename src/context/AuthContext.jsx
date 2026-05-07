@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { AuthContext } from './authContext.js'
 
 function getMissingConfigError() {
-  return new Error('O cliente Supabase nao esta configurado com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.')
+  return new Error('O cliente Supabase não está configurado com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.')
 }
 
 export function AuthProvider({ children }) {
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
       if (!active) return
 
       if (error) {
-        console.error('Erro ao carregar sessao inicial:', error)
+        console.error('Erro ao carregar sessão inicial:', error)
       }
 
       const nextSession = data?.session ?? null

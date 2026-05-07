@@ -11,14 +11,14 @@ vi.mock('../../hooks/useTenant.js', () => ({
 }))
 
 describe('WorkspaceOnboarding', () => {
-  it('valida nome obrigatorio antes de criar workspace', async () => {
+  it('valida nome obrigatório antes de criar espaço de trabalho', async () => {
     createWorkspaceMock.mockResolvedValue({ tenant: { id: 'tenant-1' } })
 
     render(<WorkspaceOnboarding />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Criar workspace' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Criar espaço de trabalho' }))
 
-    expect(screen.getByText('Informe o nome do workspace.')).toBeTruthy()
+    expect(screen.getByText('Informe o nome do espaço de trabalho.')).toBeTruthy()
     expect(createWorkspaceMock).not.toHaveBeenCalled()
   })
 
@@ -27,15 +27,15 @@ describe('WorkspaceOnboarding', () => {
 
     render(<WorkspaceOnboarding />)
 
-    fireEvent.change(screen.getByLabelText('Nome do workspace'), {
+    fireEvent.change(screen.getByLabelText('Nome do espaço de trabalho'), {
       target: { value: 'Workspace Alpha' },
     })
 
-    fireEvent.change(screen.getByLabelText('Slug do workspace'), {
+    fireEvent.change(screen.getByLabelText('Slug do espaço de trabalho'), {
       target: { value: 'workspace-alpha' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Criar workspace' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Criar espaço de trabalho' }))
 
     await waitFor(() => {
       expect(createWorkspaceMock).toHaveBeenCalledWith({

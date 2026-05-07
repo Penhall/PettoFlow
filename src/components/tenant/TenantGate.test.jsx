@@ -24,7 +24,7 @@ describe('TenantGate', () => {
       </TenantGate>,
     )
 
-    expect(screen.getByText('Carregando workspaces do NexusCRM...')).toBeTruthy()
+    expect(screen.getByText('Carregando espaços de trabalho do NexusCRM...')).toBeTruthy()
   })
 
   it('mostra onboarding quando o usuario autenticado nao possui tenant ativo', () => {
@@ -42,7 +42,7 @@ describe('TenantGate', () => {
       </TenantGate>,
     )
 
-    expect(screen.getByText('Criar seu workspace')).toBeTruthy()
+    expect(screen.getByText('Criar seu espaço de trabalho')).toBeTruthy()
   })
 
   it('renderiza a aplicacao quando existe tenant ativo', () => {

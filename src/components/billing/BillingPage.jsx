@@ -47,7 +47,7 @@ export default function BillingPage() {
       const data = await fetchTenantBillingOverview(activeTenantId)
       setOverview(data)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar billing do workspace.')
+      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar faturamento do espaço de trabalho.')
     } finally {
       setLoading(false)
     }
@@ -67,7 +67,7 @@ export default function BillingPage() {
         if (active) setOverview(data)
       } catch (loadError) {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar billing do workspace.')
+          setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar faturamento do espaço de trabalho.')
         }
       } finally {
         if (active) setLoading(false)
@@ -89,11 +89,11 @@ export default function BillingPage() {
   const planLimits = subscription?.plan?.limits ?? {}
 
   const usageEntries = [
-    { label: 'Usuarios ativos', current: usage.active_members ?? 0, limit: planLimits.max_users ?? null },
+    { label: 'Usuários ativos', current: usage.active_members ?? 0, limit: planLimits.max_users ?? null },
     { label: 'Clientes', current: usage.clients ?? 0, limit: planLimits.max_clients ?? null },
     { label: 'Tarefas', current: usage.tasks ?? 0, limit: planLimits.max_tasks ?? null },
     { label: 'Atividades', current: usage.activities ?? 0, limit: planLimits.max_activities ?? null },
-    { label: 'Transacoes', current: usage.transactions ?? 0, limit: planLimits.max_transactions ?? null },
+    { label: 'Transações', current: usage.transactions ?? 0, limit: planLimits.max_transactions ?? null },
   ]
 
   async function handleCheckout(planSlug, interval) {
@@ -129,7 +129,7 @@ export default function BillingPage() {
         throw new Error('Portal Stripe sem URL de redirecionamento.')
       }
     } catch (portalError) {
-      setError(portalError instanceof Error ? portalError.message : 'Erro ao abrir portal de billing.')
+      setError(portalError instanceof Error ? portalError.message : 'Erro ao abrir portal de faturamento.')
     } finally {
       setBusyPlanKey('')
     }
@@ -139,14 +139,14 @@ export default function BillingPage() {
     <section style={{ display: 'grid', gap: 24 }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ margin: '0 0 6px' }}>Billing do workspace</h2>
+          <h2 style={{ margin: '0 0 6px' }}>Faturamento do espaço de trabalho</h2>
           <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-            {activeTenant ? `Plano atual e capacidade operacional de ${activeTenant.name}.` : 'Billing do workspace ativo.'}
+            {activeTenant ? `Plano atual e capacidade operacional de ${activeTenant.name}.` : 'Faturamento do espaço de trabalho ativo.'}
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <button type="button" className="icon-btn" onClick={() => loadOverview()} aria-label="Atualizar billing">
+          <button type="button" className="icon-btn" onClick={() => loadOverview()} aria-label="Atualizar faturamento">
             <RefreshCw size={18} />
           </button>
           {manageable && subscription?.provider === 'stripe' && (
@@ -167,9 +167,9 @@ export default function BillingPage() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
             <span>
-              {feedback === 'success' && 'Checkout concluido. Aguarde a sincronizacao do Stripe.'}
-              {feedback === 'cancel' && 'Checkout cancelado. Nenhuma alteracao foi aplicada.'}
-              {feedback === 'portal' && 'Retorno do portal de billing recebido.'}
+              {feedback === 'success' && 'Checkout concluído. Aguarde a sincronização do Stripe.'}
+              {feedback === 'cancel' && 'Checkout cancelado. Nenhuma alteração foi aplicada.'}
+              {feedback === 'portal' && 'Retorno do portal de faturamento recebido.'}
             </span>
             <button type="button" className="icon-btn" onClick={() => { setFeedback(''); clearBillingFeedback() }}>
               x
@@ -192,19 +192,19 @@ export default function BillingPage() {
 
       {loading ? (
         <div style={{ padding: 18, borderRadius: 16, border: '1px solid var(--border-color)' }}>
-          Carregando billing do workspace...
+          Carregando faturamento do espaço de trabalho...
         </div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
             <div style={{ border: '1px solid var(--border-color)', borderRadius: 16, padding: 18, background: 'var(--card-bg)' }}>
               <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Plano atual</span>
-              <h3 style={{ margin: '8px 0 4px' }}>{subscription?.plan?.name ?? 'Nao identificado'}</h3>
-              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{subscription?.plan?.description ?? 'Resumo indisponivel.'}</p>
+              <h3 style={{ margin: '8px 0 4px' }}>{subscription?.plan?.name ?? 'Não identificado'}</h3>
+              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{subscription?.plan?.description ?? 'Resumo indisponível.'}</p>
               <div style={{ marginTop: 18, display: 'grid', gap: 8, fontSize: 14 }}>
                 <span>Status: <strong>{subscription?.status ?? '—'}</strong></span>
-                <span>Provider: <strong>{subscription?.provider ?? '—'}</strong></span>
-                <span>Fim do periodo: <strong>{subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR') : '—'}</strong></span>
+                <span>Provedor: <strong>{subscription?.provider ?? '—'}</strong></span>
+                <span>Fim do período: <strong>{subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR') : '—'}</strong></span>
               </div>
             </div>
 
@@ -223,7 +223,7 @@ export default function BillingPage() {
 
           {!manageable && (
             <div style={{ color: 'var(--text-secondary)' }}>
-              Apenas owner/admin podem iniciar upgrade, downgrade ou abrir o portal de billing.
+              Apenas proprietários e admins podem iniciar upgrade, downgrade ou abrir o portal de faturamento.
             </div>
           )}
 
@@ -244,7 +244,7 @@ export default function BillingPage() {
                 >
                   <div>
                     <h3 style={{ margin: '0 0 6px' }}>{plan.name}</h3>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{plan.description || 'Plano sem descricao comercial.'}</p>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{plan.description || 'Plano sem descrição comercial.'}</p>
                   </div>
 
                   <div style={{ display: 'grid', gap: 6 }}>

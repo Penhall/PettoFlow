@@ -53,7 +53,7 @@ export default function EventDetailPanel({
     task: `Tarefa · ${event.date}`,
     activity: `Atividade · ${event.date}`,
     receivable: `A receber · ${centsToReal(payload.amount)} · ${event.date}`,
-    transaction: `Transacao · ${centsToReal(Math.abs(payload.amount))} · ${event.date}`,
+    transaction: `Transação · ${centsToReal(Math.abs(payload.amount))} · ${event.date}`,
   }[type]
 
   const createQuickTask = () => {
@@ -62,7 +62,7 @@ export default function EventDetailPanel({
     onAddTask?.({
       title: newTaskTitle,
       status: columns[0]?.name ?? 'A Fazer',
-      priority: 'Media',
+      priority: 'Média',
     })
     onClose()
   }
@@ -81,7 +81,7 @@ export default function EventDetailPanel({
     if (!cents || cents <= 0) return
 
     if (!principalAccountId) {
-      alert('Nenhuma conta Principal definida. Acesse Financas > Contas.')
+      alert('Nenhuma conta principal definida. Acesse Finanças > Contas.')
       return
     }
 
@@ -141,7 +141,7 @@ export default function EventDetailPanel({
             {type === 'activity' ? (
               <>
                 <DetailAction icon={Edit} label="Editar" onClick={() => setInnerMode('editActivity')} />
-                <DetailAction icon={DollarSign} label="Criar transacao" onClick={() => setInnerMode('newTransaction')} />
+                <DetailAction icon={DollarSign} label="Criar transação" onClick={() => setInnerMode('newTransaction')} />
                 <DetailAction icon={Plus} label="Criar a receber" onClick={() => setInnerMode('newReceivable')} />
                 <DetailAction
                   icon={CheckCircle}
@@ -218,7 +218,7 @@ export default function EventDetailPanel({
             <div className="calendar-detail__panel">
               <div className="calendar-detail__panel-header">
                 <strong>Confirmar faturamento</strong>
-                <span>Registre o valor recebido e a data de conciliacao.</span>
+                <span>Registre o valor recebido e a data de conciliação.</span>
               </div>
 
               <div className="calendar-detail__form">
@@ -252,7 +252,7 @@ export default function EventDetailPanel({
             <div className="calendar-detail__panel">
               <div className="calendar-detail__panel-header">
                 <strong>Criar a receber</strong>
-                <span>Use a atividade como origem para acompanhar o proximo recebimento.</span>
+                <span>Use a atividade como origem para acompanhar o próximo recebimento.</span>
               </div>
 
               <div className="calendar-detail__form">
@@ -266,7 +266,7 @@ export default function EventDetailPanel({
                   />
                 </DetailField>
 
-                <DetailField label="Previsao de recebimento">
+                <DetailField label="Previsão de recebimento">
                   <input
                     className="form-input"
                     type="date"
@@ -285,7 +285,7 @@ export default function EventDetailPanel({
           {innerMode === 'newTransaction' ? (
             <div className="calendar-detail__panel calendar-detail__panel--muted">
               <strong>Registro financeiro contextual</strong>
-              <p>Abra o modulo de Financas para registrar a transacao vinculada a esta atividade com categoria e conta corretas.</p>
+              <p>Abra o módulo de Finanças para registrar a transação vinculada a esta atividade com categoria e conta corretas.</p>
             </div>
           ) : null}
 
@@ -293,11 +293,11 @@ export default function EventDetailPanel({
             <div className="calendar-detail__panel">
               <div className="calendar-detail__panel-header">
                 <strong>Criar tarefa de acompanhamento</strong>
-                <span>Use uma tarefa curta quando o proximo passo exigir dono e prazo operacional.</span>
+                <span>Use uma tarefa curta quando o próximo passo exigir dono e prazo operacional.</span>
               </div>
 
               <div className="calendar-detail__form">
-                <DetailField label="Titulo da tarefa">
+                <DetailField label="Título da tarefa">
                   <input
                     className="form-input"
                     type="text"
@@ -323,15 +323,15 @@ export default function EventDetailPanel({
 
           {innerMode === 'editTask' ? (
             <div className="calendar-detail__panel calendar-detail__panel--muted">
-              <strong>Edicao principal</strong>
-              <p>Use a tela de tarefas para alterar prioridade, responsavel e demais campos estruturais com contexto completo.</p>
+              <strong>Edição principal</strong>
+              <p>Use a tela de tarefas para alterar prioridade, responsável e demais campos estruturais com contexto completo.</p>
             </div>
           ) : null}
 
           {innerMode === 'editActivity' ? (
             <div className="calendar-detail__panel calendar-detail__panel--muted">
-              <strong>Edicao principal</strong>
-              <p>Use a area de atividades para editar template, participantes e registros relacionados com mais contexto.</p>
+              <strong>Edição principal</strong>
+              <p>Use a área de atividades para editar template, participantes e registros relacionados com mais contexto.</p>
             </div>
           ) : null}
         </div>

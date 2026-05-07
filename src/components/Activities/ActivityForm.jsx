@@ -1,12 +1,13 @@
 // src/components/Activities/ActivityForm.jsx
-import { useRef, useState, lazy, Suspense } from 'react'
+import { useRef, useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { X, Calendar, FileText, ChevronDown } from 'lucide-react'
 import RelationChips from './RelationChips'
 import { realToCents } from '../../lib/finUtils'
+import { lazyWithRetry } from '../../lib/lazyWithRetry.js'
 
 // Lazy load do Tiptap — carrega ambos os pacotes juntos
-const TiptapEditor = lazy(() =>
+const TiptapEditor = lazyWithRetry(() =>
   Promise.all([
     import('@tiptap/react'),
     import('@tiptap/starter-kit'),
@@ -34,7 +35,8 @@ const TiptapEditor = lazy(() =>
       )
     }
     return { default: Editor }
-  })
+  }),
+  'activity-tiptap-editor',
 )
 
 const ACTIVITY_TYPES = [
