@@ -86,6 +86,26 @@ O produto passa a ter uma area propria de tutoriais e documentacao interna, cone
 
 Essa area nao e uma FAQ solta. Ela e uma superficie operacional do produto.
 
+### Workspace initialization modes
+
+O modelo de inicializacao do workspace precisa ser preparado para mais de um modo, mesmo que nesta fase apenas um deles seja ativado de forma padrao.
+
+Modos previstos:
+
+- guided_seeded
+- clean_workspace
+- future_demo_workspace
+- future_imported_workspace
+
+Diretrizes:
+
+- `guided_seeded` e o padrao atual desta fase
+- `clean_workspace` deve permitir uma experiencia sem exemplos no futuro
+- `future_demo_workspace` fica reservado para cenarios de demonstracao ou vendas
+- `future_imported_workspace` prepara compatibilidade com futuras entradas por importacao
+
+Nesta fase, a exigencia e preparar a arquitetura e a compatibilidade futura, nao implementar todos os modos.
+
 ## Seed content
 
 ### Tasks
@@ -191,6 +211,20 @@ Cada vazio pode incluir:
 - CTA para abrir tutorial relacionado
 - dica operacional curta
 
+### Quick actions
+
+Os empty states devem permitir acoes rapidas diretamente ligadas a ativacao inicial e ao uso real do produto.
+
+Exemplos:
+
+- `[Criar cliente]`
+- `[Importar contatos]`
+- `[Criar primeira tarefa]`
+- `[Usar template]`
+- `[Agendar atendimento]`
+
+As quick actions devem reduzir a friccao entre onboarding, empty state e acao real do produto.
+
 Prioridades:
 
 - Tasks
@@ -243,8 +277,30 @@ Cada tutorial precisa ter:
 - nivel ou contexto
 - CTA de abertura
 - relacao com itens de onboarding, se existir
+- owner_module
+- last_reviewed_at
+- deprecated
+- feature_dependency
+- minimum_version
+
+Os tutoriais precisam ter ownership claro, para evitar envelhecimento silencioso de conteudo.
+
+Tambem precisam suportar dependencia de feature e de versao, para que o produto possa ocultar, depreciar ou adaptar conteudo conforme a evolucao da plataforma.
 
 Nesta fase, persistimos no backend apenas o progresso do usuario. O conteudo em si permanece no frontend para simplicidade, governanca e versionamento.
+
+### AI-ready onboarding metadata
+
+Entidades de onboarding, tutorial, quick action e empty states devem possuir ids estaveis e relacoes explicitas entre si.
+
+Isso prepara a arquitetura para:
+
+- copiloto interno
+- ajuda contextual
+- onboarding adaptativo
+- IA operacional
+
+Nenhuma IA sera implementada agora. O objetivo desta fase e apenas preparar a estrutura para evolucao futura sem retrabalho conceitual.
 
 ## Data and persistence model
 
@@ -271,6 +327,159 @@ Requisitos:
 - criacao coerente entre tarefas, clientes, atividades e financas
 - dados seeded claramente editaveis e deletaveis
 - nao recriar exemplos sem intencao explicita do sistema
+
+### Seed provenance
+
+Todo registro criado automaticamente pelo sistema deve possuir metadata de origem.
+
+Metadata minima sugerida:
+
+- origin_type
+- origin_version
+- seed_batch_id
+- created_by_system
+
+Valores esperados para `origin_type`:
+
+- system_seed
+- onboarding_seed
+- demo_seed
+- user_created
+- imported
+
+Objetivos dessa estrategia:
+
+- identificar dados criados automaticamente
+- evitar duplicacoes
+- suportar limpeza seletiva
+- suportar analytics
+- preparar futura IA contextual
+- permitir migracao segura de seeds
+
+Os dados continuam totalmente editaveis e deletaveis. A provenance nao deve travar entidades nem mudar a natureza operacional dos registros.
+
+### Onboarding versioning
+
+O modelo de onboarding deve ser versionado para suportar evolucao incremental do produto.
+
+Campos conceituais minimos:
+
+- current_onboarding_version
+- completed_onboarding_version
+- last_seen_onboarding_version
+
+Isso permite:
+
+- onboarding incremental
+- novas experiencias futuras
+- reabertura parcial de onboarding
+- onboarding especifico por feature
+- compatibilidade entre tenants antigos e novos
+
+Tours, checklist e tutoriais podem evoluir por versao, sem exigir uma ruptura unica no modelo.
+
+### Persistent dismiss state
+
+O sistema deve persistir dismiss de elementos de ajuda e orientacao para nao se tornar repetitivo com usuarios mais maduros.
+
+Escopos iniciais:
+
+- onboarding panel
+- contextual hints
+- tutorial suggestions
+- helper surfaces
+- tours
+
+Metadata sugerida:
+
+- dismissed
+- dismissed_at
+- dismiss_scope
+- dismiss_reason
+
+O sistema nunca deve parecer insistente ou repetitivo para usuarios avancados.
+
+## Progressive onboarding strategy
+
+Ajuda, hints, tutoriais e sugestoes nao devem aparecer todos de uma vez. O sistema deve revelar funcionalidades progressivamente conforme uso real e maturidade do usuario.
+
+Estagios possiveis:
+
+- new
+- learning
+- operational
+- advanced
+- power_user
+
+Conceitos de suporte:
+
+- experience_level
+- feature_exposure_stage
+
+Recursos avancados podem aparecer apenas conforme a maturidade do usuario. O objetivo e evitar sobrecarga cognitiva e preservar clareza operacional.
+
+## Activation telemetry
+
+O onboarding precisa definir uma trilha minima de eventos para medir ativacao e orientar iteracoes futuras.
+
+Eventos iniciais sugeridos:
+
+- onboarding_started
+- onboarding_completed
+- tutorial_opened
+- tutorial_completed
+- tour_skipped
+- tour_completed
+- checklist_item_completed
+- empty_state_cta_clicked
+- quick_action_triggered
+
+Objetivos:
+
+- medir ativacao
+- detectar abandono
+- identificar modulos confusos
+- entender uso dos tutoriais
+- melhorar onboarding ao longo do tempo
+
+A telemetry inicial pode ser simples e incremental. O objetivo desta fase nao e criar uma plataforma analitica complexa, e sim garantir observabilidade minima do comportamento de ativacao.
+
+### Contextual re-engagement
+
+O sistema pode, no futuro imediato, detectar onboarding incompleto ou baixa ativacao e oferecer retomadas discretas.
+
+Exemplos:
+
+- "Voce ainda nao criou seu primeiro cliente."
+- "Precisa de ajuda para configurar essa area?"
+
+Diretrizes:
+
+- comportamento discreto
+- cooldown
+- anti-spam
+- contexto real
+- nunca invasivo
+
+## Failure handling
+
+O onboarding nunca pode bloquear acesso ao produto.
+
+Precisamos cobrir, no minimo, cenarios como:
+
+- seed falhou
+- tutorial indisponivel
+- tour corrompido
+- persistencia falhou
+- metadata inconsistente
+
+Direcao tecnica:
+
+- graceful degradation
+- retries
+- fallbacks
+- logs
+- recuperacao segura
 
 ## UX and UI rules
 
@@ -350,6 +559,14 @@ Esta fase so sera considerada completa se:
 - a central de tutoriais for navegavel e util
 - o tour for discreto e retomavel
 - a experiencia se integrar ao sistema premium sem parecer um enxerto paralelo
+- o onboarding esteja preparado para evolucao futura
+- exista telemetry minima definida
+- o onboarding seja progressivo em vez de ruidoso
+- o dismiss persistente esteja previsto no modelo
+- a governanca dos tutoriais esteja explicita
+- a arquitetura esteja preparada para IA contextual futura
+- o sistema suporte usuarios iniciantes e avancados
+- a provenance dos dados seeded esteja definida
 
 ## Risks
 
@@ -358,6 +575,11 @@ Esta fase so sera considerada completa se:
 - heuristicas automaticas de checklist podem ser ambiguas se nao houver persistencia clara
 - empty states e tutoriais podem divergir se o catalogo nao tiver ids e ownership claros
 - onboarding pode competir com o conteudo operacional se o painel inicial for grande demais
+- excesso de hints pode gerar fadiga
+- telemetry excessiva pode aumentar ruido
+- onboarding mal versionado pode gerar inconsistencias
+- quick actions mal conectadas podem gerar duplicidade de fluxo
+- tutoriais sem ownership podem envelhecer rapidamente
 
 ## Recommended technical direction
 
@@ -366,4 +588,11 @@ Esta fase so sera considerada completa se:
 - progresso persistido no backend por usuario e tenant
 - checklist como eixo principal
 - tour como camada secundaria de orientacao
+- onboarding versionado
+- progressive disclosure
+- telemetry incremental
+- provenance rastreavel
+- metadata preparada para IA
+- dismiss persistente
+- quick actions reutilizaveis
 - relatorios por fase em `docs/PHASE_XX_ONBOARDING_TOUR_REPORT.md`
