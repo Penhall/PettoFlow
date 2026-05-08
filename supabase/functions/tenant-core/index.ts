@@ -16,6 +16,13 @@ import {
   isStripeConfigured,
 } from '../_shared/stripe.ts'
 import { attachRequestId, createRequestContext } from '../_shared/observability.ts'
+import {
+  CURRENT_ONBOARDING_VERSION,
+  DEFAULT_INITIALIZATION_MODE,
+  ensureTenantOnboardingState,
+  recordOnboardingEvent,
+  seedTenantOnboardingData,
+} from '../_shared/onboarding.ts'
 
 function getRouteParts(req: Request) {
   const url = new URL(req.url)
@@ -87,6 +94,30 @@ function normalizePlan(plan: Record<string, unknown>) {
 function parseBillingInterval(value: unknown) {
   const normalized = String(value ?? '').trim().toLowerCase()
   return normalized === 'yearly' ? 'yearly' : normalized === 'monthly' ? 'monthly' : null
+}
+
+function isValidExperienceLevel(value: string) {
+  return ['new', 'learning', 'operational', 'advanced', 'power_user'].includes(value)
+}
+
+function normalizeOnboardingState(row: Record<string, unknown> | null) {
+  if (!row) return null
+
+  return {
+    id: row.id ?? null,
+    tenantId: row.tenant_id ?? null,
+    userId: row.user_id ?? null,
+    currentOnboardingVersion: row.current_onboarding_version ?? CURRENT_ONBOARDING_VERSION,
+    completedOnboardingVersion: row.completed_onboarding_version ?? null,
+    lastSeenOnboardingVersion: row.last_seen_onboarding_version ?? null,
+    experienceLevel: row.experience_level ?? 'new',
+    tourState: toRecord(row.tour_state),
+    checklistState: toRecord(row.checklist_state),
+    tutorialState: toRecord(row.tutorial_state),
+    dismissState: toRecord(row.dismiss_state),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -207,6 +238,40 @@ Deno.serve(async (req: Request) => {
 
       if (settingsError) return ctx.fail(500, 'tenant_settings_upsert_failed', settingsError.message)
 
+      const seedBatchId = crypto.randomUUID()
+
+      try {
+        await ensureTenantOnboardingState({
+          sb: serviceSb,
+          tenantId: String(tenant.id),
+          userId: auth.user.id,
+        })
+        await seedTenantOnboardingData({
+          sb: serviceSb,
+          tenantId: String(tenant.id),
+          userId: auth.user.id,
+          tenantName: String(tenant.name),
+          seedBatchId,
+        })
+        await recordOnboardingEvent({
+          sb: serviceSb,
+          tenantId: String(tenant.id),
+          userId: auth.user.id,
+          eventName: 'onboarding_started',
+          eventPayload: {
+            initialization_mode: DEFAULT_INITIALIZATION_MODE,
+            seed_batch_id: seedBatchId,
+            current_onboarding_version: CURRENT_ONBOARDING_VERSION,
+          },
+        })
+      } catch (onboardingError) {
+        return ctx.fail(
+          500,
+          'tenant_onboarding_seed_failed',
+          onboardingError instanceof Error ? onboardingError.message : 'Erro ao iniciar onboarding do workspace.',
+        )
+      }
+
       await writeAuditLog({
         tenantId: tenant.id,
         userId: auth.user.id,
@@ -239,7 +304,112 @@ Deno.serve(async (req: Request) => {
           role: membership.role,
           status: membership.status,
         },
+        onboarding: {
+          currentVersion: CURRENT_ONBOARDING_VERSION,
+          initializationMode: DEFAULT_INITIALIZATION_MODE,
+        },
       }, 201)
+    }
+
+    if (resource === 'tenants' && resourceId && action === 'onboarding' && (request.method === 'GET' || request.method === 'PATCH')) {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
+      if (!tenantAccess.ok) return tenantAccess.response
+      if (tenantAccess.tenantId !== resourceId) {
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
+      }
+
+      if (request.method === 'GET') {
+        const state = await ensureTenantOnboardingState({
+          sb: serviceSb,
+          tenantId: tenantAccess.tenantId,
+          userId: auth.user.id,
+        })
+
+        const { data: seedProfile, error: seedProfileError } = await serviceSb
+          .from('tenant_settings')
+          .select('value')
+          .eq('tenant_id', tenantAccess.tenantId)
+          .eq('key', 'onboarding_seed_profile')
+          .maybeSingle()
+
+        if (seedProfileError) return ctx.fail(500, 'tenant_onboarding_seed_profile_failed', seedProfileError.message)
+
+        return ctx.ok({
+          state: normalizeOnboardingState(state as Record<string, unknown>),
+          initializationMode: DEFAULT_INITIALIZATION_MODE,
+          currentVersion: CURRENT_ONBOARDING_VERSION,
+          seedProfile: seedProfile?.value ?? null,
+        })
+      }
+
+      const body = toRecord(await request.json())
+
+      const { data: currentState, error: currentStateError } = await serviceSb
+        .from('tenant_onboarding_state')
+        .select('*')
+        .eq('tenant_id', tenantAccess.tenantId)
+        .eq('user_id', auth.user.id)
+        .maybeSingle()
+
+      if (currentStateError) return ctx.fail(500, 'tenant_onboarding_fetch_failed', currentStateError.message)
+
+      const baseState = currentState ?? await ensureTenantOnboardingState({
+        sb: serviceSb,
+        tenantId: tenantAccess.tenantId,
+        userId: auth.user.id,
+      })
+
+      const payload = {
+        experience_level: String(body.experienceLevel ?? baseState.experience_level ?? 'new'),
+        tenant_id: tenantAccess.tenantId,
+        user_id: auth.user.id,
+        current_onboarding_version: String(body.currentOnboardingVersion ?? baseState.current_onboarding_version ?? CURRENT_ONBOARDING_VERSION),
+        completed_onboarding_version: body.completedOnboardingVersion ?? baseState.completed_onboarding_version ?? null,
+        last_seen_onboarding_version: body.lastSeenOnboardingVersion ?? baseState.last_seen_onboarding_version ?? CURRENT_ONBOARDING_VERSION,
+        tour_state: toRecord(body.tourState ?? baseState.tour_state),
+        checklist_state: toRecord(body.checklistState ?? baseState.checklist_state),
+        tutorial_state: toRecord(body.tutorialState ?? baseState.tutorial_state),
+        dismiss_state: toRecord(body.dismissState ?? baseState.dismiss_state),
+      }
+
+      if (!isValidExperienceLevel(payload.experience_level)) {
+        return ctx.fail(400, 'tenant_onboarding_experience_invalid', 'Nivel de experiencia de onboarding invalido.')
+      }
+
+      const { data, error } = await serviceSb
+        .from('tenant_onboarding_state')
+        .upsert([payload], { onConflict: 'tenant_id,user_id' })
+        .select('*')
+        .single()
+
+      if (error) return ctx.fail(500, 'tenant_onboarding_update_failed', error.message)
+      return ctx.ok({ state: normalizeOnboardingState(data as Record<string, unknown>) })
+    }
+
+    if (request.method === 'POST' && resource === 'tenants' && resourceId && action === 'onboarding' && subAction === 'events') {
+      const tenantAccess = await requireTenantAccess(request, auth.user.id)
+      if (!tenantAccess.ok) return tenantAccess.response
+      if (tenantAccess.tenantId !== resourceId) {
+        return ctx.fail(400, 'tenant_path_header_mismatch', 'Tenant id do path difere do header.')
+      }
+
+      const body = toRecord(await request.json())
+      const eventName = String(body.eventName ?? '').trim()
+      const eventPayload = toRecord(body.eventPayload)
+
+      if (!eventName) {
+        return ctx.fail(400, 'tenant_onboarding_event_required', 'Nome do evento de onboarding obrigatorio.')
+      }
+
+      const event = await recordOnboardingEvent({
+        sb: serviceSb,
+        tenantId: tenantAccess.tenantId,
+        userId: auth.user.id,
+        eventName,
+        eventPayload,
+      })
+
+      return ctx.ok({ event }, 201)
     }
 
     if ((request.method === 'GET' || request.method === 'PATCH') && resource === 'tenants' && resourceId && action === 'settings') {
