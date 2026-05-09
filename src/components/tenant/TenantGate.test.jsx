@@ -62,4 +62,23 @@ describe('TenantGate', () => {
 
     expect(screen.getByText('Dashboard')).toBeTruthy()
   })
+
+  it('nao bloqueia a aplicacao se o tenant existir mesmo com falhas posteriores de onboarding', () => {
+    useTenantMock.mockReturnValue({
+      loading: false,
+      error: null,
+      hasTenant: true,
+      activeTenantId: 'tenant-1',
+      tenants: [{ id: 'tenant-1', name: 'Workspace A' }],
+      onboardingError: 'falha ao carregar onboarding',
+    })
+
+    render(
+      <TenantGate>
+        <div>Área operacional</div>
+      </TenantGate>,
+    )
+
+    expect(screen.getByText('Área operacional')).toBeTruthy()
+  })
 })

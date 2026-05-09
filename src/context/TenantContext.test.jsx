@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TenantProvider } from './TenantContext.jsx'
 import { useTenant } from '../hooks/useTenant.js'
@@ -22,13 +23,26 @@ vi.mock('../lib/memberApi.js', () => ({
 }))
 
 function TenantConsumer() {
-  const { loading, hasTenant, activeTenantId, tenants } = useTenant()
+  const { loading, hasTenant, activeTenantId, tenants, createWorkspace } = useTenant()
+  const [creationResult, setCreationResult] = useState(null)
+
   return (
     <div>
       <span data-testid="tenant-loading">{loading ? 'loading' : 'ready'}</span>
       <span data-testid="tenant-has-tenant">{hasTenant ? 'yes' : 'no'}</span>
       <span data-testid="tenant-active-id">{activeTenantId ?? 'none'}</span>
       <span data-testid="tenant-count">{String(tenants.length)}</span>
+      <span data-testid="tenant-onboarding-version">{creationResult?.onboarding?.currentVersion ?? 'none'}</span>
+      <span data-testid="tenant-initialization-mode">{creationResult?.onboarding?.initializationMode ?? 'none'}</span>
+      <button
+        type="button"
+        onClick={async () => {
+          const result = await createWorkspace({ name: 'Workspace Beta', slug: 'workspace-beta' })
+          setCreationResult(result)
+        }}
+      >
+        Criar workspace
+      </button>
     </div>
   )
 }
@@ -114,5 +128,53 @@ describe('TenantProvider', () => {
     expect(acceptInvitationMock).toHaveBeenCalledWith('token-123')
     expect(screen.getByTestId('tenant-active-id').textContent).toBe('tenant-1')
     expect(window.location.search).toBe('')
+  })
+
+  it('preserva metadata de onboarding ao criar um workspace novo', async () => {
+    listMyTenantsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'tenant-2',
+          name: 'Workspace Beta',
+          slug: 'workspace-beta',
+          role: 'owner',
+          membershipId: 'membership-2',
+          membershipStatus: 'active',
+        },
+      ])
+
+    createTenantMock.mockResolvedValue({
+      tenant: { id: 'tenant-2' },
+      onboarding: {
+        currentVersion: '2026.05',
+        initializationMode: 'guided_seeded',
+      },
+    })
+
+    render(
+      <TenantProvider>
+        <TenantConsumer />
+      </TenantProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tenant-loading').textContent).toBe('ready')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar workspace' }))
+
+    await waitFor(() => {
+      expect(createTenantMock).toHaveBeenCalledWith({
+        name: 'Workspace Beta',
+        slug: 'workspace-beta',
+      })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tenant-onboarding-version').textContent).toBe('2026.05')
+      expect(screen.getByTestId('tenant-initialization-mode').textContent).toBe('guided_seeded')
+      expect(screen.getByTestId('tenant-active-id').textContent).toBe('tenant-2')
+    })
   })
 })
