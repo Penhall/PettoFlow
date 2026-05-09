@@ -10,8 +10,6 @@ describe('TasksPage', () => {
 
     render(
       <TasksPage
-        tasks={[]}
-        columns={[]}
         viewType="kanban"
         setViewType={onViewChange}
         searchQuery=""
@@ -27,6 +25,13 @@ describe('TasksPage', () => {
         setShowFilterMenu={() => {}}
         onCreateTask={onCreateTask}
         taskCount={0}
+        emptyState={{
+          title: 'Sem tarefas',
+          description: 'Teste',
+          detail: 'Detalhe',
+          quickActions: [{ id: 'create-first-task', label: 'Criar primeira tarefa', onClick: onCreateTask }],
+          tutorialAction: { label: 'Abrir tutorial', onClick: () => {} },
+        }}
         content={<div>Kanban</div>}
       />
     )
@@ -39,7 +44,8 @@ describe('TasksPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Tarefas' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Kanban' })).toBeInTheDocument()
-    expect(within(document.querySelector('.tasks-page__content')).getByText('Kanban')).toBeInTheDocument()
+    expect(within(document.querySelector('.tasks-page__content')).getByRole('button', { name: /Criar primeira tarefa/i })).toBeInTheDocument()
+    expect(within(document.querySelector('.tasks-page__content')).getByRole('button', { name: /Abrir tutorial/i })).toBeInTheDocument()
     expect(onViewChange).toHaveBeenCalledWith('list')
     expect(onSearch).toHaveBeenCalledWith('pipeline')
     expect(onCreateTask).toHaveBeenCalledTimes(1)

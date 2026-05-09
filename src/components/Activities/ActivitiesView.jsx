@@ -12,6 +12,7 @@ import ActivityForm from './ActivityForm'
 import TemplatesTab from './TemplatesTab'
 import ActivityTemplateForm from './ActivityTemplateForm'
 import CalendarView from '../Calendar/CalendarView'
+import ContextualHint from '../onboarding/ContextualHint.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
@@ -24,7 +25,17 @@ const ACTIVITY_TABS = [
   { id: 'calendario', label: 'Calendário' },
 ]
 
-const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '', onSearch = () => {} }) => {
+const ActivitiesView = ({
+  clients = [],
+  tasks = [],
+  team = [],
+  searchQuery = '',
+  onSearch = () => {},
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
+  showTimelineHint = false,
+  onDismissTimelineHint = () => {},
+}) => {
   const { activities, loading, addActivity, updateActivity, deleteActivity } = useActivities()
   const { templates, createTemplate, updateTemplate, deleteTemplate, applyTemplate } = useActivityTemplates()
   const { createReceivableFromActivity } = useReceivables()
@@ -168,6 +179,22 @@ const ActivitiesView = ({ clients = [], tasks = [], team = [], searchQuery = '',
               : null
         }
       />
+
+      {activeTab === 'timeline' && showTimelineHint && filteredActivities.length === 0 ? (
+        <ContextualHint
+          title="A timeline ganha ritmo quando o time registra os primeiros follow-ups"
+          description="Use atividades para alimentar histórico, agenda e próximos passos sem depender de notas soltas."
+          actionLabel="Abrir tutorial"
+          onAction={() => {
+            onTrackOnboarding('empty_state_cta_clicked', {
+              surface: 'activities.timeline',
+              actionId: 'tutorial',
+            })
+            onOpenTutorial()
+          }}
+          onDismiss={onDismissTimelineHint}
+        />
+      ) : null}
 
       <SurfaceCard className="activities-page__surface" padded={activeTab !== 'timeline'}>
         {activeTab === 'timeline' && (

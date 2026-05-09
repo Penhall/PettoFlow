@@ -111,7 +111,14 @@ function getClientStatusTone(status) {
   return 'progress'
 }
 
-export default function ClientesView({ clients = [], tasks = [], onRefresh, searchQuery }) {
+export default function ClientesView({
+  clients = [],
+  tasks = [],
+  onRefresh,
+  searchQuery,
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
+}) {
   const [editingClient, setEditingClient] = useState(null)
   const [viewingClient, setViewingClient] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -197,6 +204,41 @@ export default function ClientesView({ clients = [], tasks = [], onRefresh, sear
                   ? 'Nenhum cliente corresponde aos filtros atuais.'
                   : 'Esta área está vazia porque nenhum cliente foi cadastrado no espaço de trabalho.'
               }
+              quickActions={[
+                {
+                  id: 'create-client',
+                  label: 'Criar cliente',
+                  onClick: () => {
+                    onTrackOnboarding('quick_action_triggered', {
+                      surface: 'clientes.empty',
+                      actionId: 'create-client',
+                    })
+                    setEditingClient(null)
+                    setShowEditModal(true)
+                  },
+                },
+                {
+                  id: 'import-contacts',
+                  label: 'Importar contatos',
+                  onClick: () => {
+                    onTrackOnboarding('quick_action_triggered', {
+                      surface: 'clientes.empty',
+                      actionId: 'import-contacts',
+                    })
+                    onOpenTutorial()
+                  },
+                },
+              ]}
+              tutorialAction={{
+                label: 'Abrir tutorial',
+                onClick: () => {
+                  onTrackOnboarding('empty_state_cta_clicked', {
+                    surface: 'clientes.empty',
+                    actionId: 'tutorial',
+                  })
+                  onOpenTutorial()
+                },
+              }}
             />
           </SurfaceCard>
         ) : (

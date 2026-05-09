@@ -15,6 +15,7 @@ import RuleBuilder from './RuleBuilder'
 import ReceivablesList from './ReceivablesList'
 import FinanceSummary from './FinanceSummary'
 import CalendarView from '../Calendar/CalendarView'
+import ContextualHint from '../onboarding/ContextualHint.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
@@ -31,7 +32,17 @@ const FINANCE_TABS = [
   { id: 'calendario', label: 'Calendário' },
 ]
 
-const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns = [] }) => {
+const FinanceView = ({
+  clients = [],
+  tasks = [],
+  team = [],
+  onAddTask,
+  columns = [],
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
+  showFiltersHint = false,
+  onDismissFiltersHint = () => {},
+}) => {
   const [activeTab, setActiveTab] = useState('extrato')
   const [extractoFilters, setExtractoFilters] = useState({})
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -161,6 +172,30 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
               title="Nenhuma conta ativa"
               description="As contas organizam saldo, conciliação e fluxo por origem financeira."
               detail="Crie a primeira conta para começar a registrar transações e acompanhar o caixa."
+              quickActions={[
+                {
+                  id: 'create-account',
+                  label: 'Criar conta',
+                  onClick: () => {
+                    onTrackOnboarding('quick_action_triggered', {
+                      surface: 'finance.accounts',
+                      actionId: 'create-account',
+                    })
+                    setEditingAccount(null)
+                    setShowAccountForm(true)
+                  },
+                },
+              ]}
+              tutorialAction={{
+                label: 'Abrir tutorial',
+                onClick: () => {
+                  onTrackOnboarding('empty_state_cta_clicked', {
+                    surface: 'finance.accounts',
+                    actionId: 'tutorial',
+                  })
+                  onOpenTutorial()
+                },
+              }}
             />
           ) : (
             activeAccounts.map((account) => (
@@ -189,6 +224,29 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
               title="Nenhuma regra criada"
               description="As regras automatizam classificação e reduzem trabalho manual no extrato."
               detail="Esta área está vazia porque nenhuma automação financeira foi configurada ainda."
+              quickActions={[
+                {
+                  id: 'create-rule',
+                  label: 'Criar regra',
+                  onClick: () => {
+                    onTrackOnboarding('quick_action_triggered', {
+                      surface: 'finance.rules',
+                      actionId: 'create-rule',
+                    })
+                    setEditingRule('new')
+                  },
+                },
+              ]}
+              tutorialAction={{
+                label: 'Abrir tutorial',
+                onClick: () => {
+                  onTrackOnboarding('empty_state_cta_clicked', {
+                    surface: 'finance.rules',
+                    actionId: 'tutorial',
+                  })
+                  onOpenTutorial()
+                },
+              }}
             />
           )}
           {rules.map((rule) => (
@@ -339,6 +397,22 @@ const FinanceView = ({ clients = [], tasks = [], team = [], onAddTask, columns =
           </div>
         ) : null}
       </PageActionBar>
+
+      {activeTab === 'extrato' && showFiltersHint ? (
+        <ContextualHint
+          title="Comece lendo a assinatura recorrente e a conta principal"
+          description="Os filtros ajudam a separar caixa, categorias e períodos sem perder densidade operacional."
+          actionLabel="Abrir tutorial"
+          onAction={() => {
+            onTrackOnboarding('empty_state_cta_clicked', {
+              surface: 'finance.filters-hint',
+              actionId: 'tutorial',
+            })
+            onOpenTutorial()
+          }}
+          onDismiss={onDismissFiltersHint}
+        />
+      ) : null}
 
       <SurfaceCard className="finance-page__surface" padded={activeTab !== 'extrato'}>
         {renderFinanceContent()}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import FinanceView from './FinanceView.jsx'
 
@@ -101,5 +101,10 @@ describe('FinanceView', () => {
     expect(screen.getByRole('heading', { name: 'Finanças' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Extrato' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /nova transação/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Contas' }))
+
+    expect(screen.getByRole('button', { name: /Criar conta/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Abrir tutorial/i })).toBeInTheDocument()
   })
 })

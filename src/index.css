@@ -1997,6 +1997,23 @@ label {
   transition: transform var(--motion-base) ease, opacity var(--motion-base) ease;
 }
 
+.quick-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.quick-actions-row__item {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: transform var(--motion-base) ease, border-color var(--motion-base) ease, background-color var(--motion-base) ease;
+}
+
 .onboarding-panel,
 .tutorial-card,
 .tutorials-hub,
@@ -2128,6 +2145,7 @@ label {
 }
 
 .onboarding-panel__item:hover,
+.quick-actions-row__item:hover,
 .tutorial-card__open:hover,
 .tutorial-card__quick-action:hover,
 .tutorials-hub__filter:hover,
@@ -2142,6 +2160,11 @@ label {
 .onboarding-panel__item:hover {
   border-color: color-mix(in srgb, var(--primary) 28%, var(--border-color));
   background: color-mix(in srgb, var(--primary-light) 30%, var(--card-bg));
+}
+
+.quick-actions-row__item:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-light) 35%, transparent);
 }
 
 .onboarding-panel__item-icon,

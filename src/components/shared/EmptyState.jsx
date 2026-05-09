@@ -1,4 +1,5 @@
 import SurfaceCard from './SurfaceCard.jsx'
+import QuickActionsRow from '../onboarding/QuickActionsRow.jsx'
 
 function joinClassNames(...values) {
   return values.filter(Boolean).join(' ')
@@ -9,6 +10,8 @@ export default function EmptyState({
   title,
   description,
   detail,
+  quickActions = [],
+  tutorialAction = null,
   action,
   className = '',
   ...props
@@ -25,6 +28,14 @@ export default function EmptyState({
         {description ? <p className="empty-state__description">{description}</p> : null}
         {detail ? <p className="empty-state__detail">{detail}</p> : null}
       </div>
+      <QuickActionsRow actions={quickActions} />
+      {tutorialAction ? (
+        <div className="empty-state__action">
+          <button type="button" className="empty-state__button" onClick={tutorialAction.onClick}>
+            {tutorialAction.label}
+          </button>
+        </div>
+      ) : null}
       {action ? <div className="empty-state__action">{action}</div> : null}
     </SurfaceCard>
   )

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ContextualHint from '../onboarding/ContextualHint.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import SurfaceCard from '../shared/SurfaceCard.jsx'
@@ -14,6 +15,10 @@ export default function CalendarWorkspacePage({
   columns = [],
   onUpdateTask,
   onAddTask,
+  showHint = false,
+  onDismissHint = () => {},
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
 }) {
   const [activeTypes, setActiveTypes] = useState(ALL_TYPES)
   const dueTaskCount = tasks.filter((task) => !task.completed_at).length
@@ -36,6 +41,22 @@ export default function CalendarWorkspacePage({
       <PageActionBar meta="Agenda unificada com filtros por operação e financeiro">
         <CalendarFilters active={activeTypes} onChange={setActiveTypes} />
       </PageActionBar>
+
+      {showHint ? (
+        <ContextualHint
+          title="Comece combinando tarefas, atividades e financeiro na mesma leitura"
+          description="Os filtros servem para reduzir ruído sem separar o calendário em módulos isolados."
+          actionLabel="Abrir tutorial"
+          onAction={() => {
+            onTrackOnboarding('empty_state_cta_clicked', {
+              surface: 'calendar.hint',
+              actionId: 'tutorial',
+            })
+            onOpenTutorial()
+          }}
+          onDismiss={onDismissHint}
+        />
+      ) : null}
 
       <SurfaceCard className="calendar-page__surface" padded={false}>
         <CalendarView

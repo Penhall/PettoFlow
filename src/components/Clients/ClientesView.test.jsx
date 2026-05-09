@@ -26,4 +26,21 @@ describe('ClientesView', () => {
     expect(screen.getByRole('button', { name: /Novo cliente/i })).toBeInTheDocument()
     expect(screen.getByText('1 tarefa em curso')).toBeInTheDocument()
   })
+
+  it('renders onboarding-aware empty state actions', () => {
+    render(
+      <ClientesView
+        clients={[]}
+        tasks={[]}
+        onRefresh={() => {}}
+        searchQuery=""
+        onOpenTutorial={() => {}}
+        onTrackOnboarding={() => {}}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: /Criar cliente/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Importar contatos/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Abrir tutorial/i })).toBeInTheDocument()
+  })
 })

@@ -84,7 +84,14 @@ function getMemberStatusTone(status) {
   return 'todo'
 }
 
-export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery }) {
+export default function TimeView({
+  tasks = [],
+  team = [],
+  onRefresh,
+  searchQuery,
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
+}) {
   const [editingMember, setEditingMember] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
@@ -178,6 +185,30 @@ export default function TimeView({ tasks = [], team = [], onRefresh, searchQuery
                   ? 'Nenhum membro corresponde aos filtros atuais.'
                   : 'Esta área está vazia porque nenhum membro foi cadastrado no espaço de trabalho.'
               }
+              quickActions={[
+                {
+                  id: 'create-member',
+                  label: 'Criar membro',
+                  onClick: () => {
+                    onTrackOnboarding('quick_action_triggered', {
+                      surface: 'team.empty',
+                      actionId: 'create-member',
+                    })
+                    setEditingMember(null)
+                    setShowModal(true)
+                  },
+                },
+              ]}
+              tutorialAction={{
+                label: 'Abrir tutorial',
+                onClick: () => {
+                  onTrackOnboarding('empty_state_cta_clicked', {
+                    surface: 'team.empty',
+                    actionId: 'tutorial',
+                  })
+                  onOpenTutorial()
+                },
+              }}
             />
           </SurfaceCard>
         ) : (

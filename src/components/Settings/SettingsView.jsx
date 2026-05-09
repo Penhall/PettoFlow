@@ -1,5 +1,6 @@
 import { Suspense, useState } from 'react'
 import DeferredSurface from '../shared/DeferredSurface.jsx'
+import ContextualHint from '../onboarding/ContextualHint.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
 import SurfaceCard from '../shared/SurfaceCard.jsx'
@@ -19,7 +20,13 @@ const TABS = [
   { id: 'commands', label: 'Comandos' },
 ]
 
-export default function SettingsView({ initialTab = 'members' }) {
+export default function SettingsView({
+  initialTab = 'members',
+  showHint = false,
+  onDismissHint = () => {},
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
+}) {
   const [activeTab, setActiveTab] = useState(TABS.some((tab) => tab.id === initialTab) ? initialTab : 'members')
 
   return (
@@ -36,6 +43,22 @@ export default function SettingsView({ initialTab = 'members' }) {
         onChange={setActiveTab}
         ariaLabel="Seções de configurações"
       />
+
+      {showHint ? (
+        <ContextualHint
+          title="Configurações ficam mais fáceis quando a equipe entra por contexto"
+          description="Comece por membros e faturamento, depois avance para auditoria, Telegram e comandos."
+          actionLabel="Abrir tutorial"
+          onAction={() => {
+            onTrackOnboarding('empty_state_cta_clicked', {
+              surface: 'settings.hint',
+              actionId: 'tutorial',
+            })
+            onOpenTutorial()
+          }}
+          onDismiss={onDismissHint}
+        />
+      ) : null}
 
       <SurfaceCard className="settings-page__panel">
         <Suspense fallback={<DeferredSurface label="Carregando seção de configurações..." />}>

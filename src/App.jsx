@@ -314,6 +314,17 @@ function App() {
     }
   }
 
+  const openTutorialHub = (tutorialId = null) => {
+    if (tutorialId) {
+      void onboarding.markTutorialOpened(tutorialId)
+    }
+    handleTabChange('tutoriais')
+  }
+
+  const trackOnboardingEvent = (eventName, eventPayload = {}) => {
+    void onboarding.emitEvent(eventName, eventPayload)
+  }
+
   const addTask = async (task) => {
     const payload = { ...task }
     delete payload.related_to
@@ -530,6 +541,36 @@ function App() {
             setShowFilterMenu={setShowFilterMenu}
             onCreateTask={() => openAddModal()}
             taskCount={filteredTasks.length}
+            emptyState={{
+              title: 'O board começa com a primeira tarefa real da operação',
+              description: 'Use tarefas para concentrar execução, prioridade e responsabilidade no mesmo fluxo.',
+              detail: searchQuery || filterTag
+                ? 'Nenhuma tarefa corresponde aos filtros atuais.'
+                : 'Esta área ainda está vazia porque nenhuma tarefa real foi criada neste espaço de trabalho.',
+              quickActions: [
+                {
+                  id: 'create-first-task',
+                  label: 'Criar primeira tarefa',
+                  onClick: () => {
+                    trackOnboardingEvent('quick_action_triggered', {
+                      surface: 'tasks.empty',
+                      actionId: 'create-first-task',
+                    })
+                    openAddModal()
+                  },
+                },
+              ],
+              tutorialAction: {
+                label: 'Abrir tutorial',
+                onClick: () => {
+                  trackOnboardingEvent('empty_state_cta_clicked', {
+                    surface: 'tasks.empty',
+                    actionId: 'tutorial',
+                  })
+                  openTutorialHub('getting-started.tasks')
+                },
+              },
+            }}
             content={(
               <div className="board-container">
                 {viewType === 'kanban' && (
@@ -588,15 +629,74 @@ function App() {
           />
         )
       case 'time':
-        return <TimeView tasks={tasks} team={team} onRefresh={fetchTeam} searchQuery={searchQuery} />
+        return (
+          <TimeView
+            tasks={tasks}
+            team={team}
+            onRefresh={fetchTeam}
+            searchQuery={searchQuery}
+            onOpenTutorial={() => openTutorialHub('getting-started.workspace')}
+            onTrackOnboarding={trackOnboardingEvent}
+          />
+        )
       case 'clientes':
-        return <ClientesView clients={clients} tasks={tasks} onRefresh={fetchClients} searchQuery={searchQuery} />
+        return (
+          <ClientesView
+            clients={clients}
+            tasks={tasks}
+            onRefresh={fetchClients}
+            searchQuery={searchQuery}
+            onOpenTutorial={() => openTutorialHub('getting-started.clients')}
+            onTrackOnboarding={trackOnboardingEvent}
+          />
+        )
       case 'atividades':
-        return <ActivitiesView clients={clients} tasks={tasks} team={team} searchQuery={searchQuery} onSearch={setSearchQuery} />
+        return (
+          <ActivitiesView
+            clients={clients}
+            tasks={tasks}
+            team={team}
+            searchQuery={searchQuery}
+            onSearch={setSearchQuery}
+            onOpenTutorial={() => openTutorialHub('getting-started.activities')}
+            onTrackOnboarding={trackOnboardingEvent}
+            showTimelineHint={!onboarding.state.dismissState?.['activities.hint.timeline']?.dismissed}
+            onDismissTimelineHint={() => onboarding.dismissSurface({
+              scope: 'activities.hint.timeline',
+              reason: 'manual_close',
+            })}
+          />
+        )
       case 'financas':
-        return <FinanceView clients={clients} tasks={tasks} team={team} onAddTask={addTask} columns={columns} />
+        return (
+          <FinanceView
+            clients={clients}
+            tasks={tasks}
+            team={team}
+            onAddTask={addTask}
+            columns={columns}
+            onOpenTutorial={() => openTutorialHub('getting-started.finance')}
+            onTrackOnboarding={trackOnboardingEvent}
+            showFiltersHint={!onboarding.state.dismissState?.['finance.hint.filters']?.dismissed}
+            onDismissFiltersHint={() => onboarding.dismissSurface({
+              scope: 'finance.hint.filters',
+              reason: 'manual_close',
+            })}
+          />
+        )
       case 'arquivo':
-        return <ArchiveView restoreTask={restoreTask} />
+        return (
+          <ArchiveView
+            restoreTask={restoreTask}
+            showHint={!onboarding.state.dismissState?.['archive.hint']?.dismissed}
+            onDismissHint={() => onboarding.dismissSurface({
+              scope: 'archive.hint',
+              reason: 'manual_close',
+            })}
+            onOpenTutorial={() => openTutorialHub('getting-started.workspace')}
+            onTrackOnboarding={trackOnboardingEvent}
+          />
+        )
       case 'calendario':
         return (
           <CalendarWorkspacePage
@@ -606,6 +706,13 @@ function App() {
             columns={columns}
             onUpdateTask={updateTask}
             onAddTask={addTask}
+            showHint={!onboarding.state.dismissState?.['calendar.hint']?.dismissed}
+            onDismissHint={() => onboarding.dismissSurface({
+              scope: 'calendar.hint',
+              reason: 'manual_close',
+            })}
+            onOpenTutorial={() => openTutorialHub('getting-started.activities')}
+            onTrackOnboarding={trackOnboardingEvent}
           />
         )
       case 'tutoriais':
@@ -630,7 +737,18 @@ function App() {
           />
         )
       case 'settings':
-        return <SettingsView initialTab={initialSettingsTab} />
+        return (
+          <SettingsView
+            initialTab={initialSettingsTab}
+            showHint={!onboarding.state.dismissState?.['settings.hint']?.dismissed}
+            onDismissHint={() => onboarding.dismissSurface({
+              scope: 'settings.hint',
+              reason: 'manual_close',
+            })}
+            onOpenTutorial={() => openTutorialHub('getting-started.workspace')}
+            onTrackOnboarding={trackOnboardingEvent}
+          />
+        )
       default:
         return null
     }

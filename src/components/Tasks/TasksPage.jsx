@@ -1,4 +1,6 @@
 import { ArrowUpDown, Filter } from 'lucide-react'
+import ContextualHint from '../onboarding/ContextualHint.jsx'
+import EmptyState from '../shared/EmptyState.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
@@ -53,7 +55,11 @@ export default function TasksPage({
   onCreateTask,
   taskCount,
   content,
+  emptyState = null,
+  contextualHint = null,
 }) {
+  const shouldRenderEmptyState = Boolean(emptyState && taskCount === 0 && viewType !== 'calendar')
+
   return (
     <div className="tasks-page">
       <PageHeader
@@ -167,7 +173,27 @@ export default function TasksPage({
         </DropdownAction>
       </PageActionBar>
 
-      <div className="tasks-page__content">{content}</div>
+      {contextualHint ? (
+        <ContextualHint
+          title={contextualHint.title}
+          description={contextualHint.description}
+          actionLabel={contextualHint.actionLabel}
+          onAction={contextualHint.onAction}
+          onDismiss={contextualHint.onDismiss}
+        />
+      ) : null}
+
+      <div className="tasks-page__content">
+        {shouldRenderEmptyState ? (
+          <EmptyState
+            title={emptyState.title}
+            description={emptyState.description}
+            detail={emptyState.detail}
+            quickActions={emptyState.quickActions}
+            tutorialAction={emptyState.tutorialAction}
+          />
+        ) : content}
+      </div>
     </div>
   )
 }

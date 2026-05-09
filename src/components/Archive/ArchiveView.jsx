@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Archive, RotateCcw } from 'lucide-react'
 import { listArchivedTaskRecords } from '../../lib/workspaceCore'
+import ContextualHint from '../onboarding/ContextualHint.jsx'
 
 const PAGE_SIZE = 50
 
-export default function ArchiveView({ restoreTask }) {
+export default function ArchiveView({
+  restoreTask,
+  showHint = false,
+  onDismissHint = () => {},
+  onOpenTutorial = () => {},
+  onTrackOnboarding = () => {},
+}) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
@@ -97,6 +104,22 @@ export default function ArchiveView({ restoreTask }) {
           <button className="action-btn sm" onClick={clearFilters}>Limpar</button>
         )}
       </div>
+
+      {showHint ? (
+        <ContextualHint
+          title="Use o arquivo como memória operacional, não como descarte"
+          description="Filtre por categoria, data ou tag para recuperar contexto antes de restaurar uma tarefa."
+          actionLabel="Abrir tutorial"
+          onAction={() => {
+            onTrackOnboarding('empty_state_cta_clicked', {
+              surface: 'archive.hint',
+              actionId: 'tutorial',
+            })
+            onOpenTutorial()
+          }}
+          onDismiss={onDismissHint}
+        />
+      ) : null}
 
       {loading ? (
         <div className="empty-state" style={{ padding: 32 }}>Carregando...</div>
