@@ -3,6 +3,7 @@ import {
   Archive,
   CalendarDays,
   CheckSquare,
+  LifeBuoy,
   LayoutDashboard,
   Settings,
   UserCircle,
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { id: 'clientes', label: 'Clientes', icon: UserCircle },
   { id: 'arquivo', label: 'Arquivo', icon: Archive },
   { id: 'calendario', label: 'Calendário', icon: CalendarDays },
+  { id: 'tutoriais', label: 'Tutoriais', icon: LifeBuoy },
   { id: 'settings', label: 'Configurações', icon: Settings },
 ]
 

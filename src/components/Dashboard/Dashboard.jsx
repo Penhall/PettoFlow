@@ -23,7 +23,7 @@ function getStatusClass(status) {
   return STATUS_CLASS[status] || 'todo'
 }
 
-export default function Dashboard({ tasks = [], columns = [] }) {
+export default function Dashboard({ tasks = [], columns = [], onboardingPanel = null }) {
   const doneColumnName = columns.length > 0 ? columns[columns.length - 1].name : 'Concluído'
   const firstColumnName = columns.length > 0 ? columns[0].name : 'A Fazer'
   const activeTasks = tasks.filter((task) => task.status !== doneColumnName)
@@ -70,6 +70,8 @@ export default function Dashboard({ tasks = [], columns = [] }) {
       />
 
       <PageActionBar meta={`${tasks.length} ${tasks.length === 1 ? 'tarefa monitorada' : 'tarefas monitoradas'}`} />
+
+      {onboardingPanel}
 
       {tasks.length === 0 ? (
         <SurfaceCard className="dashboard-page__empty">

@@ -1,8 +1,18 @@
-import { LogOut, Palette } from 'lucide-react'
+import { BookOpenText, Compass, LogOut, Palette } from 'lucide-react'
 import { useState } from 'react'
 
-export default function ProfileMenu({ user, onSignOut = () => {} }) {
+export default function ProfileMenu({
+  user,
+  onSignOut = () => {},
+  onOpenTour = () => {},
+  onOpenTutorials = () => {},
+}) {
   const [open, setOpen] = useState(false)
+
+  const handleAction = (callback) => {
+    callback()
+    setOpen(false)
+  }
 
   return (
     <div className="profile-menu">
@@ -33,7 +43,23 @@ export default function ProfileMenu({ user, onSignOut = () => {} }) {
             <button
               type="button"
               className="profile-menu__item"
-              onClick={onSignOut}
+              onClick={() => handleAction(onOpenTour)}
+            >
+              <Compass size={15} />
+              <span>Abrir tour</span>
+            </button>
+            <button
+              type="button"
+              className="profile-menu__item"
+              onClick={() => handleAction(onOpenTutorials)}
+            >
+              <BookOpenText size={15} />
+              <span>Central de tutoriais</span>
+            </button>
+            <button
+              type="button"
+              className="profile-menu__item"
+              onClick={() => handleAction(onSignOut)}
             >
               <LogOut size={15} />
               <span>Sair</span>

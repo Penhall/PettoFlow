@@ -1,5 +1,7 @@
 import { Suspense, startTransition, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import OnboardingPanel from './components/onboarding/OnboardingPanel.jsx'
+import OnboardingTour from './components/onboarding/OnboardingTour.jsx'
 import AppShell from './components/shell/AppShell.jsx'
 import ProfileMenu from './components/shell/ProfileMenu.jsx'
 import SidebarRail from './components/shell/SidebarRail.jsx'
@@ -14,10 +16,13 @@ import ViewErrorBoundary from './components/shared/ViewErrorBoundary.jsx'
 import { useActivities } from './hooks/useActivities'
 import { useAuth } from './hooks/useAuth.js'
 import { useCommandPalette } from './hooks/useCommandPalette'
+import { useOnboarding } from './hooks/useOnboarding.js'
 import { useReceivables } from './hooks/useReceivables'
+import { useTenant } from './hooks/useTenant.js'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
+import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import {
   archiveTaskRecord,
   createColumnRecord,
@@ -40,12 +45,13 @@ const FinanceView = lazyWithRetry(() => import('./components/Finance/FinanceView
 const SettingsView = lazyWithRetry(() => import('./components/Settings/SettingsView.jsx'), 'settings')
 const TaskModal = lazyWithRetry(() => import('./components/Tasks/TaskModal.jsx'), 'task-modal')
 const TimeView = lazyWithRetry(() => import('./components/Team/TimeView.jsx'), 'team')
+const TutorialsHub = lazyWithRetry(() => import('./components/onboarding/TutorialsHub.jsx'), 'tutorials-hub')
 const CommandPalette = lazyWithRetry(() => import('./components/shared/CommandPalette.jsx'), 'command-palette')
 const ReminderToast = lazyWithRetry(() => import('./components/shared/ReminderToast.jsx'), 'reminder-toast')
 
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
-const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'settings'])
-const CONTENT_SEARCH_TABS = new Set(['time', 'clientes'])
+const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings'])
+const CONTENT_SEARCH_TABS = new Set(['time', 'clientes', 'tutoriais'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
 const TAB_LOADING_LABELS = {
   dashboard: 'Carregando dashboard...',
@@ -56,6 +62,7 @@ const TAB_LOADING_LABELS = {
   clientes: 'Carregando clientes...',
   arquivo: 'Carregando arquivo...',
   calendario: 'Carregando calendário...',
+  tutoriais: 'Carregando tutoriais...',
   settings: 'Carregando configurações...',
 }
 
@@ -68,6 +75,7 @@ const TAB_ERROR_LABELS = {
   clientes: 'a área de clientes',
   arquivo: 'a área de arquivo',
   calendario: 'a área de calendário',
+  tutoriais: 'a central de tutoriais',
   settings: 'a área de configurações',
 }
 
@@ -104,9 +112,15 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [initialSettingsTab] = useState(readInitialSettingsTab)
+  const [tutorialSearchQuery, setTutorialSearchQuery] = useState('')
+  const [tourOpen, setTourOpen] = useState(false)
+  const [tourStepIndex, setTourStepIndex] = useState(0)
+  const [tourAutoPrompted, setTourAutoPrompted] = useState(false)
 
   const { user, signOut, isPlatformAdmin } = useAuth()
+  const { activeTenantId } = useTenant()
   const { activities } = useActivities()
+  const onboarding = useOnboarding({ tenantId: activeTenantId, enabled: Boolean(activeTenantId) })
   const {
     isOpen: paletteOpen,
     query,
@@ -203,14 +217,101 @@ function App() {
     return result
   }, [tasks, searchQuery, filterTag, sortBy])
 
+  const onboardingPanelDismissed = Boolean(onboarding.state.dismissState?.['dashboard.onboarding-panel']?.dismissed)
+  const checklistPreview = onboarding.checklist.filter((item) => !item.completed)
+  const shouldShowOnboardingPanel = Boolean(
+    activeTenantId &&
+    !onboarding.loading &&
+    !onboardingPanelDismissed &&
+    checklistPreview.length
+  )
+
+  useEffect(() => {
+    if (!activeTenantId || onboarding.loading || tourAutoPrompted) return
+    if (activeTab !== 'dashboard') return
+
+    const status = onboarding.state.tourState?.status || 'not_started'
+    const lastStep = Number(onboarding.state.tourState?.last_step || 0)
+
+    if (status === 'not_started') {
+      setTourStepIndex(lastStep)
+      setTourOpen(true)
+      setTourAutoPrompted(true)
+      void onboarding.updateTourState(
+        {
+          ...onboarding.state.tourState,
+          status: 'in_progress',
+          last_step: lastStep,
+        },
+        'tour_started'
+      )
+    }
+  }, [activeTenantId, activeTab, onboarding, tourAutoPrompted])
+
   const handleTabChange = (tab) => {
     startTransition(() => {
       setActiveTab(tab)
       setSearchQuery('')
+      setTutorialSearchQuery('')
       setShowFilterMenu(false)
       setShowSortMenu(false)
       closePalette()
     })
+  }
+
+  const handleOpenTour = () => {
+    const lastStep = Number(onboarding.state.tourState?.last_step || 0)
+    setTourStepIndex(lastStep)
+    setTourOpen(true)
+
+    if (onboarding.state.tourState?.status !== 'completed') {
+      void onboarding.updateTourState(
+        {
+          ...onboarding.state.tourState,
+          status: 'in_progress',
+          last_step: lastStep,
+        },
+        onboarding.state.tourState?.status === 'not_started' ? 'tour_started' : null
+      )
+    }
+  }
+
+  const handleTourStepChange = (nextStepIndex) => {
+    setTourStepIndex(nextStepIndex)
+    void onboarding.updateTourState({
+      ...onboarding.state.tourState,
+      status: 'in_progress',
+      last_step: nextStepIndex,
+    })
+  }
+
+  const handleTourSkip = (stepIndex = tourStepIndex) => {
+    setTourOpen(false)
+    setTourStepIndex(stepIndex)
+    void onboarding.updateTourState(
+      {
+        ...onboarding.state.tourState,
+        status: 'skipped',
+        last_step: stepIndex,
+      },
+      'tour_skipped'
+    )
+  }
+
+  const handleTourComplete = async () => {
+    setTourOpen(false)
+    await onboarding.updateTourState(
+      {
+        ...onboarding.state.tourState,
+        status: 'completed',
+        last_step: tourStepIndex,
+      },
+      'tour_completed'
+    )
+
+    if (!onboarding.checklist.find((item) => item.id === 'review-workspace')?.completed) {
+      await onboarding.completeChecklistItem('review-workspace', { source: 'tour' })
+    }
   }
 
   const addTask = async (task) => {
@@ -357,10 +458,14 @@ function App() {
 
   const pageSearchConfig = CONTENT_SEARCH_TABS.has(activeTab)
     ? {
-        value: searchQuery,
-        onSearch: setSearchQuery,
+        value: activeTab === 'tutoriais' ? tutorialSearchQuery : searchQuery,
+        onSearch: activeTab === 'tutoriais' ? setTutorialSearchQuery : setSearchQuery,
         onSearchFocus: undefined,
-        placeholder: activeTab === 'time' ? 'Buscar membro ou função' : 'Buscar cliente ou indústria',
+        placeholder: activeTab === 'time'
+          ? 'Buscar membro ou função'
+          : activeTab === 'tutoriais'
+            ? 'Buscar tutorial ou módulo'
+            : 'Buscar cliente ou indústria',
       }
     : COMMAND_PALETTE_SEARCH_TABS.has(activeTab)
       ? {
@@ -382,7 +487,31 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard tasks={tasks} columns={columns} />
+        return (
+          <Dashboard
+            tasks={tasks}
+            columns={columns}
+            onboardingPanel={shouldShowOnboardingPanel ? (
+              <OnboardingPanel
+                progress={onboarding.completedChecklistCount}
+                total={onboarding.totalChecklistCount}
+                items={checklistPreview}
+                onOpenTutorials={() => handleTabChange('tutoriais')}
+                onOpenTour={handleOpenTour}
+                onSelectItem={(item) => {
+                  if (item.tutorialId) {
+                    void onboarding.markTutorialOpened(item.tutorialId)
+                  }
+                  handleTabChange(item.ctaTarget || 'dashboard')
+                }}
+                onDismiss={() => onboarding.dismissSurface({
+                  scope: 'dashboard.onboarding-panel',
+                  reason: 'manual_close',
+                })}
+              />
+            ) : null}
+          />
+        )
       case 'tarefas':
         return (
           <TasksPage
@@ -479,6 +608,27 @@ function App() {
             onAddTask={addTask}
           />
         )
+      case 'tutoriais':
+        return (
+          <TutorialsHub
+            tutorials={onboarding.tutorials}
+            categories={TUTORIAL_CATEGORIES}
+            completedTutorialIds={onboarding.state.tutorialState?.completed || []}
+            searchValue={tutorialSearchQuery}
+            onSearch={setTutorialSearchQuery}
+            onOpenTour={handleOpenTour}
+            onOpenTutorial={(tutorial) => {
+              void onboarding.markTutorialOpened(tutorial.id)
+              handleTabChange(tutorial.targetTab || 'dashboard')
+            }}
+            onOpenQuickAction={(action, tutorial) => {
+              if (tutorial?.id) {
+                void onboarding.markTutorialOpened(tutorial.id)
+              }
+              handleTabChange(action.targetTab || tutorial?.targetTab || 'dashboard')
+            }}
+          />
+        )
       case 'settings':
         return <SettingsView initialTab={initialSettingsTab} />
       default:
@@ -515,6 +665,8 @@ function App() {
             profileMenu={(
               <ProfileMenu
                 user={user}
+                onOpenTour={handleOpenTour}
+                onOpenTutorials={() => handleTabChange('tutoriais')}
                 onSignOut={handleProfileSignOut}
               />
             )}
@@ -600,6 +752,16 @@ function App() {
           </Suspense>
         )}
       </AnimatePresence>
+
+      <OnboardingTour
+        open={tourOpen}
+        initialStepIndex={tourStepIndex}
+        onClose={() => setTourOpen(false)}
+        onSkip={handleTourSkip}
+        onComplete={handleTourComplete}
+        onNavigate={handleTabChange}
+        onStepChange={handleTourStepChange}
+      />
     </div>
   )
 }

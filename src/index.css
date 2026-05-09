@@ -1983,6 +1983,368 @@ label {
   gap: 10px;
 }
 
+.empty-state__button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: transform var(--motion-base) ease, opacity var(--motion-base) ease;
+}
+
+.onboarding-panel,
+.tutorial-card,
+.tutorials-hub,
+.tutorials-hub__grid,
+.onboarding-panel__intro,
+.onboarding-panel__item-copy,
+.contextual-hint__copy {
+  display: grid;
+}
+
+.onboarding-panel,
+.tutorial-card,
+.tutorials-hub {
+  gap: 18px;
+}
+
+.onboarding-panel__header,
+.onboarding-panel__body,
+.onboarding-panel__actions,
+.onboarding-panel__complete,
+.tutorial-card__header,
+.tutorial-card__footer,
+.contextual-hint,
+.contextual-hint__actions,
+.onboarding-tour__header,
+.onboarding-tour__footer,
+.onboarding-tour__footer-meta,
+.onboarding-tour__actions {
+  display: flex;
+  align-items: center;
+}
+
+.onboarding-panel__header,
+.tutorial-card__header,
+.onboarding-tour__header,
+.onboarding-tour__footer {
+  justify-content: space-between;
+}
+
+.onboarding-panel__intro,
+.onboarding-panel__item-copy,
+.contextual-hint__copy {
+  gap: 6px;
+}
+
+.onboarding-panel__eyebrow,
+.onboarding-tour__eyebrow,
+.tutorial-card__category {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.onboarding-panel__intro h2,
+.tutorial-card__header h2,
+.onboarding-tour__header h2 {
+  font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+.onboarding-panel__intro p,
+.tutorial-card__description,
+.contextual-hint__copy p,
+.onboarding-tour__description {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.onboarding-panel__ghost-button,
+.contextual-hint__dismiss,
+.onboarding-tour__close {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.onboarding-panel__progress-track,
+.onboarding-tour__meter {
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.onboarding-panel__progress-fill,
+.onboarding-tour__meter-fill {
+  display: block;
+  width: var(--progress-width);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 52%, #ffffff));
+}
+
+.onboarding-panel__body,
+.tutorials-hub__grid,
+.onboarding-tour {
+  gap: 18px;
+}
+
+.onboarding-panel__list {
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-panel__item {
+  width: 100%;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-base) ease, transform var(--motion-base) ease, background-color var(--motion-base) ease;
+}
+
+.onboarding-panel__item:hover,
+.tutorial-card__open:hover,
+.tutorial-card__quick-action:hover,
+.tutorials-hub__filter:hover,
+.contextual-hint__action:hover,
+.onboarding-tour__ghost:hover,
+.onboarding-tour__secondary:hover,
+.onboarding-tour__primary:hover,
+.empty-state__button:hover {
+  transform: translateY(-1px);
+}
+
+.onboarding-panel__item:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-light) 30%, var(--card-bg));
+}
+
+.onboarding-panel__item-icon,
+.onboarding-panel__complete svg {
+  color: var(--primary);
+}
+
+.onboarding-panel__item-copy strong,
+.contextual-hint__copy strong {
+  font-size: 0.95rem;
+}
+
+.onboarding-panel__item-copy span {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.onboarding-panel__complete {
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary-light) 55%, transparent);
+}
+
+.onboarding-panel__actions,
+.tutorials-hub__filters,
+.tutorial-card__quick-actions,
+.tutorial-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.onboarding-panel__actions,
+.tutorial-card__quick-actions,
+.tutorial-card__meta {
+  gap: 10px;
+}
+
+.onboarding-panel__action,
+.tutorial-card__open,
+.contextual-hint__action,
+.onboarding-tour__ghost,
+.onboarding-tour__secondary,
+.onboarding-tour__primary {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: transform var(--motion-base) ease, background-color var(--motion-base) ease, border-color var(--motion-base) ease;
+}
+
+.onboarding-panel__action--primary,
+.tutorial-card__open,
+.onboarding-tour__primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+}
+
+.tutorials-hub__filters {
+  gap: 10px;
+}
+
+.tutorials-hub__filter {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: transform var(--motion-base) ease, background-color var(--motion-base) ease, color var(--motion-base) ease;
+}
+
+.tutorials-hub__filter.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.tutorials-hub__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tutorial-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+
+.tutorial-card__badge--done {
+  background: color-mix(in srgb, var(--primary-light) 60%, transparent);
+  color: var(--primary);
+}
+
+.tutorial-card__meta {
+  gap: 8px 16px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.tutorial-card__quick-action {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: transform var(--motion-base) ease, border-color var(--motion-base) ease, color var(--motion-base) ease;
+}
+
+.tutorial-card__footer {
+  justify-content: flex-end;
+}
+
+.contextual-hint {
+  gap: 14px;
+  padding: 14px 16px;
+  justify-content: space-between;
+}
+
+.contextual-hint__icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--primary-light) 60%, transparent);
+  color: var(--primary);
+}
+
+.contextual-hint__actions {
+  gap: 8px;
+  margin-left: auto;
+}
+
+.onboarding-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.onboarding-tour__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(12, 12, 12, 0.48);
+}
+
+.onboarding-tour__dialog {
+  position: relative;
+  width: min(100%, 640px);
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.onboarding-tour__footer {
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.onboarding-tour__footer-meta {
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.onboarding-tour__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.onboarding-tour__actions {
+  gap: 10px;
+  margin-left: auto;
+}
+
 @media (max-width: 900px) {
   .dashboard-page,
   .team-page,
@@ -2013,6 +2375,7 @@ label {
 
   .dashboard-page__hero,
   .dashboard-page__grid,
+  .tutorials-hub__grid,
   .client-profile__grid,
   .team-member-row,
   .client-row,
@@ -2060,6 +2423,10 @@ label {
 
   .metric-card--compact {
     min-width: calc(50% - 6px);
+  }
+
+  .tutorials-hub__grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2111,6 +2478,26 @@ label {
   .template-row__confirm {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .onboarding-panel__header,
+  .contextual-hint,
+  .onboarding-tour__header,
+  .onboarding-tour__footer {
+    align-items: flex-start;
+  }
+
+  .onboarding-tour__actions {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .onboarding-tour__secondary,
+  .onboarding-tour__primary,
+  .onboarding-tour__ghost {
+    width: 100%;
+    justify-content: center;
   }
 }
 
