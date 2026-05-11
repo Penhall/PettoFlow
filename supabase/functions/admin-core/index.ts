@@ -168,6 +168,135 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    if (request.method === 'GET' && resource === 'tenants' && routeParts.length === 1) {
+      const [tenantsResult, subscriptionsResult, membershipsResult] = await Promise.all([
+        serviceSb.from('tenants').select('id, name, slug, owner_user_id, created_at').order('created_at', { ascending: false }),
+        serviceSb.from('subscriptions').select('tenant_id, status, plan:plans(name)'),
+        serviceSb.from('memberships').select('tenant_id, user_id, status').eq('status', 'active'),
+      ])
+      if (tenantsResult.error) return ctx.fail(500, 'admin_tenants_failed', tenantsResult.error.message)
+
+      const ownerIds = [...new Set((tenantsResult.data ?? []).map(t => t.owner_user_id).filter(Boolean))]
+      const ownerEmails: Record<string, string> = {}
+      for (const uid of ownerIds) {
+        const { data } = await serviceSb.auth.admin.getUserById(uid)
+        if (data?.user?.email) ownerEmails[uid] = data.user.email
+      }
+
+      const subByTenant = new Map<string, any>()
+      for (const sub of subscriptionsResult.data ?? []) subByTenant.set(sub.tenant_id, sub)
+      const memberCountByTenant = new Map<string, number>()
+      for (const m of membershipsResult.data ?? []) {
+        memberCountByTenant.set(m.tenant_id, (memberCountByTenant.get(m.tenant_id) ?? 0) + 1)
+      }
+
+      const tenants = (tenantsResult.data ?? []).map(t => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        owner_user_id: t.owner_user_id,
+        created_at: t.created_at,
+        plan_name: (subByTenant.get(t.id) as any)?.plan?.name ?? 'free',
+        user_count: memberCountByTenant.get(t.id) ?? 0,
+        owner_email: ownerEmails[t.owner_user_id] ?? null,
+      }))
+
+      return ctx.ok({ tenants })
+    }
+
+    if (request.method === 'GET' && resource === 'tenants' && routeParts.length === 2) {
+      const tenantId = routeParts[1]
+
+      const [tenantResult, subResult, membersResult] = await Promise.all([
+        serviceSb.from('tenants').select('id, name, slug, owner_user_id, created_at').eq('id', tenantId).single(),
+        serviceSb.from('subscriptions').select('status, billing_interval, current_period_end, plan:plans(name, slug)').eq('tenant_id', tenantId).maybeSingle(),
+        serviceSb.from('memberships').select('user_id, role, status').eq('tenant_id', tenantId).eq('status', 'active'),
+      ])
+
+      if (tenantResult.error) return ctx.fail(404, 'tenant_not_found', 'Tenant não encontrado')
+
+      let ownerEmail: string | null = null
+      if (tenantResult.data?.owner_user_id) {
+        const { data: ownerData } = await serviceSb.auth.admin.getUserById(tenantResult.data.owner_user_id)
+        ownerEmail = ownerData?.user?.email ?? null
+      }
+
+      return ctx.ok({
+        tenant: {
+          ...tenantResult.data,
+          owner_email: ownerEmail,
+          subscription: subResult.data ?? null,
+          active_members: membersResult.data ?? [],
+        }
+      })
+    }
+
+    if (request.method === 'GET' && resource === 'metrics') {
+      const [totalResult, subsResult, recentResult, memberResult] = await Promise.all([
+        serviceSb.from('tenants').select('id', { count: 'exact', head: true }),
+        serviceSb.from('subscriptions').select('tenant_id, status, plan:plans(name, slug)'),
+        serviceSb.from('tenants').select('id, name, slug, created_at').order('created_at', { ascending: false }).limit(5),
+        serviceSb.from('memberships').select('tenant_id, status').eq('status', 'active'),
+      ])
+
+      if (totalResult.error) return ctx.fail(500, 'metrics_failed', totalResult.error.message)
+
+      const subs = subsResult.data ?? []
+      const activeMembers = memberResult.data ?? []
+
+      const tenantsWithMembers = new Set(activeMembers.map(m => m.tenant_id))
+      const activeTenants = tenantsWithMembers.size
+
+      const planDist: Record<string, number> = {}
+      for (const sub of subs) {
+        const planName = (sub.plan as any)?.slug ?? 'free'
+        planDist[planName] = (planDist[planName] ?? 0) + 1
+      }
+
+      const GROWTH_MRR = 97
+      const activeSubs = subs.filter(s => s.status === 'active' && (s.plan as any)?.slug === 'growth')
+      const mrrTotal = activeSubs.length * GROWTH_MRR
+
+      return ctx.ok({
+        total_tenants: totalResult.count ?? 0,
+        active_tenants: activeTenants,
+        plan_distribution: planDist,
+        recent_tenants: recentResult.data ?? [],
+        mrr_total: mrrTotal,
+      })
+    }
+
+    if (request.method === 'GET' && resource === 'audit') {
+      const tenantId = url.searchParams.get('tenant_id')
+      const eventName = url.searchParams.get('event_name')
+      const dateFrom = url.searchParams.get('date_from')
+      const dateTo = url.searchParams.get('date_to')
+      const page = parsePositiveInt(url.searchParams.get('page'), 0, 0, 10000)
+      const pageSize = parsePositiveInt(url.searchParams.get('page_size'), 50, 1, 100)
+
+      let query = serviceSb
+        .from('audit_logs')
+        .select('id, tenant_id, user_id, action, resource_type, resource_id, metadata, created_at, tenant:tenants(name)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(page * pageSize, (page + 1) * pageSize - 1)
+
+      if (tenantId) query = query.eq('tenant_id', tenantId)
+      if (eventName) query = query.eq('action', eventName)
+      if (dateFrom) query = query.gte('created_at', dateFrom)
+      if (dateTo) query = query.lte('created_at', dateTo)
+
+      const { data, error, count } = await query
+      if (error) return ctx.fail(500, 'audit_failed', error.message)
+
+      const logs = (data ?? []).map(log => ({
+        ...log,
+        event_name: log.action,
+        tenant_name: (log.tenant as any)?.name ?? null,
+      }))
+
+      return ctx.ok({ logs, total: count ?? 0, page, page_size: pageSize })
+    }
+
     return ctx.fail(405, 'method_not_allowed', 'Method not allowed')
   } catch (error) {
     ctx.log('error', 'request_crashed', {
