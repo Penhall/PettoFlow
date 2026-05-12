@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Building2, DollarSign, Users } from 'lucide-react'
-import MetricCard from '../shared/MetricCard.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import SurfaceCard from '../shared/SurfaceCard.jsx'
 import { fetchAdminMetrics } from '../../lib/adminClient.js'

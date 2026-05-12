@@ -96,9 +96,9 @@ export default function SidebarRail({
           ))}
           {isPlatformAdmin && (
             <>
-              <div style={{ height: '1px', background: 'var(--border-color)', margin: '12px 16px', opacity: 0.3 }} />
+              <div className="sidebar-rail__admin-divider" />
               {!collapsed ? (
-                <div style={{ padding: '8px 16px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+                <div className="sidebar-rail__section-label">
                   Gestão SaaS
                 </div>
               ) : null}

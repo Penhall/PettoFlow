@@ -391,6 +391,22 @@ label {
   padding-inline: 0;
 }
 
+.sidebar-rail__admin-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 12px 16px;
+  opacity: 0.3;
+}
+
+.sidebar-rail__section-label {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
 .topbar-shell {
   height: 100%;
   display: flex;
