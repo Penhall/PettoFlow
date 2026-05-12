@@ -2524,6 +2524,96 @@ label {
   }
 }
 
+/* ============================================================
+   Admin Console
+   ============================================================ */
+
+.admin-dashboard {
+  padding: 24px;
+  max-width: 1200px;
+}
+
+.admin-dashboard__loading,
+.admin-dashboard__error {
+  padding: 40px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.admin-dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.admin-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.admin-panel__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 16px;
+}
+
+.admin-panel__empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.admin-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-plan-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.admin-plan-row__name {
+  color: var(--text-main);
+  text-transform: capitalize;
+}
+
+.admin-plan-row__count {
+  font-weight: 600;
+}
+
+.admin-tenant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-tenant-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.admin-tenant-row__name {
+  color: var(--text-main);
+}
+
+.admin-tenant-row__date {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 
 
 
