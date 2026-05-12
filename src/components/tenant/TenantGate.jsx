@@ -1,5 +1,4 @@
 import { useTenant } from '../../hooks/useTenant.js'
-import WorkspaceOnboarding from './WorkspaceOnboarding.jsx'
 
 function TenantSelection({ tenants, onSelect }) {
   return (
@@ -53,13 +52,12 @@ export default function TenantGate({ children }) {
     )
   }
 
-  if (!hasTenant) {
-    return <WorkspaceOnboarding />
-  }
-
-  if (!activeTenantId) {
+  // Se tem tenants mas nenhum selecionado, mostra seletor
+  if (hasTenant && !activeTenantId) {
     return <TenantSelection tenants={tenants} onSelect={setActiveTenant} />
   }
 
+  // Se não tem tenant OU tem tenant ativo, renderiza o app
+  // Usuários sem workspace entram no app normalmente e criam workspace via Settings > Workspace
   return children
 }

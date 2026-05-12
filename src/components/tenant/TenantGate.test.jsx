@@ -27,7 +27,7 @@ describe('TenantGate', () => {
     expect(screen.getByText('Carregando espaços de trabalho do NexusCRM...')).toBeTruthy()
   })
 
-  it('mostra onboarding quando o usuario autenticado nao possui tenant ativo', () => {
+  it('renderiza a aplicacao quando o usuario nao possui tenant', () => {
     useTenantMock.mockReturnValue({
       loading: false,
       error: null,
@@ -42,7 +42,25 @@ describe('TenantGate', () => {
       </TenantGate>,
     )
 
-    expect(screen.getByText('Criar seu espaço de trabalho')).toBeTruthy()
+    expect(screen.getByText('Dashboard')).toBeTruthy()
+  })
+
+  it('mostra seletor de workspace quando existem tenants mas nenhum ativo', () => {
+    useTenantMock.mockReturnValue({
+      loading: false,
+      error: null,
+      hasTenant: true,
+      activeTenantId: null,
+      tenants: [{ id: 'tenant-1', name: 'Workspace A' }],
+    })
+
+    render(
+      <TenantGate>
+        <div>Dashboard</div>
+      </TenantGate>,
+    )
+
+    expect(screen.getByText('Selecione um espaço de trabalho')).toBeTruthy()
   })
 
   it('renderiza a aplicacao quando existe tenant ativo', () => {

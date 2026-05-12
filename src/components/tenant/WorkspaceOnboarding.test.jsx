@@ -44,4 +44,15 @@ describe('WorkspaceOnboarding', () => {
       })
     })
   })
+
+  it('renderiza em modo embed sem wrapper auth-shell', () => {
+    render(<WorkspaceOnboarding embed />)
+
+    expect(screen.getByText('Criar seu espaço de trabalho')).toBeTruthy()
+    expect(screen.getByLabelText('Nome do espaço de trabalho')).toBeTruthy()
+    expect(screen.getByLabelText('Slug do espaço de trabalho')).toBeTruthy()
+
+    // No modo embed, o título deve ser h2 em vez de h1
+    expect(screen.getByRole('heading', { level: 2, name: 'Criar seu espaço de trabalho' })).toBeTruthy()
+  })
 })

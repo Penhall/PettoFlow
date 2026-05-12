@@ -23,7 +23,7 @@ function getStatusClass(status) {
   return STATUS_CLASS[status] || 'todo'
 }
 
-export default function Dashboard({ tasks = [], columns = [], onboardingPanel = null }) {
+export default function Dashboard({ tasks = [], columns = [], onboardingPanel = null, onCreateWorkspace }) {
   const doneColumnName = columns.length > 0 ? columns[columns.length - 1].name : 'Concluído'
   const firstColumnName = columns.length > 0 ? columns[0].name : 'A Fazer'
   const activeTasks = tasks.filter((task) => task.status !== doneColumnName)
@@ -55,6 +55,34 @@ export default function Dashboard({ tasks = [], columns = [], onboardingPanel = 
     .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0))
     .slice(0, 6)
 
+  // Estado de boas-vindas: usuário sem workspace
+  if (onCreateWorkspace) {
+    return (
+      <div className="dashboard-page">
+        <PageHeader
+          eyebrow="Espaço de trabalho"
+          title="Dashboard"
+          subtitle="Acompanhe capacidade, ritmo de entrega e sinais recentes do espaço de trabalho em uma leitura objetiva."
+        />
+        <SurfaceCard className="dashboard-page__empty">
+          <EmptyState
+            title="Bem-vindo ao NexusCRM"
+            description="Para começar, crie seu primeiro espaço de trabalho. É onde você organizará clientes, tarefas, atividades e finanças."
+            detail="Depois de criar, você pode convidar sua equipe e configurar integrações."
+            quickActions={[
+              {
+                id: 'create-first-workspace',
+                label: 'Criar espaço de trabalho',
+                onClick: onCreateWorkspace,
+              },
+            ]}
+          />
+        </SurfaceCard>
+      </div>
+    )
+  }
+
+  // Dashboard normal para usuários com workspace
   return (
     <div className="dashboard-page">
       <PageHeader

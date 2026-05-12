@@ -10,7 +10,7 @@ function slugifyWorkspaceName(value) {
     .replace(/^-+|-+$/g, '')
 }
 
-export default function WorkspaceOnboarding() {
+export default function WorkspaceOnboarding({ embed = false }) {
   const { createWorkspace } = useTenant()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -49,6 +49,52 @@ export default function WorkspaceOnboarding() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (embed) {
+    return (
+      <div className="workspace-onboarding-embed">
+        <div className="workspace-onboarding-embed__copy">
+          <h2>Criar seu espaço de trabalho</h2>
+          <p>Organize clientes, tarefas, atividades e finanças em um único espaço de trabalho.</p>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label htmlFor="workspace-name">Nome do espaço de trabalho</label>
+          <input
+            id="workspace-name"
+            name="workspace-name"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Ex.: Equipe Comercial"
+            autoComplete="organization"
+          />
+
+          <label htmlFor="workspace-slug">Slug do espaço de trabalho</label>
+          <input
+            id="workspace-slug"
+            name="workspace-slug"
+            type="text"
+            value={slug}
+            onChange={(event) => {
+              setSlugTouched(true)
+              setSlug(event.target.value)
+            }}
+            placeholder="equipe-comercial"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
+          />
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <button type="submit" className="auth-submit" disabled={loading}>
+            {loading ? 'Criando espaço de trabalho...' : 'Criar espaço de trabalho'}
+          </button>
+        </form>
+      </div>
+    )
   }
 
   return (

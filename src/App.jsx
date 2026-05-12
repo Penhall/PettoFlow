@@ -107,6 +107,7 @@ function readInitialSettingsTab() {
 function App() {
   const [activeTab, setActiveTab] = useState(readInitialAppTab)
   const [viewType, setViewType] = useState('kanban')
+  const [pendingSettingsTab, setPendingSettingsTab] = useState(null)
   const [tasks, setTasks] = useState([])
   const [team, setTeam] = useState([])
   const [clients, setClients] = useState([])
@@ -238,6 +239,8 @@ function App() {
     checklistPreview.length
   )
 
+  const noActiveWorkspace = !activeTenantId && !loading
+
   useEffect(() => {
     if (!activeTenantId || onboarding.loading || tourAutoPrompted) return
     if (activeTab !== 'dashboard') return
@@ -261,6 +264,9 @@ function App() {
   }, [activeTenantId, activeTab, onboarding, tourAutoPrompted])
 
   const handleTabChange = (tab) => {
+    if (tab !== 'settings') {
+      setPendingSettingsTab(null)
+    }
     startTransition(() => {
       setActiveTab(tab)
       setSearchQuery('')
@@ -514,7 +520,7 @@ function App() {
           <Dashboard
             tasks={tasks}
             columns={columns}
-            onboardingPanel={shouldShowOnboardingPanel ? (
+            onboardingPanel={noActiveWorkspace ? null : shouldShowOnboardingPanel ? (
               <OnboardingPanel
                 progress={onboarding.completedChecklistCount}
                 total={onboarding.totalChecklistCount}
@@ -533,6 +539,10 @@ function App() {
                 })}
               />
             ) : null}
+            onCreateWorkspace={noActiveWorkspace ? () => {
+              setPendingSettingsTab('workspace')
+              handleTabChange('settings')
+            } : undefined}
           />
         )
       case 'tarefas':
@@ -751,7 +761,7 @@ function App() {
       case 'settings':
         return (
           <SettingsView
-            initialTab={initialSettingsTab}
+            initialTab={pendingSettingsTab || initialSettingsTab}
             showHint={!onboarding.state.dismissState?.['settings.hint']?.dismissed}
             onDismissHint={() => onboarding.dismissSurface({
               scope: 'settings.hint',

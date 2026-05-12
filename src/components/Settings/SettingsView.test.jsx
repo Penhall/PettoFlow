@@ -22,6 +22,14 @@ vi.mock('../tenant/AuditTimeline.jsx', () => ({
   default: () => <div>Audit Timeline</div>,
 }))
 
+vi.mock('../tenant/WorkspaceOnboarding.jsx', () => ({
+  default: () => <div>Workspace Onboarding</div>,
+}))
+
+vi.mock('../../hooks/useTenant.js', () => ({
+  useTenant: () => ({ hasTenant: true }),
+}))
+
 describe('SettingsView', () => {
   it('renderiza o cabecalho premium e as tabs semanticas de configuracoes', async () => {
     render(<SettingsView />)

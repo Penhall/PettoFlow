@@ -4,7 +4,9 @@ import ContextualHint from '../onboarding/ContextualHint.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
 import SurfaceCard from '../shared/SurfaceCard.jsx'
+import WorkspaceOnboarding from '../tenant/WorkspaceOnboarding.jsx'
 import { lazyWithRetry } from '../../lib/lazyWithRetry.js'
+import { useTenant } from '../../hooks/useTenant.js'
 
 const MembersPage = lazyWithRetry(() => import('../tenant/MembersPage.jsx'), 'settings-members')
 const AuditTimeline = lazyWithRetry(() => import('../tenant/AuditTimeline.jsx'), 'settings-audit')
@@ -13,6 +15,7 @@ const TelegramSection = lazyWithRetry(() => import('./TelegramSection.jsx'), 'se
 const CommandsSection = lazyWithRetry(() => import('./CommandsSection.jsx'), 'settings-commands')
 
 const TABS = [
+  { id: 'workspace', label: 'Workspace' },
   { id: 'members', label: 'Membros' },
   { id: 'billing', label: 'Faturamento' },
   { id: 'audit', label: 'Auditoria' },
@@ -27,7 +30,9 @@ export default function SettingsView({
   onOpenTutorial = () => {},
   onTrackOnboarding = () => {},
 }) {
-  const [activeTab, setActiveTab] = useState(TABS.some((tab) => tab.id === initialTab) ? initialTab : 'members')
+  const { hasTenant } = useTenant()
+  const defaultTab = TABS.some((tab) => tab.id === initialTab) ? initialTab : (hasTenant ? 'members' : 'workspace')
+  const [activeTab, setActiveTab] = useState(defaultTab)
 
   return (
     <div className="settings-page">
@@ -61,6 +66,7 @@ export default function SettingsView({
       ) : null}
 
       <SurfaceCard className="settings-page__panel">
+        {activeTab === 'workspace' && <WorkspaceOnboarding embed />}
         <Suspense fallback={<DeferredSurface label="Carregando seção de configurações..." />}>
           {activeTab === 'members' && <MembersPage />}
           {activeTab === 'billing' && <BillingPage />}
