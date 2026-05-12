@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { fetchAdminTenantDetail } from '../../lib/adminClient.js'
+import { useCallback, useEffect, useState } from 'react'
+import { fetchAdminTenantDetail, updateTenantPlan, suspendTenant, reactivateTenant } from '../../lib/adminClient.js'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -11,11 +11,63 @@ export default function TenantDetailModal({ tenantId, onClose }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
+  const [selectedPlan, setSelectedPlan] = useState('free')
+  const [planLoading, setPlanLoading] = useState(false)
+  const [planFeedback, setPlanFeedback] = useState(null)
+
+  const [suspendLoading, setSuspendLoading] = useState(false)
+  const [suspendFeedback, setSuspendFeedback] = useState(null)
+
+  const loadTenant = useCallback(() => {
+    setLoading(true)
+    setError(null)
     fetchAdminTenantDetail(tenantId)
-      .then(data => { setTenant(data.tenant); setLoading(false) })
+      .then(data => {
+        setTenant(data.tenant)
+        setSelectedPlan(data.tenant?.subscription?.plan?.slug ?? 'free')
+        setLoading(false)
+      })
       .catch(err => { setError(err.message); setLoading(false) })
   }, [tenantId])
+
+  useEffect(() => { loadTenant() }, [loadTenant])
+
+  async function handlePlanChange() {
+    setPlanLoading(true)
+    setPlanFeedback(null)
+    try {
+      await updateTenantPlan(tenantId, selectedPlan)
+      setPlanFeedback({ ok: true, msg: 'Plano alterado com sucesso.' })
+      loadTenant()
+    } catch (err) {
+      setPlanFeedback({ ok: false, msg: err.message })
+    } finally {
+      setPlanLoading(false)
+    }
+  }
+
+  async function handleSuspend() {
+    setSuspendLoading(true)
+    setSuspendFeedback(null)
+    const isActive = tenant?.subscription?.status === 'active'
+    try {
+      if (isActive) {
+        await suspendTenant(tenantId)
+        setSuspendFeedback({ ok: true, msg: 'Tenant suspenso com sucesso.' })
+      } else {
+        await reactivateTenant(tenantId)
+        setSuspendFeedback({ ok: true, msg: 'Tenant reativado com sucesso.' })
+      }
+      loadTenant()
+    } catch (err) {
+      setSuspendFeedback({ ok: false, msg: err.message })
+    } finally {
+      setSuspendLoading(false)
+    }
+  }
+
+  const subscriptionStatus = tenant?.subscription?.status ?? null
+  const isActive = subscriptionStatus === 'active'
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -78,6 +130,59 @@ export default function TenantDetailModal({ tenantId, onClose }) {
                   </ul>
                 </div>
               )}
+
+              <div className="admin-detail-actions">
+                <p className="admin-detail-actions__title">Ações Administrativas</p>
+
+                <div>
+                  <div className="admin-detail-actions__row">
+                    <select
+                      className="admin-detail-actions__select"
+                      value={selectedPlan}
+                      onChange={e => setSelectedPlan(e.target.value)}
+                      disabled={planLoading}
+                    >
+                      <option value="free">Free</option>
+                      <option value="growth">Growth</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="action-btn"
+                      onClick={handlePlanChange}
+                      disabled={planLoading}
+                    >
+                      {planLoading ? 'Alterando...' : 'Alterar Plano'}
+                    </button>
+                  </div>
+                  {planFeedback && (
+                    <p className={`admin-detail-actions__feedback admin-detail-actions__feedback--${planFeedback.ok ? 'success' : 'error'}`}>
+                      {planFeedback.msg}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="admin-detail-actions__row">
+                    <button
+                      type="button"
+                      className={`action-btn${isActive ? ' danger' : ''}`}
+                      onClick={handleSuspend}
+                      disabled={suspendLoading}
+                    >
+                      {suspendLoading
+                        ? 'Processando...'
+                        : isActive
+                          ? 'Suspender Tenant'
+                          : 'Reativar Tenant'}
+                    </button>
+                  </div>
+                  {suspendFeedback && (
+                    <p className={`admin-detail-actions__feedback admin-detail-actions__feedback--${suspendFeedback.ok ? 'success' : 'error'}`}>
+                      {suspendFeedback.msg}
+                    </p>
+                  )}
+                </div>
+              </div>
             </>
           )}
 

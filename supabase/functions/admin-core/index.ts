@@ -301,6 +301,117 @@ Deno.serve(async (req: Request) => {
       return ctx.ok({ logs, total: count ?? 0, page, page_size: pageSize })
     }
 
+    if (request.method === 'PATCH' && resource === 'tenants' && routeParts.length === 3 && routeParts[2] === 'plan') {
+      const tenantId = routeParts[1]
+      const body = await request.json().catch(() => ({}))
+      const planSlug = typeof body.plan_slug === 'string' ? body.plan_slug.toLowerCase() : null
+      if (!planSlug) return ctx.fail(400, 'invalid_body', 'plan_slug obrigatório')
+
+      const { data: plan, error: planError } = await serviceSb
+        .from('plans')
+        .select('id, name, slug')
+        .filter('slug', 'ilike', planSlug)
+        .eq('active', true)
+        .maybeSingle()
+
+      if (planError) return ctx.fail(500, 'plan_lookup_failed', planError.message)
+      if (!plan) return ctx.fail(404, 'plan_not_found', `Plano '${planSlug}' não encontrado`)
+
+      const { data: existing, error: subFetchError } = await serviceSb
+        .from('subscriptions')
+        .select('id, plan_id, plan:plans(slug)')
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      if (subFetchError) return ctx.fail(500, 'subscription_lookup_failed', subFetchError.message)
+
+      const fromPlan = (existing?.plan as any)?.slug ?? 'free'
+
+      let subscription: any
+      if (existing) {
+        const { data: updated, error: updateError } = await serviceSb
+          .from('subscriptions')
+          .update({ plan_id: plan.id, updated_at: new Date().toISOString() })
+          .eq('tenant_id', tenantId)
+          .select()
+          .single()
+        if (updateError) return ctx.fail(500, 'subscription_update_failed', updateError.message)
+        subscription = updated
+      } else {
+        const { data: inserted, error: insertError } = await serviceSb
+          .from('subscriptions')
+          .insert({ tenant_id: tenantId, plan_id: plan.id, status: 'active', provider: 'internal' })
+          .select()
+          .single()
+        if (insertError) return ctx.fail(500, 'subscription_insert_failed', insertError.message)
+        subscription = inserted
+      }
+
+      await serviceSb.from('audit_logs').insert({
+        tenant_id: tenantId,
+        user_id: auth.user.id,
+        action: 'subscription.plan_changed',
+        resource_type: 'subscription',
+        metadata: { from_plan: fromPlan, to_plan: plan.slug },
+      })
+
+      return ctx.ok({ ok: true, subscription })
+    }
+
+    if (request.method === 'POST' && resource === 'tenants' && routeParts.length === 3 && routeParts[2] === 'suspend') {
+      const tenantId = routeParts[1]
+      const body = await request.json().catch(() => ({}))
+      const action = body.action
+
+      if (action !== 'suspend' && action !== 'reactivate') {
+        return ctx.fail(400, 'invalid_action', 'action deve ser suspend ou reactivate')
+      }
+
+      const { data: existing } = await serviceSb
+        .from('subscriptions')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      if (action === 'suspend') {
+        if (!existing) return ctx.fail(404, 'subscription_not_found', 'Assinatura não encontrada')
+        const { error } = await serviceSb
+          .from('subscriptions')
+          .update({ status: 'inactive', updated_at: new Date().toISOString() })
+          .eq('tenant_id', tenantId)
+        if (error) return ctx.fail(500, 'suspend_failed', error.message)
+
+        await serviceSb.from('audit_logs').insert({
+          tenant_id: tenantId,
+          user_id: auth.user.id,
+          action: 'tenant.suspended',
+          resource_type: 'subscription',
+          metadata: {},
+        })
+      } else {
+        if (!existing) {
+          const { error } = await serviceSb.rpc('ensure_default_subscription', { p_tenant_id: tenantId })
+          if (error) return ctx.fail(500, 'ensure_subscription_failed', error.message)
+        } else {
+          const { error } = await serviceSb
+            .from('subscriptions')
+            .update({ status: 'active', updated_at: new Date().toISOString() })
+            .eq('tenant_id', tenantId)
+          if (error) return ctx.fail(500, 'reactivate_failed', error.message)
+        }
+
+        await serviceSb.from('audit_logs').insert({
+          tenant_id: tenantId,
+          user_id: auth.user.id,
+          action: 'tenant.reactivated',
+          resource_type: 'subscription',
+          metadata: {},
+        })
+      }
+
+      return ctx.ok({ ok: true })
+    }
+
     return ctx.fail(405, 'method_not_allowed', 'Method not allowed')
   } catch (error) {
     ctx.log('error', 'request_crashed', {

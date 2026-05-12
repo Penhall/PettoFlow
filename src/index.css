@@ -2785,6 +2785,48 @@ label {
   font-size: 12px;
 }
 
+.admin-detail-actions {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.admin-detail-actions__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.admin-detail-actions__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-detail-actions__select {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.admin-detail-actions__feedback {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.admin-detail-actions__feedback--success {
+  color: var(--success);
+}
+
+.admin-detail-actions__feedback--error {
+  color: var(--danger);
+}
+
 /* ---- Audit Page ---- */
 
 .admin-audit {

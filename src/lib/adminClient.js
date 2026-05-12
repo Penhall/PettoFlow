@@ -20,6 +20,15 @@ export async function adminFetch(path, options = {}) {
 export const fetchAdminTenants = () => adminFetch('/tenants')
 export const fetchAdminTenantDetail = (id) => adminFetch(`/tenants/${id}`)
 export const fetchAdminMetrics = () => adminFetch('/metrics')
+export const updateTenantPlan = (tenantId, planSlug) =>
+  adminFetch(`/tenants/${tenantId}/plan`, { method: 'PATCH', body: { plan_slug: planSlug } })
+
+export const suspendTenant = (tenantId) =>
+  adminFetch(`/tenants/${tenantId}/suspend`, { method: 'POST', body: { action: 'suspend' } })
+
+export const reactivateTenant = (tenantId) =>
+  adminFetch(`/tenants/${tenantId}/suspend`, { method: 'POST', body: { action: 'reactivate' } })
+
 export const fetchAdminAudit = (filters = {}) => {
   const params = new URLSearchParams()
   if (filters.tenantId) params.set('tenant_id', filters.tenantId)
