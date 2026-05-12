@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import LoginPage from './LoginPage.jsx'
 import SignupPage from './SignupPage.jsx'
 import AuthLayout from './AuthLayout.jsx'
@@ -8,6 +8,31 @@ export default function ProtectedRoute({ children }) {
   const { loading, isAuthenticated, isConfigured } = useAuth()
   const [mode, setMode] = useState('login')
 
+  // Once the user has been authenticated at least once, NEVER show loading
+  // or login again — even if the auth context flickers due to token refresh.
+  // This prevents the splash screen from appearing during tab navigation.
+  const authReady = useRef(false)
+  const everAuthenticated = useRef(false)
+
+  useEffect(() => {
+    if (!loading) {
+      authReady.current = true
+    }
+  }, [loading])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      everAuthenticated.current = true
+    }
+  }, [isAuthenticated])
+
+  // If we've ever confirmed the user is authenticated, short-circuit
+  // straight to children. No loading screen, no login redirect.
+  if (everAuthenticated.current) {
+    return children
+  }
+
+  // Initial load: show loading until auth resolves
   if (loading) {
     return (
       <AuthLayout
