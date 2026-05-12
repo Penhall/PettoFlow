@@ -34,6 +34,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let active = true
+    let initialLoadResolved = false
 
     async function loadSession() {
       if (!supabase) {
@@ -60,7 +61,10 @@ export function AuthProvider({ children }) {
         setUser(null)
         setIsPlatformAdmin(false)
       } finally {
-        if (active) setLoading(false)
+        if (active) {
+          initialLoadResolved = true
+          setLoading(false)
+        }
       }
     }
 
@@ -72,14 +76,38 @@ export function AuthProvider({ children }) {
       }
     }
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (!active) return
+
+      // Supabase sometimes emits SIGNED_OUT before TOKEN_REFRESHED
+      // during a token refresh. Verify the session is really gone
+      // before clearing.
+      if (_event === 'SIGNED_OUT' && !nextSession) {
+        const { data: current } = await supabase.auth.getSession()
+        if (!active) return
+        if (current?.session) {
+          // Session is still alive — this is a transient SIGNED_OUT
+          // during token refresh. Don't clear; TOKEN_REFRESHED follows.
+          return
+        }
+      }
+
       const resolvedSession = nextSession ?? null
       setSession(resolvedSession)
       setUser(resolvedSession?.user ?? null)
-      syncPlatformAdmin(resolvedSession, () => active).finally(() => {
-        if (active) setLoading(false)
-      })
+
+      // loading should only transition true→false once (initial mount).
+      // Token refresh / auth state changes after that should not flicker.
+      if (!initialLoadResolved) {
+        await syncPlatformAdmin(resolvedSession, () => active)
+        if (active) {
+          initialLoadResolved = true
+          setLoading(false)
+        }
+      } else {
+        // Subsequent events: fire-and-forget, no loading flicker
+        syncPlatformAdmin(resolvedSession, () => active).catch(() => {})
+      }
     })
 
     return () => {
@@ -143,8 +171,8 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
         session,
+        user,
         loading,
         isAuthenticated: Boolean(session),
         isPlatformAdmin,
