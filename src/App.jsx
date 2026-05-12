@@ -48,9 +48,12 @@ const TimeView = lazyWithRetry(() => import('./components/Team/TimeView.jsx'), '
 const TutorialsHub = lazyWithRetry(() => import('./components/onboarding/TutorialsHub.jsx'), 'tutorials-hub')
 const CommandPalette = lazyWithRetry(() => import('./components/shared/CommandPalette.jsx'), 'command-palette')
 const ReminderToast = lazyWithRetry(() => import('./components/shared/ReminderToast.jsx'), 'reminder-toast')
+const AdminDashboard = lazyWithRetry(() => import('./components/admin/AdminDashboard.jsx'), 'admin-dashboard')
+const TenantsPage = lazyWithRetry(() => import('./components/admin/TenantsPage.jsx'), 'admin-tenants')
+const AuditPage = lazyWithRetry(() => import('./components/admin/AuditPage.jsx'), 'admin-audit')
 
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
-const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings'])
+const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit'])
 const CONTENT_SEARCH_TABS = new Set(['time', 'clientes', 'tutoriais'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
 const TAB_LOADING_LABELS = {
@@ -64,6 +67,9 @@ const TAB_LOADING_LABELS = {
   calendario: 'Carregando calendário...',
   tutoriais: 'Carregando tutoriais...',
   settings: 'Carregando configurações...',
+  'admin-dashboard': 'Carregando dashboard admin...',
+  'admin-tenants': 'Carregando tenants...',
+  'admin-audit': 'Carregando auditoria...',
 }
 
 const TAB_ERROR_LABELS = {
@@ -77,6 +83,9 @@ const TAB_ERROR_LABELS = {
   calendario: 'a área de calendário',
   tutoriais: 'a central de tutoriais',
   settings: 'a área de configurações',
+  'admin-dashboard': 'o dashboard admin',
+  'admin-tenants': 'a lista de tenants',
+  'admin-audit': 'a auditoria',
 }
 
 function readInitialAppTab() {
@@ -749,6 +758,9 @@ function App() {
             onTrackOnboarding={trackOnboardingEvent}
           />
         )
+      case 'admin-dashboard': return <AdminDashboard />
+      case 'admin-tenants': return <TenantsPage />
+      case 'admin-audit': return <AuditPage />
       default:
         return null
     }

@@ -1,10 +1,13 @@
 import {
   Activity,
   Archive,
+  BarChart3,
+  Building2,
   CalendarDays,
   CheckSquare,
   LifeBuoy,
   LayoutDashboard,
+  ScrollText,
   Settings,
   UserCircle,
   Users,
@@ -40,7 +43,7 @@ export default function SidebarRail({
   mobileOpen = false,
   onMobileClose,
 }) {
-  const { user } = useAuth()
+  const { user, isPlatformAdmin } = useAuth()
   const { activeTenant } = useTenant()
 
   return (
@@ -91,6 +94,39 @@ export default function SidebarRail({
               {!collapsed ? <span className="sidebar-rail__label">{label}</span> : null}
             </button>
           ))}
+          {isPlatformAdmin && (
+            <>
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '12px 16px', opacity: 0.3 }} />
+              {!collapsed ? (
+                <div style={{ padding: '8px 16px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+                  Gestão SaaS
+                </div>
+              ) : null}
+              {[
+                { id: 'admin-dashboard', label: 'Dashboard', icon: BarChart3 },
+                { id: 'admin-tenants', label: 'Tenants', icon: Building2 },
+                { id: 'admin-audit', label: 'Auditoria', icon: ScrollText },
+              ].map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`sidebar-rail__item ${activeTab === id ? 'is-active' : ''}`}
+                  aria-current={activeTab === id ? 'page' : undefined}
+                  aria-label={label}
+                  title={collapsed ? label : undefined}
+                  onClick={() => {
+                    onChange?.(id)
+                    onMobileClose?.()
+                  }}
+                >
+                  <span className="sidebar-rail__icon">
+                    <Icon size={18} />
+                  </span>
+                  {!collapsed ? <span className="sidebar-rail__label">{label}</span> : null}
+                </button>
+              ))}
+            </>
+          )}
         </nav>
 
         <div className="sidebar-rail__footer">
