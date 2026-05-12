@@ -2769,5 +2769,161 @@ label {
   font-size: 12px;
 }
 
+/* ---- Audit Page ---- */
+
+.admin-audit {
+  padding: 24px;
+  max-width: 1200px;
+}
+
+.admin-audit__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+}
+
+.admin-audit__filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.admin-audit__filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.admin-audit__select,
+.admin-audit__date {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 0;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 160px;
+}
+
+.admin-audit__select:focus,
+.admin-audit__date:focus {
+  border-color: var(--accent);
+}
+
+.admin-audit__summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.admin-audit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+}
+
+.admin-audit-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-main);
+  transition: background 0.12s;
+}
+
+.admin-audit-event:hover {
+  background: var(--bg-elevated);
+}
+
+.admin-audit-event__dot {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  background: var(--accent);
+  margin-top: 5px;
+}
+
+.admin-audit-event__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.admin-audit-event__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-audit-event__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.admin-audit-event__tenant {
+  font-size: 12px;
+  color: var(--accent);
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.admin-audit-event__date {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.admin-audit-event__payload {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.admin-audit__load-more {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.admin-audit__load-more-btn {
+  padding: 9px 24px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-audit__load-more-btn:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+}
+
+.admin-audit__load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 
 
