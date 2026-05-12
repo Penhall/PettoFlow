@@ -175,13 +175,15 @@ Deno.serve(async (req: Request) => {
         serviceSb.from('memberships').select('tenant_id, user_id, status').eq('status', 'active'),
       ])
       if (tenantsResult.error) return ctx.fail(500, 'admin_tenants_failed', tenantsResult.error.message)
+      if (subscriptionsResult.error) return ctx.fail(500, 'admin_subscriptions_failed', subscriptionsResult.error.message)
+      if (membershipsResult.error) return ctx.fail(500, 'admin_memberships_failed', membershipsResult.error.message)
 
       const ownerIds = [...new Set((tenantsResult.data ?? []).map(t => t.owner_user_id).filter(Boolean))]
       const ownerEmails: Record<string, string> = {}
-      for (const uid of ownerIds) {
+      await Promise.all(ownerIds.map(async (uid) => {
         const { data } = await serviceSb.auth.admin.getUserById(uid)
         if (data?.user?.email) ownerEmails[uid] = data.user.email
-      }
+      }))
 
       const subByTenant = new Map<string, any>()
       for (const sub of subscriptionsResult.data ?? []) subByTenant.set(sub.tenant_id, sub)
@@ -234,7 +236,7 @@ Deno.serve(async (req: Request) => {
     if (request.method === 'GET' && resource === 'metrics') {
       const [totalResult, subsResult, recentResult, memberResult] = await Promise.all([
         serviceSb.from('tenants').select('id', { count: 'exact', head: true }),
-        serviceSb.from('subscriptions').select('tenant_id, status, plan:plans(name, slug)'),
+        serviceSb.from('subscriptions').select('tenant_id, status, plan:plans(name, slug, price_monthly)'),
         serviceSb.from('tenants').select('id, name, slug, created_at').order('created_at', { ascending: false }).limit(5),
         serviceSb.from('memberships').select('tenant_id, status').eq('status', 'active'),
       ])
@@ -253,9 +255,11 @@ Deno.serve(async (req: Request) => {
         planDist[planName] = (planDist[planName] ?? 0) + 1
       }
 
-      const GROWTH_MRR = 97
-      const activeSubs = subs.filter(s => s.status === 'active' && (s.plan as any)?.slug === 'growth')
-      const mrrTotal = activeSubs.length * GROWTH_MRR
+      const activeSubs = subs.filter(s => s.status === 'active')
+      const mrrTotal = activeSubs.reduce((sum, sub) => {
+        const price = (sub.plan as any)?.price_monthly ?? 0
+        return sum + Number(price)
+      }, 0)
 
       return ctx.ok({
         total_tenants: totalResult.count ?? 0,
