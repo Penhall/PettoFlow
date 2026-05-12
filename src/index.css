@@ -2983,20 +2983,5 @@ label {
   cursor: not-allowed;
 }
 
-/* ---- Billing Page ---- */
-
-.admin-billing {
-  padding: 24px;
-  max-width: 1200px;
-}
-
-.admin-billing__status-active { color: var(--success); }
-.admin-billing__status-inactive { color: var(--text-secondary); }
-.admin-billing__status-past_due { color: var(--warning); }
-.admin-billing__status-canceled { color: var(--danger); }
-.admin-billing__status-processed { color: var(--success); }
-.admin-billing__status-failed { color: var(--danger); }
-.admin-billing__status-received { color: var(--warning); }
-
 
 

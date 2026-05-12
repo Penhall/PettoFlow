@@ -5,7 +5,6 @@ import {
   Building2,
   CalendarDays,
   CheckSquare,
-  DollarSign,
   LifeBuoy,
   LayoutDashboard,
   ScrollText,
@@ -107,7 +106,6 @@ export default function SidebarRail({
                 { id: 'admin-dashboard', label: 'Dashboard', icon: BarChart3 },
                 { id: 'admin-tenants', label: 'Tenants', icon: Building2 },
                 { id: 'admin-audit', label: 'Auditoria', icon: ScrollText },
-                { id: 'admin-billing', label: 'Financeiro', icon: DollarSign },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}

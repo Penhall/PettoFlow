@@ -29,8 +29,6 @@ export const suspendTenant = (tenantId) =>
 export const reactivateTenant = (tenantId) =>
   adminFetch(`/tenants/${tenantId}/suspend`, { method: 'POST', body: { action: 'reactivate' } })
 
-export const fetchAdminBilling = () => adminFetch('/billing')
-
 export const fetchAdminAudit = (filters = {}) => {
   const params = new URLSearchParams()
   if (filters.tenantId) params.set('tenant_id', filters.tenantId)
