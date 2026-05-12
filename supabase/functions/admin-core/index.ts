@@ -4,6 +4,7 @@ import { requirePlatformAdmin } from '../_shared/admin.ts'
 import { getServiceRoleClient } from '../_shared/supabase.ts'
 import { getTenantUsageSnapshot } from '../_shared/billing.ts'
 import { attachRequestId, createRequestContext } from '../_shared/observability.ts'
+import { handleClaimMaster } from './claim-master.ts'
 
 function getRouteParts(req: Request) {
   const url = new URL(req.url)
@@ -34,12 +35,17 @@ Deno.serve(async (req: Request) => {
   const auth = await requireAuthenticatedUser(request)
   if (!auth.ok) return auth.response
 
+  const { url, routeParts } = getRouteParts(request)
+  const resource = routeParts[0] ?? 'overview'
+
+  if (request.method === 'POST' && resource === 'claim-master') {
+    return handleClaimMaster(request)
+  }
+
   const admin = await requirePlatformAdmin(request)
   if (!admin.ok) return admin.response
 
   const serviceSb = getServiceRoleClient()
-  const { url, routeParts } = getRouteParts(request)
-  const resource = routeParts[0] ?? 'overview'
 
   try {
     if (request.method === 'GET' && resource === 'me') {

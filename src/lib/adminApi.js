@@ -1,4 +1,5 @@
 import { authenticatedFetch } from './apiFetch.js'
+import { adminFetch } from './adminClient.js'
 
 const ADMIN_CORE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-core`
 
@@ -39,4 +40,8 @@ export async function listAdminUsers({ page = 1, perPage = 25 } = {}) {
 export async function fetchAdminProfile() {
   const res = await authenticatedFetch(`${ADMIN_CORE_URL}/me`, { method: 'GET' })
   return parseResponse(res, 'Erro ao carregar perfil administrativo')
+}
+
+export async function claimMaster() {
+  return adminFetch('/claim-master', { method: 'POST' })
 }
