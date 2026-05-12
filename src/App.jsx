@@ -51,9 +51,10 @@ const ReminderToast = lazyWithRetry(() => import('./components/shared/ReminderTo
 const AdminDashboard = lazyWithRetry(() => import('./components/admin/AdminDashboard.jsx'), 'admin-dashboard')
 const TenantsPage = lazyWithRetry(() => import('./components/admin/TenantsPage.jsx'), 'admin-tenants')
 const AuditPage = lazyWithRetry(() => import('./components/admin/AuditPage.jsx'), 'admin-audit')
+const PlansPage = lazyWithRetry(() => import('./components/admin/PlansPage.jsx'), 'admin-plans')
 
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
-const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit'])
+const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit', 'admin-plans'])
 const CONTENT_SEARCH_TABS = new Set(['time', 'clientes', 'tutoriais'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
 const TAB_LOADING_LABELS = {
@@ -70,6 +71,7 @@ const TAB_LOADING_LABELS = {
   'admin-dashboard': 'Carregando dashboard admin...',
   'admin-tenants': 'Carregando tenants...',
   'admin-audit': 'Carregando auditoria...',
+  'admin-plans': 'Carregando planos...',
 }
 
 const TAB_ERROR_LABELS = {
@@ -86,6 +88,7 @@ const TAB_ERROR_LABELS = {
   'admin-dashboard': 'o dashboard admin',
   'admin-tenants': 'a lista de tenants',
   'admin-audit': 'a auditoria',
+  'admin-plans': 'a gestão de planos',
 }
 
 function readInitialAppTab() {
@@ -761,6 +764,7 @@ function App() {
       case 'admin-dashboard': return <AdminDashboard />
       case 'admin-tenants': return <TenantsPage />
       case 'admin-audit': return <AuditPage />
+      case 'admin-plans': return <PlansPage />
       default:
         return null
     }

@@ -2983,5 +2983,94 @@ label {
   cursor: not-allowed;
 }
 
+/* ---- Plans Page ---- */
+
+.admin-plans {
+  padding: 24px;
+  max-width: 1200px;
+}
+
+.admin-plans__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-plans__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-plans__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.admin-plans__action-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-elevated);
+}
+
+.admin-plans__action-btn--danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.admin-plans-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-plans-form__row {
+  display: flex;
+  gap: 12px;
+}
+
+.admin-plans-form__field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-plans-form__field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-plans-form__field input {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.admin-plans-form__limits-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.admin-plans-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 
 

@@ -358,6 +358,136 @@ Deno.serve(async (req: Request) => {
       return ctx.ok({ ok: true, subscription })
     }
 
+    if (request.method === 'GET' && resource === 'plans' && routeParts.length === 1) {
+      const { data, error } = await serviceSb
+        .from('plans')
+        .select(`
+          id, name, slug, limits, price_monthly, price_yearly, active, created_at, updated_at,
+          active_subscriptions_count:subscriptions(count)
+        `)
+        .order('price_monthly', { ascending: true })
+
+      if (error) return ctx.fail(500, 'plans_list_failed', error.message)
+
+      const plans = (data ?? []).map((p) => ({
+        ...p,
+        active_subscriptions_count: Array.isArray(p.active_subscriptions_count)
+          ? (p.active_subscriptions_count[0] as any)?.count ?? 0
+          : 0,
+      }))
+
+      return ctx.ok({ plans })
+    }
+
+    if (request.method === 'POST' && resource === 'plans') {
+      const body = await request.json().catch(() => ({}))
+      const name = typeof body.name === 'string' ? body.name.trim() : ''
+      const slug = typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : ''
+
+      if (!name) return ctx.fail(400, 'invalid_body', 'name é obrigatório')
+      if (!slug) return ctx.fail(400, 'invalid_body', 'slug é obrigatório')
+
+      const { data: existing } = await serviceSb
+        .from('plans')
+        .select('id')
+        .filter('slug', 'ilike', slug)
+        .maybeSingle()
+
+      if (existing) return ctx.fail(409, 'slug_conflict', `Slug '${slug}' já está em uso`)
+
+      const { data: plan, error } = await serviceSb
+        .from('plans')
+        .insert({
+          name,
+          slug,
+          limits: body.limits ?? {},
+          price_monthly: body.price_monthly ?? 0,
+          price_yearly: body.price_yearly ?? 0,
+          active: body.active !== false,
+        })
+        .select()
+        .single()
+
+      if (error) return ctx.fail(500, 'plan_create_failed', error.message)
+      return ctx.ok({ plan })
+    }
+
+    if (request.method === 'PATCH' && resource === 'plans' && routeParts.length === 2) {
+      const planId = routeParts[1]
+      const body = await request.json().catch(() => ({}))
+
+      if (body.active === false) {
+        const { count } = await serviceSb
+          .from('subscriptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('plan_id', planId)
+          .eq('status', 'active')
+
+        if ((count ?? 0) > 0) {
+          return ctx.fail(409, 'plan_has_active_subscriptions', 'Plano possui assinaturas ativas. Não é possível desativá-lo.')
+        }
+      }
+
+      if (typeof body.slug === 'string') {
+        const slugNorm = body.slug.trim().toLowerCase()
+        const { data: existing } = await serviceSb
+          .from('plans')
+          .select('id')
+          .filter('slug', 'ilike', slugNorm)
+          .neq('id', planId)
+          .maybeSingle()
+
+        if (existing) return ctx.fail(409, 'slug_conflict', `Slug '${slugNorm}' já está em uso`)
+        body.slug = slugNorm
+      }
+
+      const allowed = ['name', 'slug', 'limits', 'price_monthly', 'price_yearly', 'active']
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+      for (const key of allowed) {
+        if (key in body) updates[key] = body[key]
+      }
+
+      const { data: plan, error } = await serviceSb
+        .from('plans')
+        .update(updates)
+        .eq('id', planId)
+        .select()
+        .single()
+
+      if (error) return ctx.fail(500, 'plan_update_failed', error.message)
+      return ctx.ok({ plan })
+    }
+
+    if (request.method === 'DELETE' && resource === 'plans' && routeParts.length === 2) {
+      const planId = routeParts[1]
+
+      const { data: planRow, error: planFetchError } = await serviceSb
+        .from('plans')
+        .select('id, slug')
+        .eq('id', planId)
+        .maybeSingle()
+
+      if (planFetchError) return ctx.fail(500, 'plan_lookup_failed', planFetchError.message)
+      if (!planRow) return ctx.fail(404, 'plan_not_found', 'Plano não encontrado')
+
+      if (planRow.slug === 'free') {
+        return ctx.fail(400, 'plan_protected', 'Plano Free não pode ser excluído.')
+      }
+
+      const { count } = await serviceSb
+        .from('subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('plan_id', planId)
+
+      if ((count ?? 0) > 0) {
+        return ctx.fail(409, 'plan_has_subscriptions', 'Plano possui assinaturas ativas. Remova ou migre os tenants primeiro.')
+      }
+
+      const { error } = await serviceSb.from('plans').delete().eq('id', planId)
+      if (error) return ctx.fail(500, 'plan_delete_failed', error.message)
+      return ctx.ok({ ok: true })
+    }
+
     if (request.method === 'POST' && resource === 'tenants' && routeParts.length === 3 && routeParts[2] === 'suspend') {
       const tenantId = routeParts[1]
       const body = await request.json().catch(() => ({}))

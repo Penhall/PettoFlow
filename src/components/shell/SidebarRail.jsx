@@ -7,6 +7,7 @@ import {
   CheckSquare,
   LifeBuoy,
   LayoutDashboard,
+  Package,
   ScrollText,
   Settings,
   UserCircle,
@@ -106,6 +107,7 @@ export default function SidebarRail({
                 { id: 'admin-dashboard', label: 'Dashboard', icon: BarChart3 },
                 { id: 'admin-tenants', label: 'Tenants', icon: Building2 },
                 { id: 'admin-audit', label: 'Auditoria', icon: ScrollText },
+                { id: 'admin-plans', label: 'Planos', icon: Package },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
