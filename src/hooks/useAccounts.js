@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getPrincipalAccount as findPrincipal } from '../lib/financeUtils'
 import { listAccountRecords, saveAccountRecord } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useAccounts() {
   const visualMode = isVisualRegressionMode()
-  const fixtureAccounts = getVisualFixture('accounts', [])
+  const fixtureAccounts = useMemo(() => getVisualFixture('accounts', []), [])
   const [accounts, setAccounts] = useState(visualMode ? fixtureAccounts : [])
   const [loading, setLoading] = useState(!visualMode)
 

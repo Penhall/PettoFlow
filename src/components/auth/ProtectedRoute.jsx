@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import LoginPage from './LoginPage.jsx'
 import SignupPage from './SignupPage.jsx'
 import AuthLayout from './AuthLayout.jsx'
@@ -8,44 +8,26 @@ export default function ProtectedRoute({ children }) {
   const { loading, isAuthenticated, isConfigured } = useAuth()
   const [mode, setMode] = useState('login')
 
-  // Once the user has been authenticated at least once, NEVER show loading
-  // or login again — even if the auth context flickers due to token refresh.
-  // This prevents the splash screen from appearing during tab navigation.
-  const authReady = useRef(false)
-  const everAuthenticated = useRef(false)
+  // Track when auth has loaded at least once. Once true, never flicker back to
+  // loading — prevents splash screen on tab navigation and token refresh.
+  // Initialized from current loading state so Supabase-misconfigured environments
+  // (loading starts false) skip the loading screen entirely.
+  const [authInitialized, setAuthInitialized] = useState(!loading)
 
   useEffect(() => {
-    if (!loading) {
-      authReady.current = true
-    }
+    if (!loading) setAuthInitialized(true)
   }, [loading])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      everAuthenticated.current = true
-    } else if (!loading) {
-      // Auth definitively resolved to false (loading finished, no session).
-      // Clear so the login screen appears — prevents stale shell after logout
-      // or session expiry. Token-refresh transients are already suppressed in
-      // AuthContext, so this branch only runs on real auth loss.
-      everAuthenticated.current = false
-    }
-  }, [isAuthenticated, loading])
-
-  // If we've ever confirmed the user is authenticated, short-circuit
-  // straight to children. No loading screen, no login redirect.
-  if (everAuthenticated.current) {
-    return children
-  }
-
-  // Initial load: show loading until auth resolves
-  if (loading) {
+  // Show loading only during first auth resolution
+  if (!authInitialized) {
     return (
       <AuthLayout
         title="Carregando NexusCRM..."
         description="Validando a sessão atual antes de liberar o dashboard."
       >
-        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Aguarde enquanto sua autenticação é verificada.</p>
+        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+          Aguarde enquanto sua autenticação é verificada.
+        </p>
       </AuthLayout>
     )
   }
@@ -63,6 +45,10 @@ export default function ProtectedRoute({ children }) {
     )
   }
 
+  // isAuthenticated is React state — triggers rerender when it changes.
+  // Auth loss (real logout/expiry) sets it false, causing an immediate rerender
+  // that shows the login screen. Token-refresh transients are suppressed by
+  // AuthContext so this never fires spuriously.
   if (!isAuthenticated) {
     if (mode === 'signup') {
       return <SignupPage onSwitchToLogin={() => setMode('login')} />

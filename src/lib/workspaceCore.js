@@ -44,8 +44,8 @@ async function request(path, options = {}) {
   return workspaceCoreRequest(path, options)
 }
 
-export async function fetchWorkspaceBootstrap() {
-  return request('/bootstrap', { fallbackMessage: 'Erro ao carregar o espaço de trabalho' })
+export async function fetchWorkspaceBootstrap(tenantId) {
+  return request('/bootstrap', { tenantId, fallbackMessage: 'Erro ao carregar o espaço de trabalho' })
 }
 
 export async function createTaskRecord(task) {

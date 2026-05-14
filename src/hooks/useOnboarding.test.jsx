@@ -12,6 +12,28 @@ vi.mock('../lib/onboardingApi.js', () => ({
   recordOnboardingEvent: (...args) => recordOnboardingEventMock(...args),
 }))
 
+// Stateful mock that merges each partial payload into accumulated server state,
+// simulating real PATCH semantics: only provided keys are updated, the server
+// returns the full merged state. This matches how updateOnboardingState works
+// in production (partial fields → full state response).
+function makeEchoMock() {
+  let serverState = {
+    currentOnboardingVersion: '2026.05',
+    checklistState: { items: {} },
+    tutorialState: { opened: [], completed: [] },
+    tourState: { status: 'not_started' },
+    dismissState: {},
+    experienceLevel: 'new',
+  }
+  return async (_tenantId, payload) => {
+    if (payload.checklistState !== undefined) serverState = { ...serverState, checklistState: payload.checklistState }
+    if (payload.tutorialState !== undefined) serverState = { ...serverState, tutorialState: payload.tutorialState }
+    if (payload.tourState !== undefined) serverState = { ...serverState, tourState: payload.tourState }
+    if (payload.dismissState !== undefined) serverState = { ...serverState, dismissState: payload.dismissState }
+    return { state: { ...serverState } }
+  }
+}
+
 describe('useOnboarding', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -30,17 +52,7 @@ describe('useOnboarding', () => {
       seedProfile: null,
     })
 
-    updateOnboardingStateMock.mockImplementation(async (_tenantId, payload) => ({
-      state: {
-        currentOnboardingVersion: '2026.05',
-        checklistState: payload.checklistState ?? { items: {} },
-        tutorialState: payload.tutorialState ?? { opened: [], completed: [] },
-        tourState: payload.tourState ?? { status: 'not_started' },
-        dismissState: payload.dismissState ?? {},
-        experienceLevel: payload.experienceLevel ?? 'new',
-      },
-    }))
-
+    updateOnboardingStateMock.mockImplementation(makeEchoMock())
     recordOnboardingEventMock.mockResolvedValue({ event: { id: 'evt-1' } })
   })
 
@@ -70,11 +82,8 @@ describe('useOnboarding', () => {
     expect(result.current.initializationMode).toBe('guided_seeded')
   })
 
-  describe('stale mutation protection (Phase 24 regression)', () => {
+  describe('Phase 24 regression: stale mutation protection', () => {
     it('rapid consecutive checklist completions preserve both items', async () => {
-      // Simulate server that merges items — returns whatever was sent.
-      // This tests that the second call uses the server-confirmed state
-      // from the first call (via stateRef) rather than the stale initial snapshot.
       let callCount = 0
       updateOnboardingStateMock.mockImplementation(async (_tenantId, payload) => {
         callCount++
@@ -93,18 +102,11 @@ describe('useOnboarding', () => {
       const { result } = renderHook(() => useOnboarding({ tenantId: 'tenant-1', enabled: true }))
       await waitFor(() => expect(result.current.loading).toBe(false))
 
-      // Call both completions sequentially (not simultaneously) to validate
-      // that stateRef always reflects the latest committed state.
-      await act(async () => {
-        await result.current.completeChecklistItem('item-a')
-      })
-      await act(async () => {
-        await result.current.completeChecklistItem('item-b')
-      })
+      await act(async () => { await result.current.completeChecklistItem('item-a') })
+      await act(async () => { await result.current.completeChecklistItem('item-b') })
 
       expect(callCount).toBe(2)
 
-      // After both calls, the local state should show both items completed.
       await waitFor(() => {
         const items = result.current.state.checklistState?.items ?? {}
         expect(items['item-a']?.completed).toBe(true)
@@ -120,11 +122,8 @@ describe('useOnboarding', () => {
 
       const stateBefore = result.current.state
 
-      await act(async () => {
-        await result.current.completeChecklistItem('item-x')
-      })
+      await act(async () => { await result.current.completeChecklistItem('item-x') })
 
-      // After a failed patch, local state should be unchanged (no partial corruption).
       expect(result.current.state.checklistState).toEqual(stateBefore.checklistState)
     })
 
@@ -139,8 +138,6 @@ describe('useOnboarding', () => {
         await result.current.dismissSurface({ scope: 'dashboard.onboarding-panel', reason: 'manual_close' })
       })
 
-      // dismissState keys are simple object keys — re-setting the same scope
-      // just overwrites, no duplicate entries.
       const dismissKeys = Object.keys(result.current.state.dismissState ?? {})
       const occurrences = dismissKeys.filter((k) => k === 'dashboard.onboarding-panel')
       expect(occurrences.length).toBe(1)
@@ -150,16 +147,107 @@ describe('useOnboarding', () => {
       const { result } = renderHook(() => useOnboarding({ tenantId: 'tenant-1', enabled: true }))
       await waitFor(() => expect(result.current.loading).toBe(false))
 
-      await act(async () => {
-        await result.current.markTutorialOpened('getting-started.tasks')
-      })
-      await act(async () => {
-        await result.current.markTutorialOpened('getting-started.tasks')
-      })
+      await act(async () => { await result.current.markTutorialOpened('getting-started.tasks') })
+      await act(async () => { await result.current.markTutorialOpened('getting-started.tasks') })
 
       const opened = result.current.state.tutorialState?.opened ?? []
       const count = opened.filter((id) => id === 'getting-started.tasks').length
       expect(count).toBe(1)
+    })
+  })
+
+  describe('Phase 27: committed-state queue — payload computed at execution time', () => {
+    it('concurrent checklist completions: second payload includes first confirmed item', async () => {
+      // The fix: payload builders run INSIDE the queue after the previous call
+      // confirms, so the second builder reads committedStateRef which already has
+      // item-a from the server response of the first call.
+      const serverCalls = []
+      updateOnboardingStateMock.mockImplementation(async (_tenantId, payload) => {
+        serverCalls.push(JSON.parse(JSON.stringify(payload)))
+        return {
+          state: {
+            currentOnboardingVersion: '2026.05',
+            checklistState: payload.checklistState ?? { items: {} },
+            tutorialState: { opened: [], completed: [] },
+            tourState: { status: 'not_started' },
+            dismissState: {},
+            experienceLevel: 'new',
+          },
+        }
+      })
+
+      const { result } = renderHook(() => useOnboarding({ tenantId: 'tenant-1', enabled: true }))
+      await waitFor(() => expect(result.current.loading).toBe(false))
+
+      // Fire BOTH without awaiting the first — true concurrent dispatch
+      await act(async () => {
+        const p1 = result.current.completeChecklistItem('item-a')
+        const p2 = result.current.completeChecklistItem('item-b')
+        await Promise.all([p1, p2])
+      })
+
+      expect(serverCalls).toHaveLength(2)
+      // The SECOND server call must include item-a (merged from confirmed state)
+      const secondCallItems = serverCalls[1]?.checklistState?.items ?? {}
+      expect(secondCallItems['item-a']?.completed).toBe(true)
+      expect(secondCallItems['item-b']?.completed).toBe(true)
+    })
+
+    it('concurrent mixed mutations: dismiss + checklist do not overwrite each other', async () => {
+      updateOnboardingStateMock.mockImplementation(makeEchoMock())
+
+      const { result } = renderHook(() => useOnboarding({ tenantId: 'tenant-1', enabled: true }))
+      await waitFor(() => expect(result.current.loading).toBe(false))
+
+      await act(async () => {
+        const p1 = result.current.completeChecklistItem('item-a')
+        const p2 = result.current.dismissSurface({ scope: 'panel.x', reason: 'manual_close' })
+        await Promise.all([p1, p2])
+      })
+
+      // Both mutations must be visible in the final state
+      const items = result.current.state.checklistState?.items ?? {}
+      const dismissed = result.current.state.dismissState ?? {}
+      expect(items['item-a']?.completed).toBe(true)
+      expect(dismissed['panel.x']?.dismissed).toBe(true)
+    })
+
+    it('failed first patch does not block subsequent patches from executing', async () => {
+      let callCount = 0
+      updateOnboardingStateMock
+        .mockRejectedValueOnce(new Error('first patch fails'))
+        .mockImplementation(async (_tenantId, payload) => {
+          callCount++
+          return {
+            state: {
+              currentOnboardingVersion: '2026.05',
+              checklistState: payload.checklistState ?? { items: {} },
+              tutorialState: { opened: [], completed: [] },
+              tourState: { status: 'not_started' },
+              dismissState: {},
+              experienceLevel: 'new',
+            },
+          }
+        })
+
+      const { result } = renderHook(() => useOnboarding({ tenantId: 'tenant-1', enabled: true }))
+      await waitFor(() => expect(result.current.loading).toBe(false))
+
+      await act(async () => {
+        await result.current.completeChecklistItem('item-fail')
+      })
+
+      // After the failed patch, the queue should drain and subsequent patches execute
+      await act(async () => {
+        await result.current.completeChecklistItem('item-ok')
+      })
+
+      expect(callCount).toBe(1)
+
+      await waitFor(() => {
+        const items = result.current.state.checklistState?.items ?? {}
+        expect(items['item-ok']?.completed).toBe(true)
+      })
     })
   })
 })

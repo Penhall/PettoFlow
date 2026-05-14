@@ -29,22 +29,32 @@ function normalizeResponseState(data) {
 
 export function useOnboarding({ tenantId, enabled = true }) {
   const [state, setState] = useState(buildFallbackState())
-  const stateRef = useRef(state)
   const [loading, setLoading] = useState(Boolean(enabled && tenantId))
   const [error, setError] = useState(null)
   const [initializationMode, setInitializationMode] = useState('guided_seeded')
   const [seedProfile, setSeedProfile] = useState(null)
-  // Serial mutation queue: each patchState call chains onto the previous one
-  // so patches never overlap and last-write-wins is eliminated.
+
+  // committedStateRef tracks the last server-confirmed state.
+  // Updated synchronously inside queue execution — before the next queued
+  // item runs — so payload builders always receive the latest confirmed state
+  // regardless of React render timing.
+  const committedStateRef = useRef(state)
+
+  // Serial mutation queue: each enqueued item waits for the previous to settle.
+  // Payload is computed via a builder function INSIDE execution so it reads
+  // committedStateRef.current AFTER the previous patch confirmed — eliminating
+  // stale-payload overwrite even for overlapping rapid mutations.
   const mutationQueue = useRef(Promise.resolve(null))
 
   useEffect(() => {
-    stateRef.current = state
+    committedStateRef.current = state
   }, [state])
 
   useEffect(() => {
     if (!enabled || !tenantId) {
-      setState(buildFallbackState())
+      const fallback = buildFallbackState()
+      setState(fallback)
+      committedStateRef.current = fallback
       setInitializationMode('guided_seeded')
       setSeedProfile(null)
       setError(null)
@@ -59,7 +69,9 @@ export function useOnboarding({ tenantId, enabled = true }) {
     getOnboardingState(tenantId)
       .then((data) => {
         if (cancelled) return
-        setState(normalizeResponseState(data?.state))
+        const nextState = normalizeResponseState(data?.state)
+        setState(nextState)
+        committedStateRef.current = nextState
         setInitializationMode(data?.initializationMode || 'guided_seeded')
         setSeedProfile(data?.seedProfile || null)
       })
@@ -67,7 +79,9 @@ export function useOnboarding({ tenantId, enabled = true }) {
         if (cancelled) return
         console.error('Error fetching onboarding state:', nextError)
         setError(nextError)
-        setState(buildFallbackState())
+        const fallback = buildFallbackState()
+        setState(fallback)
+        committedStateRef.current = fallback
         setInitializationMode('guided_seeded')
         setSeedProfile(null)
       })
@@ -80,16 +94,22 @@ export function useOnboarding({ tenantId, enabled = true }) {
     }
   }, [tenantId, enabled])
 
-  const patchState = (payload) => {
+  // patchState accepts a builder function (current => payload) rather than a
+  // static payload object. The builder is called INSIDE the queued execution so
+  // it reads committedStateRef.current AFTER the preceding patch has confirmed,
+  // guaranteeing correct merge even under concurrent rapid calls.
+  const patchState = (buildPayload) => {
     if (!tenantId) return Promise.resolve(null)
 
-    // Chain onto the mutation queue so concurrent callers execute sequentially.
-    // Each call waits for the previous to settle before sending to the server,
-    // which prevents last-write-wins from clobbering concurrent completions.
     const queued = mutationQueue.current.then(async () => {
+      // Compute payload from the latest server-confirmed state at execution time
+      const payload = buildPayload(committedStateRef.current)
       try {
         const data = await updateOnboardingState(tenantId, payload)
         const nextState = normalizeResponseState(data?.state)
+        // Update synchronously before resolving so the next queued item
+        // sees this confirmed state immediately via committedStateRef.current
+        committedStateRef.current = nextState
         setState(nextState)
         return nextState
       } catch (nextError) {
@@ -99,8 +119,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
       }
     })
 
-    // Suppress unhandled-rejection on the queue reference itself so a failed
-    // patch doesn't surface as an uncaught error in subsequent chained calls.
+    // Prevent unhandled rejection on the queue reference from a failed patch
     mutationQueue.current = queued.catch(() => null)
     return queued
   }
@@ -116,78 +135,95 @@ export function useOnboarding({ tenantId, enabled = true }) {
     }
   }
 
-  const completeChecklistItem = async (itemId, metadata = {}) => {
-    // Read stateRef.current so rapid successive calls each see the latest
-    // server-confirmed state rather than a stale closure snapshot.
-    const current = stateRef.current
-    const nextItems = {
-      ...(current.checklistState?.items || {}),
-      [itemId]: {
-        completed: true,
-        completedAt: new Date().toISOString(),
-        metadata,
+  const completeChecklistItem = (itemId, metadata = {}) => {
+    const patched = patchState((current) => {
+      const nextItems = {
+        ...(current.checklistState?.items || {}),
+        [itemId]: {
+          completed: true,
+          completedAt: new Date().toISOString(),
+          metadata,
+        },
+      }
+      return {
+        checklistState: {
+          ...(current.checklistState || {}),
+          items: nextItems,
+        },
+      }
+    })
+
+    patched.then((nextState) => {
+      if (nextState) emitEvent('checklist_item_completed', { itemId, ...metadata })
+    }).catch(() => {})
+
+    return patched
+  }
+
+  const dismissSurface = ({ scope, reason = 'manual_close' }) => {
+    return patchState((current) => ({
+      dismissState: {
+        ...(current.dismissState || {}),
+        [scope]: {
+          dismissed: true,
+          dismissed_at: new Date().toISOString(),
+          dismiss_scope: scope,
+          dismiss_reason: reason,
+        },
       },
-    }
-
-    const nextChecklistState = {
-      ...(current.checklistState || {}),
-      items: nextItems,
-    }
-
-    const nextState = await patchState({ checklistState: nextChecklistState })
-    await emitEvent('checklist_item_completed', { itemId, ...metadata })
-    return nextState
+    }))
   }
 
-  const dismissSurface = async ({ scope, reason = 'manual_close' }) => {
-    const current = stateRef.current
-    const nextDismissState = {
-      ...(current.dismissState || {}),
-      [scope]: {
-        dismissed: true,
-        dismissed_at: new Date().toISOString(),
-        dismiss_scope: scope,
-        dismiss_reason: reason,
-      },
-    }
+  const markTutorialOpened = (tutorialId) => {
+    const patched = patchState((current) => {
+      const opened = Array.from(new Set([...(current.tutorialState?.opened || []), tutorialId]))
+      return {
+        tutorialState: {
+          ...(current.tutorialState || {}),
+          opened,
+        },
+      }
+    })
 
-    return patchState({ dismissState: nextDismissState })
+    patched.then((nextState) => {
+      if (nextState) emitEvent('tutorial_opened', { tutorialId })
+    }).catch(() => {})
+
+    return patched
   }
 
-  const markTutorialOpened = async (tutorialId) => {
-    const current = stateRef.current
-    const opened = Array.from(new Set([...(current.tutorialState?.opened || []), tutorialId]))
-    const nextTutorialState = {
-      ...(current.tutorialState || {}),
-      opened,
-    }
+  const markTutorialCompleted = (tutorialId) => {
+    const patched = patchState((current) => {
+      const opened = Array.from(new Set([...(current.tutorialState?.opened || []), tutorialId]))
+      const completed = Array.from(new Set([...(current.tutorialState?.completed || []), tutorialId]))
+      return {
+        tutorialState: {
+          ...(current.tutorialState || {}),
+          opened,
+          completed,
+        },
+      }
+    })
 
-    const nextState = await patchState({ tutorialState: nextTutorialState })
-    await emitEvent('tutorial_opened', { tutorialId })
-    return nextState
+    patched.then((nextState) => {
+      if (nextState) emitEvent('tutorial_completed', { tutorialId })
+    }).catch(() => {})
+
+    return patched
   }
 
-  const markTutorialCompleted = async (tutorialId) => {
-    const current = stateRef.current
-    const opened = Array.from(new Set([...(current.tutorialState?.opened || []), tutorialId]))
-    const completed = Array.from(new Set([...(current.tutorialState?.completed || []), tutorialId]))
-    const nextTutorialState = {
-      ...(current.tutorialState || {}),
-      opened,
-      completed,
-    }
+  const updateTourState = (tourState, eventName = null) => {
+    const patched = patchState(() => ({ tourState }))
 
-    const nextState = await patchState({ tutorialState: nextTutorialState })
-    await emitEvent('tutorial_completed', { tutorialId })
-    return nextState
-  }
-
-  const updateTourState = async (tourState, eventName = null) => {
-    const nextState = await patchState({ tourState })
     if (eventName) {
-      await emitEvent(eventName, { status: tourState?.status || null, lastStep: tourState?.last_step || null })
+      patched.then((nextState) => {
+        if (nextState) {
+          emitEvent(eventName, { status: tourState?.status || null, lastStep: tourState?.last_step || null })
+        }
+      }).catch(() => {})
     }
-    return nextState
+
+    return patched
   }
 
   const checklist = ONBOARDING_CHECKLIST.map((item) => ({

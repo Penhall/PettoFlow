@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import ProtectedRoute from './ProtectedRoute.jsx'
 
@@ -55,5 +55,134 @@ describe('ProtectedRoute', () => {
     )
 
     expect(screen.getByText('Dashboard')).toBeTruthy()
+  })
+
+  it('mostra erro de configuracao quando supabase nao esta configurado', () => {
+    useAuthMock.mockReturnValue({
+      loading: false,
+      isAuthenticated: false,
+      isConfigured: false,
+    })
+
+    render(
+      <ProtectedRoute>
+        <div>Dashboard</div>
+      </ProtectedRoute>,
+    )
+
+    expect(screen.getByText('Configuração incompleta')).toBeTruthy()
+  })
+
+  describe('auth state transitions (rerender-driven)', () => {
+    it('auth loss after authentication shows login — state change triggers rerender', () => {
+      // Start authenticated
+      useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+
+      const { rerender } = render(
+        <ProtectedRoute>
+          <div>Dashboard</div>
+        </ProtectedRoute>,
+      )
+
+      expect(screen.getByText('Dashboard')).toBeTruthy()
+
+      // Auth is lost — isAuthenticated flips to false (real logout/expiry)
+      useAuthMock.mockReturnValue({ loading: false, isAuthenticated: false, isConfigured: true })
+
+      act(() => {
+        rerender(
+          <ProtectedRoute>
+            <div>Dashboard</div>
+          </ProtectedRoute>,
+        )
+      })
+
+      // Login screen must appear — no stale shell rendering
+      expect(screen.getByText('Entrar no NexusCRM')).toBeTruthy()
+      expect(screen.queryByText('Dashboard')).toBeNull()
+    })
+
+    it('initial loading then authenticated shows children without flash', () => {
+      useAuthMock.mockReturnValue({ loading: true, isAuthenticated: false, isConfigured: true })
+
+      const { rerender } = render(
+        <ProtectedRoute>
+          <div>Dashboard</div>
+        </ProtectedRoute>,
+      )
+
+      expect(screen.getByText('Carregando NexusCRM...')).toBeTruthy()
+
+      // Auth resolves
+      useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+
+      act(() => {
+        rerender(
+          <ProtectedRoute>
+            <div>Dashboard</div>
+          </ProtectedRoute>,
+        )
+      })
+
+      expect(screen.getByText('Dashboard')).toBeTruthy()
+      expect(screen.queryByText('Carregando NexusCRM...')).toBeNull()
+    })
+
+    it('subsequent auth resolution does not re-show loading screen', () => {
+      // Already authenticated
+      useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+
+      const { rerender } = render(
+        <ProtectedRoute>
+          <div>Dashboard</div>
+        </ProtectedRoute>,
+      )
+
+      expect(screen.getByText('Dashboard')).toBeTruthy()
+
+      // Simulate a rerender where loading becomes true (should not re-show loader)
+      // In practice AuthContext prevents this, but the component must be robust.
+      // authInitialized is already true so loading: true is ignored.
+      useAuthMock.mockReturnValue({ loading: true, isAuthenticated: true, isConfigured: true })
+
+      act(() => {
+        rerender(
+          <ProtectedRoute>
+            <div>Dashboard</div>
+          </ProtectedRoute>,
+        )
+      })
+
+      // Shell should remain visible — authInitialized prevents loading re-show
+      expect(screen.getByText('Dashboard')).toBeTruthy()
+      expect(screen.queryByText('Carregando NexusCRM...')).toBeNull()
+    })
+
+    it('logout flow: authenticated → unauthenticated shows login, not loading', () => {
+      useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+
+      const { rerender } = render(
+        <ProtectedRoute>
+          <div>Dashboard</div>
+        </ProtectedRoute>,
+      )
+
+      expect(screen.getByText('Dashboard')).toBeTruthy()
+
+      // Logout: session cleared
+      useAuthMock.mockReturnValue({ loading: false, isAuthenticated: false, isConfigured: true })
+
+      act(() => {
+        rerender(
+          <ProtectedRoute>
+            <div>Dashboard</div>
+          </ProtectedRoute>,
+        )
+      })
+
+      // Shows login, not loading — authInitialized stays true
+      expect(screen.getByText('Entrar no NexusCRM')).toBeTruthy()
+      expect(screen.queryByText('Carregando NexusCRM...')).toBeNull()
+    })
   })
 })

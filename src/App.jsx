@@ -146,7 +146,7 @@ function App() {
 
   const fetchTeam = async () => {
     try {
-      const data = await fetchWorkspaceBootstrap()
+      const data = await fetchWorkspaceBootstrap(activeTenantId)
       setTeam(data.team || [])
     } catch (error) {
       console.error('Error fetching team:', error)
@@ -155,7 +155,7 @@ function App() {
 
   const fetchClients = async () => {
     try {
-      const data = await fetchWorkspaceBootstrap()
+      const data = await fetchWorkspaceBootstrap(activeTenantId)
       setClients(data.clients || [])
     } catch (error) {
       console.error('Error fetching clients:', error)
@@ -176,7 +176,7 @@ function App() {
     let cancelled = false
     setLoading(true)
 
-    fetchWorkspaceBootstrap()
+    fetchWorkspaceBootstrap(activeTenantId)
       .then((data) => {
         if (cancelled) return
         setTasks(data.tasks || [])

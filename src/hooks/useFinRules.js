@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   listFinRuleRecords,
   saveFinRuleRecord,
@@ -8,7 +8,7 @@ import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRunti
 
 export function useFinRules() {
   const visualMode = isVisualRegressionMode()
-  const fixtureRules = getVisualFixture('finRules', [])
+  const fixtureRules = useMemo(() => getVisualFixture('finRules', []), [])
   const [rules, setRules] = useState(visualMode ? fixtureRules : [])
   const [loading, setLoading] = useState(!visualMode)
 

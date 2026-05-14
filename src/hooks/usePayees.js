@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { listPayeeRecords, savePayeeRecord } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function usePayees() {
   const visualMode = isVisualRegressionMode()
-  const fixturePayees = getVisualFixture('payees', [])
+  const fixturePayees = useMemo(() => getVisualFixture('payees', []), [])
   const [payees, setPayees] = useState(visualMode ? fixturePayees : [])
   const [loading, setLoading] = useState(!visualMode)
 

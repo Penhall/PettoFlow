@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   listActivityTemplateRecords,
   saveActivityTemplateRecord,
@@ -8,7 +8,7 @@ import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRunti
 
 export function useActivityTemplates() {
   const visualMode = isVisualRegressionMode()
-  const fixtureTemplates = getVisualFixture('activityTemplates', [])
+  const fixtureTemplates = useMemo(() => getVisualFixture('activityTemplates', []), [])
   const [templates, setTemplates] = useState(visualMode ? fixtureTemplates : [])
   const [loading, setLoading] = useState(!visualMode)
 

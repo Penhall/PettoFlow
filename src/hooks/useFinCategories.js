@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   listFinCategoryRecords,
   createCategoryGroupRecord,
@@ -8,8 +8,8 @@ import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRunti
 
 export function useFinCategories() {
   const visualMode = isVisualRegressionMode()
-  const fixtureGroups = getVisualFixture('finCategoryGroups', [])
-  const fixtureCategories = getVisualFixture('finCategories', [])
+  const fixtureGroups = useMemo(() => getVisualFixture('finCategoryGroups', []), [])
+  const fixtureCategories = useMemo(() => getVisualFixture('finCategories', []), [])
   const [groups, setGroups] = useState(visualMode ? fixtureGroups : [])
   const [categories, setCategories] = useState(visualMode ? fixtureCategories : [])
   const [loading, setLoading] = useState(!visualMode)
