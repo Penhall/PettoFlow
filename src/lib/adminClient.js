@@ -34,6 +34,8 @@ export const createAdminPlan = (data) => adminFetch('/plans', { method: 'POST', 
 export const updateAdminPlan = (id, data) => adminFetch(`/plans/${id}`, { method: 'PATCH', body: data })
 export const deleteAdminPlan = (id) => adminFetch(`/plans/${id}`, { method: 'DELETE' })
 
+export const fetchAdminBilling = () => adminFetch('/billing')
+
 export const fetchAdminAudit = (filters = {}) => {
   const params = new URLSearchParams()
   if (filters.tenantId) params.set('tenant_id', filters.tenantId)

@@ -10,7 +10,8 @@ export function useActivities() {
   const visualMode = isVisualRegressionMode()
   // getVisualFixture returns a new array reference every call; memoize so
   // the useEffect dep array stays stable and doesn't loop in visual mode.
-  const fixtureActivities = useMemo(() => getVisualFixture('activities', []), [visualMode])
+  // Empty deps: the fixture data is static module-level state that never changes at runtime.
+  const fixtureActivities = useMemo(() => getVisualFixture('activities', []), [])
   const [activities, setActivities] = useState(visualMode ? fixtureActivities : [])
   const [loading, setLoading] = useState(!visualMode)
 

@@ -163,6 +163,16 @@ function App() {
   }
 
   useEffect(() => {
+    // Explicit guard: don't fetch workspace data until a tenant is confirmed.
+    // Without this, the app renders a false empty-state on first mount for users
+    // with no workspace (noActiveWorkspace path). The localStorage fallback in
+    // activeTenant.js covers the timing race, but this guard removes the
+    // dependency on timing entirely.
+    if (!activeTenantId) {
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -183,7 +193,7 @@ function App() {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [activeTenantId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -278,6 +288,9 @@ function App() {
   }, [activeTenantId, activeTab, onboardingLoading, tourStateStatus, tourStateLastStep, tourAutoPrompted])
 
   const handleTabChange = (tab) => {
+    // Close the palette synchronously so it disappears immediately rather than
+    // staying visible while the deferred tab transition is in-flight.
+    closePalette()
     if (tab !== 'settings') {
       setPendingSettingsTab(null)
     }
@@ -287,7 +300,6 @@ function App() {
       setTutorialSearchQuery('')
       setShowFilterMenu(false)
       setShowSortMenu(false)
-      closePalette()
     })
   }
 
