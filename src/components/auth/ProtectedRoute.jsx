@@ -23,8 +23,14 @@ export default function ProtectedRoute({ children }) {
   useEffect(() => {
     if (isAuthenticated) {
       everAuthenticated.current = true
+    } else if (!loading) {
+      // Auth definitively resolved to false (loading finished, no session).
+      // Clear so the login screen appears — prevents stale shell after logout
+      // or session expiry. Token-refresh transients are already suppressed in
+      // AuthContext, so this branch only runs on real auth loss.
+      everAuthenticated.current = false
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, loading])
 
   // If we've ever confirmed the user is authenticated, short-circuit
   // straight to children. No loading screen, no login redirect.

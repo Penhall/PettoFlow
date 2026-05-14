@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { runRulesEngine } from '../lib/rulesEngine'
 import {
   listTransactionRecords,
@@ -10,9 +10,12 @@ import { filterFixtureTransactions, getVisualFixture, isVisualRegressionMode } f
 
 export function useTransactions(filters = {}, rules = []) {
   const visualMode = isVisualRegressionMode()
-  const fixtureTransactions = getVisualFixture('transactions', [])
+  // getVisualFixture returns a new array reference every call; memoize so
+  // the effect dep array stays stable and doesn't loop in visual mode.
+  const fixtureTransactions = useMemo(() => getVisualFixture('transactions', []), [])
+  const filtersKey = JSON.stringify(filters)
   const [transactions, setTransactions] = useState(
-    visualMode ? filterFixtureTransactions(fixtureTransactions, filters) : []
+    visualMode ? filterFixtureTransactions(fixtureTransactions, JSON.parse(filtersKey)) : []
   )
   const [loading, setLoading] = useState(!visualMode)
   const rulesRef = useRef(rules)
@@ -21,11 +24,9 @@ export function useTransactions(filters = {}, rules = []) {
     rulesRef.current = rules
   }, [rules])
 
-  const filtersKey = JSON.stringify(filters)
-
   useEffect(() => {
     if (visualMode) {
-      setTransactions(filterFixtureTransactions(fixtureTransactions, filters))
+      setTransactions(filterFixtureTransactions(fixtureTransactions, filtersKey ? JSON.parse(filtersKey) : {}))
       setLoading(false)
       return undefined
     }
@@ -47,7 +48,7 @@ export function useTransactions(filters = {}, rules = []) {
       })
 
     return () => { cancelled = true }
-  }, [filters, filtersKey, visualMode, fixtureTransactions])
+  }, [filtersKey, visualMode, fixtureTransactions])
 
   const getSortedRules = () =>
     [...(rulesRef.current || [])].sort((left, right) =>

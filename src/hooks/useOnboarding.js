@@ -34,6 +34,9 @@ export function useOnboarding({ tenantId, enabled = true }) {
   const [error, setError] = useState(null)
   const [initializationMode, setInitializationMode] = useState('guided_seeded')
   const [seedProfile, setSeedProfile] = useState(null)
+  // Serial mutation queue: each patchState call chains onto the previous one
+  // so patches never overlap and last-write-wins is eliminated.
+  const mutationQueue = useRef(Promise.resolve(null))
 
   useEffect(() => {
     stateRef.current = state
@@ -77,19 +80,29 @@ export function useOnboarding({ tenantId, enabled = true }) {
     }
   }, [tenantId, enabled])
 
-  const patchState = async (payload) => {
-    if (!tenantId) return null
+  const patchState = (payload) => {
+    if (!tenantId) return Promise.resolve(null)
 
-    try {
-      const data = await updateOnboardingState(tenantId, payload)
-      const nextState = normalizeResponseState(data?.state)
-      setState(nextState)
-      return nextState
-    } catch (nextError) {
-      console.error('Error updating onboarding state:', nextError)
-      setError(nextError)
-      return null
-    }
+    // Chain onto the mutation queue so concurrent callers execute sequentially.
+    // Each call waits for the previous to settle before sending to the server,
+    // which prevents last-write-wins from clobbering concurrent completions.
+    const queued = mutationQueue.current.then(async () => {
+      try {
+        const data = await updateOnboardingState(tenantId, payload)
+        const nextState = normalizeResponseState(data?.state)
+        setState(nextState)
+        return nextState
+      } catch (nextError) {
+        console.error('Error updating onboarding state:', nextError)
+        setError(nextError)
+        return null
+      }
+    })
+
+    // Suppress unhandled-rejection on the queue reference itself so a failed
+    // patch doesn't surface as an uncaught error in subsequent chained calls.
+    mutationQueue.current = queued.catch(() => null)
+    return queued
   }
 
   const emitEvent = async (eventName, eventPayload = {}) => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   listReceivableRecords,
   createReceivableRecord,
@@ -8,7 +8,9 @@ import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRunti
 
 export function useReceivables() {
   const visualMode = isVisualRegressionMode()
-  const fixtureReceivables = getVisualFixture('receivables', [])
+  // getVisualFixture returns a new array reference every call; memoize so
+  // the useCallback dep array stays stable and doesn't loop in visual mode.
+  const fixtureReceivables = useMemo(() => getVisualFixture('receivables', []), [])
   const [receivables, setReceivables] = useState(visualMode ? fixtureReceivables : [])
   const [loading, setLoading] = useState(!visualMode)
 

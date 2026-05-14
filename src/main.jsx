@@ -7,6 +7,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
 import RootRouter from './RootRouter.jsx'
 import DeferredSurface from './components/shared/DeferredSurface.jsx'
 import RootErrorBoundary from './components/shared/RootErrorBoundary.jsx'
+import { VisualHarnessProviders } from './visual/VisualHarnessProviders.jsx'
 
 const VisualRegressionApp = lazy(() => import('./visual/VisualRegressionApp.jsx'))
 
@@ -22,7 +23,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <RootErrorBoundary>
         {isVisualRegressionEntry() ? (
           <Suspense fallback={<DeferredSurface label="Carregando harness visual..." />}>
-            <VisualRegressionApp />
+            <VisualHarnessProviders>
+              <VisualRegressionApp />
+            </VisualHarnessProviders>
           </Suspense>
         ) : (
           <AuthProvider>
