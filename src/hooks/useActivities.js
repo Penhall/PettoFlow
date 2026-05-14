@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   listActivityRecords,
   saveActivityRecord,
@@ -8,7 +8,9 @@ import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRunti
 
 export function useActivities() {
   const visualMode = isVisualRegressionMode()
-  const fixtureActivities = getVisualFixture('activities', [])
+  // getVisualFixture returns a new array reference every call; memoize so
+  // the useEffect dep array stays stable and doesn't loop in visual mode.
+  const fixtureActivities = useMemo(() => getVisualFixture('activities', []), [visualMode])
   const [activities, setActivities] = useState(visualMode ? fixtureActivities : [])
   const [loading, setLoading] = useState(!visualMode)
 

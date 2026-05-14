@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getOnboardingState, recordOnboardingEvent, updateOnboardingState } from '../lib/onboardingApi.js'
 import { CURRENT_ONBOARDING_VERSION } from '../lib/onboardingState.js'
 import { ONBOARDING_CHECKLIST, QUICK_ACTIONS, TUTORIAL_CATALOG } from '../lib/tutorialCatalog.js'
@@ -29,10 +29,15 @@ function normalizeResponseState(data) {
 
 export function useOnboarding({ tenantId, enabled = true }) {
   const [state, setState] = useState(buildFallbackState())
+  const stateRef = useRef(state)
   const [loading, setLoading] = useState(Boolean(enabled && tenantId))
   const [error, setError] = useState(null)
   const [initializationMode, setInitializationMode] = useState('guided_seeded')
   const [seedProfile, setSeedProfile] = useState(null)
+
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   useEffect(() => {
     if (!enabled || !tenantId) {
@@ -99,8 +104,11 @@ export function useOnboarding({ tenantId, enabled = true }) {
   }
 
   const completeChecklistItem = async (itemId, metadata = {}) => {
+    // Read stateRef.current so rapid successive calls each see the latest
+    // server-confirmed state rather than a stale closure snapshot.
+    const current = stateRef.current
     const nextItems = {
-      ...(state.checklistState?.items || {}),
+      ...(current.checklistState?.items || {}),
       [itemId]: {
         completed: true,
         completedAt: new Date().toISOString(),
@@ -109,7 +117,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
     }
 
     const nextChecklistState = {
-      ...(state.checklistState || {}),
+      ...(current.checklistState || {}),
       items: nextItems,
     }
 
@@ -119,8 +127,9 @@ export function useOnboarding({ tenantId, enabled = true }) {
   }
 
   const dismissSurface = async ({ scope, reason = 'manual_close' }) => {
+    const current = stateRef.current
     const nextDismissState = {
-      ...(state.dismissState || {}),
+      ...(current.dismissState || {}),
       [scope]: {
         dismissed: true,
         dismissed_at: new Date().toISOString(),
@@ -133,9 +142,10 @@ export function useOnboarding({ tenantId, enabled = true }) {
   }
 
   const markTutorialOpened = async (tutorialId) => {
-    const opened = Array.from(new Set([...(state.tutorialState?.opened || []), tutorialId]))
+    const current = stateRef.current
+    const opened = Array.from(new Set([...(current.tutorialState?.opened || []), tutorialId]))
     const nextTutorialState = {
-      ...(state.tutorialState || {}),
+      ...(current.tutorialState || {}),
       opened,
     }
 
@@ -145,10 +155,11 @@ export function useOnboarding({ tenantId, enabled = true }) {
   }
 
   const markTutorialCompleted = async (tutorialId) => {
-    const opened = Array.from(new Set([...(state.tutorialState?.opened || []), tutorialId]))
-    const completed = Array.from(new Set([...(state.tutorialState?.completed || []), tutorialId]))
+    const current = stateRef.current
+    const opened = Array.from(new Set([...(current.tutorialState?.opened || []), tutorialId]))
+    const completed = Array.from(new Set([...(current.tutorialState?.completed || []), tutorialId]))
     const nextTutorialState = {
-      ...(state.tutorialState || {}),
+      ...(current.tutorialState || {}),
       opened,
       completed,
     }

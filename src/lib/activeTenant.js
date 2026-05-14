@@ -33,7 +33,12 @@ export function createTenantRequiredError() {
 }
 
 export function getRequiredActiveTenantId() {
-  const tenantId = currentActiveTenantId
+  // Prefer the runtime variable set by TenantContext's effect.
+  // Fall back to localStorage so the initial workspace fetch succeeds even
+  // when React runs App's effect before TenantContext's effect (child-before-parent
+  // effect order in React 18). localStorage is written synchronously during
+  // TenantContext's async loadTenants() before any re-render occurs.
+  const tenantId = currentActiveTenantId || getStoredActiveTenantId()
   if (!tenantId) {
     throw createTenantRequiredError()
   }

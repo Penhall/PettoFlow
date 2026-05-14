@@ -7,7 +7,8 @@ export function useCommandPalette(tasks, clients, activities) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      const isMac = navigator.platform.toUpperCase().includes('MAC')
+      const platform = navigator.userAgentData?.platform ?? navigator.platform ?? ''
+      const isMac = platform.toUpperCase().includes('MAC')
       const trigger = isMac ? e.metaKey && e.key === 'k' : e.ctrlKey && e.key === 'k'
       if (trigger) {
         e.preventDefault()

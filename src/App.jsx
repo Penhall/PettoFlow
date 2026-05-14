@@ -1,4 +1,4 @@
-import { Suspense, startTransition, useEffect, useMemo, useState } from 'react'
+import { Suspense, startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import OnboardingPanel from './components/onboarding/OnboardingPanel.jsx'
 import OnboardingTour from './components/onboarding/OnboardingTour.jsx'
@@ -144,21 +144,6 @@ function App() {
   } = useCommandPalette(tasks, clients, activities)
   const { createReceivable, listReceivables } = useReceivables()
 
-  const fetchWorkspaceData = async () => {
-    setLoading(true)
-    try {
-      const data = await fetchWorkspaceBootstrap()
-      setTasks(data.tasks || [])
-      setTeam(data.team || [])
-      setClients(data.clients || [])
-      setColumns(data.columns || [])
-    } catch (error) {
-      console.error('Error fetching workspace data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const fetchTeam = async () => {
     try {
       const data = await fetchWorkspaceBootstrap()
@@ -178,7 +163,26 @@ function App() {
   }
 
   useEffect(() => {
-    fetchWorkspaceData()
+    let cancelled = false
+    setLoading(true)
+
+    fetchWorkspaceBootstrap()
+      .then((data) => {
+        if (cancelled) return
+        setTasks(data.tasks || [])
+        setTeam(data.team || [])
+        setClients(data.clients || [])
+        setColumns(data.columns || [])
+      })
+      .catch((error) => {
+        if (cancelled) return
+        console.error('Error fetching workspace data:', error)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -241,27 +245,37 @@ function App() {
 
   const noActiveWorkspace = !activeTenantId && !loading
 
+  // Stable ref so the effect callback always sees the latest onboarding methods
+  // without listing the entire object (which changes every render) as a dep.
+  const onboardingRef = useRef(onboarding)
+  useEffect(() => { onboardingRef.current = onboarding })
+
+  const onboardingLoading = onboarding.loading
+  const tourStateStatus = onboarding.state.tourState?.status
+  const tourStateLastStep = onboarding.state.tourState?.last_step
+
   useEffect(() => {
-    if (!activeTenantId || onboarding.loading || tourAutoPrompted) return
+    if (!activeTenantId || onboardingLoading || tourAutoPrompted) return
     if (activeTab !== 'dashboard') return
 
-    const status = onboarding.state.tourState?.status || 'not_started'
-    const lastStep = Number(onboarding.state.tourState?.last_step || 0)
+    const status = tourStateStatus || 'not_started'
+    const lastStep = Number(tourStateLastStep || 0)
 
     if (status === 'not_started') {
       setTourStepIndex(lastStep)
       setTourOpen(true)
       setTourAutoPrompted(true)
-      void onboarding.updateTourState(
+      const ob = onboardingRef.current
+      void ob.updateTourState(
         {
-          ...onboarding.state.tourState,
+          ...ob.state.tourState,
           status: 'in_progress',
           last_step: lastStep,
         },
         'tour_started'
       )
     }
-  }, [activeTenantId, activeTab, onboarding, tourAutoPrompted])
+  }, [activeTenantId, activeTab, onboardingLoading, tourStateStatus, tourStateLastStep, tourAutoPrompted])
 
   const handleTabChange = (tab) => {
     if (tab !== 'settings') {
@@ -318,17 +332,21 @@ function App() {
 
   const handleTourComplete = async () => {
     setTourOpen(false)
-    await onboarding.updateTourState(
-      {
-        ...onboarding.state.tourState,
-        status: 'completed',
-        last_step: tourStepIndex,
-      },
-      'tour_completed'
-    )
+    try {
+      await onboarding.updateTourState(
+        {
+          ...onboarding.state.tourState,
+          status: 'completed',
+          last_step: tourStepIndex,
+        },
+        'tour_completed'
+      )
 
-    if (!onboarding.checklist.find((item) => item.id === 'review-workspace')?.completed) {
-      await onboarding.completeChecklistItem('review-workspace', { source: 'tour' })
+      if (!onboarding.checklist.find((item) => item.id === 'review-workspace')?.completed) {
+        await onboarding.completeChecklistItem('review-workspace', { source: 'tour' })
+      }
+    } catch (error) {
+      console.error('Error completing tour:', error)
     }
   }
 
