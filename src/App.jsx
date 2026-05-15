@@ -18,10 +18,11 @@ import { useAuth } from './hooks/useAuth.js'
 import { useCommandPalette } from './hooks/useCommandPalette'
 import { useOnboarding } from './hooks/useOnboarding.js'
 import { useReceivables } from './hooks/useReceivables'
+import { useRuntimeOrchestration } from './hooks/useRuntimeOrchestration.js'
 import { useTenant } from './hooks/useTenant.js'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
-import { traceAsync, traceAsyncFailure, traceBootstrap, traceRouteTransition } from './lib/diagnostics.js'
+import { traceAsync, traceAsyncFailure, traceBootstrap, traceRouteTransition, traceTransitionConflict } from './lib/diagnostics.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import {
@@ -146,6 +147,16 @@ function App() {
     results,
   } = useCommandPalette(tasks, clients, activities)
   const { createReceivable, listReceivables } = useReceivables({ tenantId: activeTenantId })
+  const {
+    cancelWorkspaceLoad,
+    completeTransition,
+    failWorkspaceLoad,
+    interruptTransition,
+    resolveWorkspaceLoad,
+    startRetry,
+    startTransition: startRuntimeTransition,
+    startWorkspaceLoad,
+  } = useRuntimeOrchestration()
   const previousTabRef = useRef(activeTab)
   const pendingRouteTransitionRef = useRef(null)
   const activeTenantIdRef = useRef(activeTenantId)
@@ -164,7 +175,13 @@ function App() {
 
     const pendingTransition = pendingRouteTransitionRef.current
     if (pendingTransition) {
+      traceTransitionConflict('route', pendingTransition, {
+        from: activeTab,
+        to: activeTab,
+        source: 'tenant-change-cleanup',
+      })
       traceRouteTransition(pendingTransition.from, pendingTransition.to, 'interrupted')
+      interruptTransition('route', pendingTransition)
       pendingRouteTransitionRef.current = null
     }
 
@@ -180,7 +197,7 @@ function App() {
     setMobileSidebarOpen(false)
     setTourOpen(false)
     setTourAutoPrompted(false)
-  }, [activeTenantId, closePalette])
+  }, [activeTab, activeTenantId, closePalette, interruptTransition])
 
   const runScopedWorkspaceRefresh = async (scope, tenantId, commit) => {
     if (!tenantId) {
@@ -266,10 +283,19 @@ function App() {
     if (!activeTenantId) {
       setBootstrapError(null)
       setLoading(false)
+      completeTransition('tenant', {
+        reason: 'no-active-tenant',
+      })
       return undefined
     }
 
     let cancelled = false
+    let settled = false
+    const workspaceRequestId = startWorkspaceLoad(
+      activeTenantId,
+      bootstrapRetryKey > 0 ? 'retry-bootstrap' : 'tenant-bootstrap',
+      null,
+    )
     setLoading(true)
     setBootstrapError(null)
     traceBootstrap('start', activeTenantId)
@@ -282,12 +308,30 @@ function App() {
         setClients(data.clients || [])
         setColumns(data.columns || [])
         setBootstrapError(null)
+        resolveWorkspaceLoad(workspaceRequestId, activeTenantId, {
+          tasks: data.tasks?.length ?? 0,
+          team: data.team?.length ?? 0,
+          clients: data.clients?.length ?? 0,
+        })
+        settled = true
+        completeTransition('tenant', {
+          tenantId: activeTenantId,
+          reason: 'workspace-ready',
+        })
         traceBootstrap('ready', activeTenantId)
       })
       .catch((error) => {
         if (cancelled) return
         console.error('Error fetching workspace data:', error)
         setBootstrapError(error)
+        failWorkspaceLoad(workspaceRequestId, activeTenantId, error, {
+          stage: 'app-bootstrap',
+        })
+        settled = true
+        interruptTransition('tenant', {
+          tenantId: activeTenantId,
+          reason: 'workspace-error',
+        })
         traceBootstrap('error', activeTenantId, error.message)
         traceAsyncFailure('bootstrap-failure', error, { stage: 'app-bootstrap', tenantId: activeTenantId })
       })
@@ -296,10 +340,24 @@ function App() {
       })
 
     return () => {
-      traceBootstrap('cancelled', activeTenantId)
+      if (!settled) {
+        traceBootstrap('cancelled', activeTenantId)
+        cancelWorkspaceLoad(workspaceRequestId, activeTenantId, {
+          stage: 'app-bootstrap.cleanup',
+        })
+      }
       cancelled = true
     }
-  }, [activeTenantId, bootstrapRetryKey])
+  }, [
+    activeTenantId,
+    bootstrapRetryKey,
+    cancelWorkspaceLoad,
+    completeTransition,
+    failWorkspaceLoad,
+    interruptTransition,
+    resolveWorkspaceLoad,
+    startWorkspaceLoad,
+  ])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -398,13 +456,19 @@ function App() {
       const pendingTransition = pendingRouteTransitionRef.current
       if (pendingTransition && pendingTransition.to === activeTab) {
         traceRouteTransition(pendingTransition.from, pendingTransition.to, 'complete')
+        completeTransition('route', pendingTransition)
         pendingRouteTransitionRef.current = null
       } else {
         traceRouteTransition(previousTabRef.current, activeTab, 'complete')
+        completeTransition('route', {
+          from: previousTabRef.current,
+          to: activeTab,
+          reason: 'state-sync',
+        })
       }
       previousTabRef.current = activeTab
     }
-  }, [activeTab])
+  }, [activeTab, completeTransition])
 
   const handleTabChange = (tab) => {
     // Close the palette synchronously so it disappears immediately rather than
@@ -415,10 +479,21 @@ function App() {
     }
     const pendingTransition = pendingRouteTransitionRef.current
     if (pendingTransition && pendingTransition.to !== activeTab) {
+      traceTransitionConflict('route', pendingTransition, {
+        from: activeTab,
+        to: tab,
+        source: 'tab-change',
+      })
       traceRouteTransition(pendingTransition.from, pendingTransition.to, 'interrupted')
+      interruptTransition('route', pendingTransition)
     }
     pendingRouteTransitionRef.current = { from: activeTab, to: tab }
     traceRouteTransition(activeTab, tab, 'start')
+    startRuntimeTransition('route', {
+      from: activeTab,
+      to: tab,
+      detail: { source: 'tab-change' },
+    })
     startTransition(() => {
       setActiveTab(tab)
       setSearchQuery('')
@@ -624,6 +699,10 @@ function App() {
 
   const retryBootstrap = () => {
     traceBootstrap('retry', activeTenantId)
+    startRetry('workspace', {
+      tenantId: activeTenantId,
+      reason: 'app-retry-button',
+    })
     setBootstrapRetryKey((current) => current + 1)
   }
 

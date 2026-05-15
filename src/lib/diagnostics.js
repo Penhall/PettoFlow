@@ -150,3 +150,27 @@ export function traceRouteTransition(from, to, phase) {
   const phases = { start: 'START', complete: 'COMPLETE', suspended: 'SUSPENDED', interrupted: 'INTERRUPTED', error: 'ERROR' }
   console.debug(tag('route-transition'), phases[phase] ?? phase, `${from} -> ${to}`)
 }
+
+export function traceOrchestrationTransition(from, to, reason, detail = null) {
+  recordEvent('orchestration-transition', { from, to, reason, detail })
+  if (!isEnabled()) return
+  console.debug(tag('orchestration'), `${from} -> ${to}`, reason, detail ?? '')
+}
+
+export function traceRetryLifecycle(scope, phase, detail = null) {
+  recordEvent('orchestration-retry', { scope, phase, detail })
+  if (!isEnabled()) return
+  console.debug(tag('retry'), scope, phase, detail ?? '')
+}
+
+export function traceTransitionConflict(kind, active, next) {
+  recordEvent('orchestration-conflict', { transitionKind: kind, active, next })
+  if (!isEnabled()) return
+  console.warn(tag('orchestration-conflict'), kind, active, next)
+}
+
+export function traceCancellation(label, detail = null) {
+  recordEvent('orchestration-cancel', { label, detail })
+  if (!isEnabled()) return
+  console.debug(tag('cancel'), label, detail ?? '')
+}

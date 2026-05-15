@@ -50,6 +50,7 @@ test('mounted stress: repeated tenant switching survives inside one runtime tree
   }
 
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.__NEXUS_RUNTIME_PHASE__)).toBe('APP_READY')
 })
 
 test('mounted stress: auth loss and recovery happen without full page reload', async ({ page }) => {
@@ -60,6 +61,7 @@ test('mounted stress: auth loss and recovery happen without full page reload', a
 
   await expect(page.locator('.sidebar-rail')).toBeVisible()
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.__NEXUS_RUNTIME_PHASE__)).toBe('APP_READY')
 })
 
 test('mounted stress: rapid route transitions survive inside the mounted app', async ({ page }) => {
@@ -126,6 +128,7 @@ test('mounted stress: bootstrap retry storms recover once the backend stabilizes
 
   await expect(page.locator('.sidebar-rail')).toBeVisible()
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.__NEXUS_RUNTIME_PHASE__)).toBe('APP_READY')
 })
 
 test('mounted stress: concurrent startup interruptions do not leave stale shell state behind', async ({ page }) => {
@@ -140,6 +143,16 @@ test('mounted stress: concurrent startup interruptions do not leave stale shell 
 
   await expect(page.locator('.sidebar-rail__workspace')).toContainText('Boreal Ops', { timeout: 5000 })
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.__NEXUS_RUNTIME_PHASE__)).toBe('APP_READY')
+})
+
+test('mounted stress: auth invalidation during lazy transition returns runtime to BOOTSTRAP_IDLE', async ({ page }) => {
+  await navigateTo(page, /finan/i)
+  await emitAuth(page, 'SIGNED_OUT', null)
+
+  await expect(page.locator('body')).toContainText('Entrar no NexusCRM')
+  await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.__NEXUS_RUNTIME_PHASE__)).toBe('BOOTSTRAP_IDLE')
 })
 
 test('mounted stress: stale team refresh does not commit across tenant switching', async ({ page }) => {

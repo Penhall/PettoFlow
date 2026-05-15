@@ -3,6 +3,7 @@ import App from './App.jsx'
 import AdminRoute from './admin/AdminRoute.jsx'
 import TenantGate from './components/tenant/TenantGate.jsx'
 import { TenantProvider } from './context/TenantContext.jsx'
+import { useRuntimeOrchestration } from './hooks/useRuntimeOrchestration.js'
 
 function getCurrentRoute() {
   if (typeof window === 'undefined') return 'app'
@@ -21,12 +22,17 @@ function TenantAppRoute() {
 
 export default function RootRouter() {
   const [route, setRoute] = useState(getCurrentRoute())
+  const { syncRoute } = useRuntimeOrchestration()
 
   useEffect(() => {
     const handleHashChange = () => setRoute(getCurrentRoute())
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
+
+  useEffect(() => {
+    syncRoute(route)
+  }, [route, syncRoute])
 
   if (route === 'admin') {
     return <AdminRoute />

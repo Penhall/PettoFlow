@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import './index.css'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { RuntimeOrchestrationProvider } from './context/RuntimeOrchestrationContext.jsx'
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
 import RootRouter from './RootRouter.jsx'
 import DeferredSurface from './components/shared/DeferredSurface.jsx'
@@ -29,6 +30,10 @@ function isRuntimeHarnessEntry() {
   return new URL(window.location.href).searchParams.get('runtime-harness') === '1'
 }
 
+if (import.meta.env.DEV && typeof window !== 'undefined' && window.__NEXUS_STRICT_OWNERSHIP__ === undefined) {
+  window.__NEXUS_STRICT_OWNERSHIP__ = true
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
@@ -47,9 +52,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           </Suspense>
         ) : (
           <AuthProvider>
-            <ProtectedRoute>
-              <RootRouter />
-            </ProtectedRoute>
+            <RuntimeOrchestrationProvider>
+              <ProtectedRoute>
+                <RootRouter />
+              </ProtectedRoute>
+            </RuntimeOrchestrationProvider>
           </AuthProvider>
         )}
       </RootErrorBoundary>

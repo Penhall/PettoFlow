@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
+import { useRuntimeOrchestration } from '../hooks/useRuntimeOrchestration.js'
 import { TenantContext } from './tenantContext.js'
 import { createTenant, listMyTenants } from '../lib/tenantApi.js'
 import { acceptInvitation } from '../lib/memberApi.js'
@@ -54,6 +55,16 @@ function clearInvitationToken() {
 
 export function TenantProvider({ children }) {
   const { isAuthenticated } = useAuth()
+  const {
+    cancelTenantLoad,
+    completeTransition,
+    failTenantLoad,
+    resolveTenantLoad,
+    setActiveTenant: syncActiveTenant,
+    startRetry,
+    startTenantLoad,
+    startTransition,
+  } = useRuntimeOrchestration()
   const [tenants, setTenants] = useState([])
   const [activeTenantId, setActiveTenantIdState] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -62,7 +73,16 @@ export function TenantProvider({ children }) {
   useEffect(() => {
     setRuntimeActiveTenantId(activeTenantId)
     traceTenant('active-tenant-changed', activeTenantId)
-  }, [activeTenantId])
+    syncActiveTenant(activeTenantId, {
+      source: 'tenant-context',
+      hasTenant: tenants.length > 0,
+    })
+    if (!activeTenantId) {
+      completeTransition('tenant', {
+        reason: 'no-active-tenant',
+      })
+    }
+  }, [activeTenantId, completeTransition, syncActiveTenant, tenants.length])
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -76,6 +96,10 @@ export function TenantProvider({ children }) {
     }
 
     let active = true
+    let settled = false
+    const requestId = startTenantLoad('auth-state-bootstrap', {
+      authenticated: true,
+    })
 
     async function loadTenants() {
       setLoading(true)
@@ -103,12 +127,23 @@ export function TenantProvider({ children }) {
           setStoredActiveTenantId(nextActiveTenantId)
         }
 
+        resolveTenantLoad(requestId, {
+          activeTenantId: nextActiveTenantId,
+          hasTenant: nextTenants.length > 0,
+          tenantCount: nextTenants.length,
+        })
+        settled = true
+
         traceBootstrap('ready', nextActiveTenantId, `${nextTenants.length} tenant(s)`)
       } catch (loadError) {
         if (!active) return
         setTenants([])
         setActiveTenantIdState(null)
         setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
+        failTenantLoad(requestId, loadError, {
+          stage: 'tenant-context.load-tenants',
+        })
+        settled = true
         traceBootstrap('error', null, loadError?.message)
         traceAsyncFailure('bootstrap-failure', loadError, { stage: 'tenant-context.load-tenants' })
       } finally {
@@ -119,9 +154,14 @@ export function TenantProvider({ children }) {
     loadTenants()
 
     return () => {
+      if (!settled) {
+        cancelTenantLoad(requestId, {
+          stage: 'tenant-context.load-tenants.cleanup',
+        })
+      }
       active = false
     }
-  }, [isAuthenticated])
+  }, [cancelTenantLoad, failTenantLoad, isAuthenticated, resolveTenantLoad, startTenantLoad])
 
   async function refreshTenants() {
     if (!isAuthenticated) {
@@ -133,6 +173,13 @@ export function TenantProvider({ children }) {
 
     setLoading(true)
     setError(null)
+    startRetry('tenant', {
+      reason: 'manual-refresh',
+      tenantId: activeTenantId,
+    })
+    const requestId = startTenantLoad('manual-refresh', {
+      activeTenantId,
+    })
 
     try {
       const records = await listMyTenants()
@@ -145,11 +192,19 @@ export function TenantProvider({ children }) {
       setTenants(nextTenants)
       setActiveTenantIdState(nextActiveTenantId)
       setStoredActiveTenantId(nextActiveTenantId)
+      resolveTenantLoad(requestId, {
+        activeTenantId: nextActiveTenantId,
+        hasTenant: nextTenants.length > 0,
+        tenantCount: nextTenants.length,
+      })
       return nextTenants
     } catch (loadError) {
       setTenants([])
       setActiveTenantIdState(null)
       setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
+      failTenantLoad(requestId, loadError, {
+        stage: 'tenant-context.refresh-tenants',
+      })
       traceAsyncFailure('bootstrap-failure', loadError, { stage: 'tenant-context.refresh-tenants' })
       throw loadError
     } finally {
@@ -184,6 +239,11 @@ export function TenantProvider({ children }) {
       return
     }
 
+    startTransition('tenant', {
+      from: activeTenantId ?? 'none',
+      to: nextTenantId,
+      detail: { source: 'tenant-switcher' },
+    })
     setError(null)
     setActiveTenantIdState(nextTenantId)
     setStoredActiveTenantId(nextTenantId)

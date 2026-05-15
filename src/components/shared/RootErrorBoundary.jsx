@@ -1,5 +1,5 @@
 import { Component, Fragment } from 'react'
-import { traceAsyncFailure } from '../../lib/diagnostics.js'
+import { traceAsyncFailure, traceRetryLifecycle } from '../../lib/diagnostics.js'
 
 const isDev = import.meta.env.DEV
 const MAX_RETRIES = 3
@@ -66,14 +66,27 @@ export default class RootErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('[RootErrorBoundary] Shell-level crash caught:', error, info?.componentStack ?? '')
+    traceAsyncFailure('transition-failure', error, {
+      component: 'RootErrorBoundary',
+      runtimePhase: typeof window !== 'undefined' ? window.__NEXUS_RUNTIME_PHASE__ ?? null : null,
+      componentStack: info?.componentStack ?? null,
+    })
   }
 
   handleReset() {
     const { retryCount } = this.state
     if (retryCount >= MAX_RETRIES) {
+      traceRetryLifecycle('root-error-boundary', 'reload', {
+        retryCount,
+        runtimePhase: typeof window !== 'undefined' ? window.__NEXUS_RUNTIME_PHASE__ ?? null : null,
+      })
       window.location.reload()
       return
     }
+    traceRetryLifecycle('root-error-boundary', 'retry', {
+      retryCount,
+      runtimePhase: typeof window !== 'undefined' ? window.__NEXUS_RUNTIME_PHASE__ ?? null : null,
+    })
     // Increment retryCount — the key change on Fragment forces a full unmount
     // and remount of children, giving them a clean slate rather than re-throwing
     // immediately from the same component instance.

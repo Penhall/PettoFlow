@@ -41,6 +41,15 @@ test('production runtime: successful auth hydration mounts the real app shell', 
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
 })
 
+test('production runtime: strict ownership is enabled by default in dev runtime paths', async ({ page }) => {
+  await page.goto(RT())
+  await page.waitForLoadState('networkidle')
+
+  const strictOwnershipEnabled = await page.evaluate(() => window.__NEXUS_STRICT_OWNERSHIP__ === true)
+
+  expect(strictOwnershipEnabled).toBe(true)
+})
+
 test('production runtime: delayed auth hydration shows loading before resolving', async ({ page }) => {
   await page.goto(RT('delayed-auth'), { waitUntil: 'commit' })
 
@@ -95,6 +104,23 @@ test('production runtime: startup can target a lazy tab and keep the shell stabl
   await expect(page.locator('.sidebar-rail')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('.topbar-shell')).toBeVisible()
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+})
+
+test('production runtime: orchestration phases converge to APP_READY after startup', async ({ page }) => {
+  await page.goto(RT('bootstrap-delayed'), { waitUntil: 'commit' })
+  await page.waitForLoadState('networkidle')
+  await expect.poll(() => page.evaluate(() => window.__NEXUS_RUNTIME_PHASE__)).toBe('APP_READY')
+
+  const orchestrationPhases = await page.evaluate(() =>
+    (window.__NEXUS_DIAG_EVENTS__ || [])
+      .filter((event) => event.kind === 'orchestration-transition')
+      .map((event) => event.to),
+  )
+
+  expect(orchestrationPhases).toContain('AUTH_HYDRATING')
+  expect(orchestrationPhases).toContain('TENANT_LOADING')
+  expect(orchestrationPhases).toContain('WORKSPACE_LOADING')
+  expect(orchestrationPhases.at(-1)).toBe('APP_READY')
 })
 
 test('production runtime: strict ownership mode navigates without implicit workspace-core fallback', async ({ page }) => {

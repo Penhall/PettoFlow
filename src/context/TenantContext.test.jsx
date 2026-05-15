@@ -5,12 +5,17 @@ import { TenantProvider } from './TenantContext.jsx'
 import { useTenant } from '../hooks/useTenant.js'
 
 const useAuthMock = vi.fn()
+const useRuntimeOrchestrationMock = vi.fn()
 const listMyTenantsMock = vi.fn()
 const createTenantMock = vi.fn()
 const acceptInvitationMock = vi.fn()
 
 vi.mock('../hooks/useAuth.js', () => ({
   useAuth: () => useAuthMock(),
+}))
+
+vi.mock('../hooks/useRuntimeOrchestration.js', () => ({
+  useRuntimeOrchestration: () => useRuntimeOrchestrationMock(),
 }))
 
 vi.mock('../lib/tenantApi.js', () => ({
@@ -53,6 +58,16 @@ describe('TenantProvider', () => {
     window.localStorage.clear()
     window.history.replaceState({}, '', '/')
     useAuthMock.mockReturnValue({ isAuthenticated: true })
+    useRuntimeOrchestrationMock.mockReturnValue({
+      cancelTenantLoad: () => {},
+      completeTransition: () => {},
+      failTenantLoad: () => {},
+      resolveTenantLoad: () => {},
+      setActiveTenant: () => {},
+      startRetry: () => {},
+      startTenantLoad: () => 1,
+      startTransition: () => {},
+    })
   })
 
   it('mantem usuario autenticado sem tenant no fluxo de onboarding', async () => {

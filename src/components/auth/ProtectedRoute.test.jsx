@@ -3,9 +3,14 @@ import { describe, expect, it, vi } from 'vitest'
 import ProtectedRoute from './ProtectedRoute.jsx'
 
 const useAuthMock = vi.fn()
+const useRuntimeOrchestrationMock = vi.fn()
 
 vi.mock('../../hooks/useAuth.js', () => ({
   useAuth: () => useAuthMock(),
+}))
+
+vi.mock('../../hooks/useRuntimeOrchestration.js', () => ({
+  useRuntimeOrchestration: () => useRuntimeOrchestrationMock(),
 }))
 
 describe('ProtectedRoute', () => {
@@ -15,6 +20,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: false,
       isConfigured: true,
     })
+    useRuntimeOrchestrationMock.mockReturnValue({ phase: 'AUTH_HYDRATING' })
 
     render(
       <ProtectedRoute>
@@ -31,6 +37,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: false,
       isConfigured: true,
     })
+    useRuntimeOrchestrationMock.mockReturnValue({ phase: 'BOOTSTRAP_IDLE' })
 
     render(
       <ProtectedRoute>
@@ -47,6 +54,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: true,
       isConfigured: true,
     })
+    useRuntimeOrchestrationMock.mockReturnValue({ phase: 'APP_READY' })
 
     render(
       <ProtectedRoute>
@@ -63,6 +71,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: false,
       isConfigured: false,
     })
+    useRuntimeOrchestrationMock.mockReturnValue({ phase: 'BOOTSTRAP_IDLE' })
 
     render(
       <ProtectedRoute>
@@ -70,13 +79,14 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>,
     )
 
-    expect(screen.getByText('Configuração incompleta')).toBeTruthy()
+    expect(screen.getByText('Configuracao incompleta')).toBeTruthy()
   })
 
   describe('auth state transitions (rerender-driven)', () => {
     it('auth loss after authentication shows login — state change triggers rerender', () => {
       // Start authenticated
       useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'APP_READY' })
 
       const { rerender } = render(
         <ProtectedRoute>
@@ -88,6 +98,7 @@ describe('ProtectedRoute', () => {
 
       // Auth is lost — isAuthenticated flips to false (real logout/expiry)
       useAuthMock.mockReturnValue({ loading: false, isAuthenticated: false, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'BOOTSTRAP_IDLE' })
 
       act(() => {
         rerender(
@@ -104,6 +115,7 @@ describe('ProtectedRoute', () => {
 
     it('initial loading then authenticated shows children without flash', () => {
       useAuthMock.mockReturnValue({ loading: true, isAuthenticated: false, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'AUTH_HYDRATING' })
 
       const { rerender } = render(
         <ProtectedRoute>
@@ -115,6 +127,7 @@ describe('ProtectedRoute', () => {
 
       // Auth resolves
       useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'APP_READY' })
 
       act(() => {
         rerender(
@@ -131,6 +144,7 @@ describe('ProtectedRoute', () => {
     it('subsequent auth resolution does not re-show loading screen', () => {
       // Already authenticated
       useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'APP_READY' })
 
       const { rerender } = render(
         <ProtectedRoute>
@@ -144,6 +158,7 @@ describe('ProtectedRoute', () => {
       // In practice AuthContext prevents this, but the component must be robust.
       // authInitialized is already true so loading: true is ignored.
       useAuthMock.mockReturnValue({ loading: true, isAuthenticated: true, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'APP_READY' })
 
       act(() => {
         rerender(
@@ -160,6 +175,7 @@ describe('ProtectedRoute', () => {
 
     it('logout flow: authenticated → unauthenticated shows login, not loading', () => {
       useAuthMock.mockReturnValue({ loading: false, isAuthenticated: true, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'APP_READY' })
 
       const { rerender } = render(
         <ProtectedRoute>
@@ -171,6 +187,7 @@ describe('ProtectedRoute', () => {
 
       // Logout: session cleared
       useAuthMock.mockReturnValue({ loading: false, isAuthenticated: false, isConfigured: true })
+      useRuntimeOrchestrationMock.mockReturnValue({ phase: 'BOOTSTRAP_IDLE' })
 
       act(() => {
         rerender(

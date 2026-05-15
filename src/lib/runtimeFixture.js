@@ -359,6 +359,9 @@ export function initializeRuntimeFixture() {
   if (!isRuntimeFixtureMode()) return null
   const targetWindow = getControllerWindow()
   if (!targetWindow) return null
+  if (targetWindow.__NEXUS_STRICT_OWNERSHIP__ === undefined) {
+    targetWindow.__NEXUS_STRICT_OWNERSHIP__ = true
+  }
   const state = ensureState()
   syncStoredActiveTenantId(state.tenantList.items[0]?.id ?? null)
   if (!targetWindow[RUNTIME_FIXTURE_KEY]) {

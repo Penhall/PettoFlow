@@ -3,6 +3,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute.jsx'
 import TenantGate from '../components/tenant/TenantGate.jsx'
 import App from '../App.jsx'
 import { AuthContext } from '../context/authContext.js'
+import { RuntimeOrchestrationProvider } from '../context/RuntimeOrchestrationContext.jsx'
 import { TenantContext } from '../context/tenantContext.js'
 import { lazyWithRetry } from '../lib/lazyWithRetry.js'
 import { FIXTURE_AUTH_VALUE, FIXTURE_TENANT_VALUE } from './harnessFixtures.js'
@@ -91,15 +92,15 @@ function AppTopologyShell({ authValue, tenantValue }) {
   return (
     <div data-testid="app-topology-harness">
       <AuthContext.Provider value={authValue}>
-        <ProtectedRoute>
-          <TenantContext.Provider value={tenantValue}>
-            <TenantGate>
-              <div key={tenantValue.activeTenantId ?? 'no-tenant'}>
+        <RuntimeOrchestrationProvider>
+          <ProtectedRoute>
+            <TenantContext.Provider value={tenantValue}>
+              <TenantGate>
                 <App />
-              </div>
-            </TenantGate>
-          </TenantContext.Provider>
-        </ProtectedRoute>
+              </TenantGate>
+            </TenantContext.Provider>
+          </ProtectedRoute>
+        </RuntimeOrchestrationProvider>
       </AuthContext.Provider>
     </div>
   )
@@ -127,13 +128,15 @@ export default function RuntimeHarnessApp() {
   if (mode === 'unauthenticated') {
     return (
       <AuthContext.Provider value={UNAUTHENTICATED_FIXTURE}>
-        <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>
-          <ProtectedRoute>
-            <div id="runtime-topology-root">
-              Runtime topology: ProtectedRoute resolved to children.
-            </div>
-          </ProtectedRoute>
-        </TenantContext.Provider>
+        <RuntimeOrchestrationProvider>
+          <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>
+            <ProtectedRoute>
+              <div id="runtime-topology-root">
+                Runtime topology: ProtectedRoute resolved to children.
+              </div>
+            </ProtectedRoute>
+          </TenantContext.Provider>
+        </RuntimeOrchestrationProvider>
       </AuthContext.Provider>
     )
   }
@@ -141,13 +144,15 @@ export default function RuntimeHarnessApp() {
   if (mode === 'authenticated') {
     return (
       <AuthContext.Provider value={FIXTURE_AUTH_VALUE}>
-        <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>
-          <ProtectedRoute>
-            <div id="runtime-topology-root">
-              Runtime topology: ProtectedRoute resolved to children.
-            </div>
-          </ProtectedRoute>
-        </TenantContext.Provider>
+        <RuntimeOrchestrationProvider>
+          <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>
+            <ProtectedRoute>
+              <div id="runtime-topology-root">
+                Runtime topology: ProtectedRoute resolved to children.
+              </div>
+            </ProtectedRoute>
+          </TenantContext.Provider>
+        </RuntimeOrchestrationProvider>
       </AuthContext.Provider>
     )
   }
@@ -190,13 +195,15 @@ export default function RuntimeHarnessApp() {
 
   return (
     <AuthContext.Provider value={FIXTURE_AUTH_VALUE}>
-      <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>
-        <ProtectedRoute>
-          <div id="runtime-topology-root">
-            Runtime topology: ProtectedRoute resolved to children.
-          </div>
-        </ProtectedRoute>
-      </TenantContext.Provider>
+      <RuntimeOrchestrationProvider>
+        <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>
+          <ProtectedRoute>
+            <div id="runtime-topology-root">
+              Runtime topology: ProtectedRoute resolved to children.
+            </div>
+          </ProtectedRoute>
+        </TenantContext.Provider>
+      </RuntimeOrchestrationProvider>
     </AuthContext.Provider>
   )
 }
