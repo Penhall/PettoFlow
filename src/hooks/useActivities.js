@@ -6,7 +6,7 @@ import {
 } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useActivities() {
+export function useActivities({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   // getVisualFixture returns a new array reference every call; memoize so
   // the useEffect dep array stays stable and doesn't loop in visual mode.
@@ -25,7 +25,7 @@ export function useActivities() {
     let cancelled = false
     setLoading(true)
 
-    listActivityRecords()
+    listActivityRecords(tenantId)
       .then((data) => {
         if (cancelled) return
         setActivities(data || [])
@@ -39,13 +39,13 @@ export function useActivities() {
       })
 
     return () => { cancelled = true }
-  }, [visualMode, fixtureActivities])
+  }, [visualMode, fixtureActivities, tenantId])
 
   const addActivity = async (activity) => {
     if (visualMode) return activity
 
     try {
-      const created = await saveActivityRecord(activity)
+      const created = await saveActivityRecord(activity, tenantId)
       setActivities((current) => [created, ...current])
       return created
     } catch (error) {
@@ -58,7 +58,7 @@ export function useActivities() {
     if (visualMode) return { id, ...updates }
 
     try {
-      const updated = await saveActivityRecord({ id, ...updates })
+      const updated = await saveActivityRecord({ id, ...updates }, tenantId)
       setActivities((current) => current.map((activity) => (activity.id === id ? updated : activity)))
       return updated
     } catch (error) {
@@ -71,7 +71,7 @@ export function useActivities() {
     if (visualMode) return true
 
     try {
-      await deleteActivityRecord(id)
+      await deleteActivityRecord(id, tenantId)
       setActivities((current) => current.filter((activity) => activity.id !== id))
       return true
     } catch (error) {

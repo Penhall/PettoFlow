@@ -29,6 +29,7 @@ export function lazyWithRetry(importer, cacheKey) {
         !hasRetried
 
       if (shouldReload) {
+        console.warn('[lazyWithRetry] Chunk load failed — reloading to recover:', cacheKey, message)
         window.sessionStorage.setItem(storageKey, '1')
         window.location.reload()
         return new Promise(() => {})
@@ -38,6 +39,7 @@ export function lazyWithRetry(importer, cacheKey) {
         window.sessionStorage.removeItem(storageKey)
       }
 
+      console.error('[lazyWithRetry] Chunk load failed after retry — re-throwing:', cacheKey, message)
       throw error
     }
   })

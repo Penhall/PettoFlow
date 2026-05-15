@@ -94,3 +94,49 @@ export function diagWarn(area, message, detail = null) {
   if (!isEnabled()) return
   console.warn(tag(area), '⚠', message, detail ?? '')
 }
+
+// ─── Bootstrap lifecycle tracing ──────────────────────────────────────────────
+// phases: 'start' | 'loading' | 'ready' | 'error' | 'retry' | 'cancelled' | 'tenant-change'
+
+export function traceBootstrap(phase, tenantId = null, detail = null) {
+  if (!isEnabled()) return
+  const icons = {
+    start: '🚀', loading: '⏳', ready: '✅', error: '❌',
+    retry: '↺', cancelled: '⊘', 'tenant-change': '🔄',
+  }
+  console.debug(tag('bootstrap'), icons[phase] ?? phase, `tenant=${tenantId ?? 'none'}`, detail ?? '')
+}
+
+// ─── Ownership tracing ─────────────────────────────────────────────────────────
+// source: 'explicit' (tenantId passed directly) | 'implicit' (read from global fallback)
+
+export function traceOwnership(operation, tenantId, source) {
+  if (!isEnabled()) return
+  const label = source === 'explicit' ? '✓ explicit' : '⚠ implicit-fallback'
+  console.debug(tag('ownership'), label, operation, `tenant=${tenantId ?? 'none'}`)
+}
+
+// ─── Async failure classification ─────────────────────────────────────────────
+// type: 'unhandled-rejection' | 'lazy-import' | 'async-event' | 'bootstrap-fail'
+// NOTE: React Error Boundaries do NOT catch unhandled promise rejections or
+// errors thrown in event handlers / setTimeout / setInterval. This function
+// only produces diagnostic output — it does not recover the app.
+
+export function traceAsyncFailure(type, error, context = null) {
+  if (!isEnabled()) return
+  const icons = {
+    'unhandled-rejection': '⚡',
+    'lazy-import': '📦',
+    'async-event': '📡',
+    'bootstrap-fail': '🔴',
+  }
+  console.error(tag('async-fault'), icons[type] ?? type, type, error?.message ?? String(error), context ?? '')
+}
+
+// ─── Route transition tracing ──────────────────────────────────────────────────
+
+export function traceRouteTransition(from, to, phase) {
+  if (!isEnabled()) return
+  const icons = { start: '▶', complete: '✔', suspended: '⏳', error: '❌' }
+  console.debug(tag('route-transition'), icons[phase] ?? phase, `${from} → ${to}`)
+}

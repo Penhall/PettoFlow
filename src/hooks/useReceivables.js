@@ -6,7 +6,7 @@ import {
 } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useReceivables() {
+export function useReceivables({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   // getVisualFixture returns a new array reference every call; memoize so
   // the useCallback dep array stays stable and doesn't loop in visual mode.
@@ -23,7 +23,7 @@ export function useReceivables() {
 
     setLoading(true)
     try {
-      const data = await listReceivableRecords()
+      const data = await listReceivableRecords(tenantId)
       setReceivables(data || [])
       return data || []
     } catch (error) {
@@ -32,7 +32,7 @@ export function useReceivables() {
     } finally {
       setLoading(false)
     }
-  }, [visualMode, fixtureReceivables])
+  }, [visualMode, fixtureReceivables, tenantId])
 
   useEffect(() => {
     fetch()
@@ -47,7 +47,7 @@ export function useReceivables() {
         amount,
         target_account_id: targetAccountId,
         status: 'pending',
-      })
+      }, tenantId)
       await fetch()
       return created
     } catch (error) {
@@ -66,7 +66,7 @@ export function useReceivables() {
         target_account_id: targetAccountId,
         status: 'pending',
         due_date: dueDate,
-      })
+      }, tenantId)
       await fetch()
       return created
     } catch (error) {
@@ -102,7 +102,7 @@ export function useReceivables() {
         status: 'invoiced',
         transaction_id: transaction.id,
         invoiced_at: new Date().toISOString(),
-      })
+      }, tenantId)
       setReceivables((current) => current.map((item) => (item.id === receivableId ? { ...item, ...updated } : item)))
       return updated
     } catch (error) {

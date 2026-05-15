@@ -3,11 +3,43 @@ import { Component, Fragment } from 'react'
 const isDev = import.meta.env.DEV
 const MAX_RETRIES = 3
 
+/**
+ * Catches synchronous render failures in the React tree below this boundary.
+ *
+ * IMPORTANT — What this boundary does NOT catch:
+ *  - Unhandled promise rejections (async code outside React render)
+ *  - Errors thrown in event handlers (onClick, onChange, etc.)
+ *  - Errors in setTimeout / setInterval callbacks
+ *  - Errors in async lifecycle methods after they have returned
+ *
+ * For async/event failures this boundary installs a window.unhandledrejection
+ * listener that logs and classifies them without attempting recovery.
+ */
 export default class RootErrorBoundary extends Component {
   constructor(props) {
     super(props)
     this.state = { hasError: false, error: null, retryCount: 0 }
     this.handleReset = this.handleReset.bind(this)
+    this._unhandledRejectionHandler = null
+  }
+
+  componentDidMount() {
+    if (typeof window === 'undefined') return
+    this._unhandledRejectionHandler = (event) => {
+      const msg = event.reason instanceof Error ? event.reason.message : String(event.reason ?? 'unknown')
+      console.error(
+        '[RootErrorBoundary] Unhandled async rejection (NOT caught by React EB):',
+        msg,
+        event.reason,
+      )
+    }
+    window.addEventListener('unhandledrejection', this._unhandledRejectionHandler)
+  }
+
+  componentWillUnmount() {
+    if (this._unhandledRejectionHandler) {
+      window.removeEventListener('unhandledrejection', this._unhandledRejectionHandler)
+    }
   }
 
   static getDerivedStateFromError(error) {

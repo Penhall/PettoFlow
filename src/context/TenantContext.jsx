@@ -8,6 +8,7 @@ import {
   setStoredActiveTenantId,
   setRuntimeActiveTenantId,
 } from '../lib/activeTenant.js'
+import { traceBootstrap, traceTenant } from '../lib/diagnostics.js'
 
 function normalizeTenantRecord(item) {
   return {
@@ -60,6 +61,7 @@ export function TenantProvider({ children }) {
 
   useEffect(() => {
     setRuntimeActiveTenantId(activeTenantId)
+    traceTenant('active-tenant-changed', activeTenantId)
   }, [activeTenantId])
 
   useEffect(() => {
@@ -78,6 +80,7 @@ export function TenantProvider({ children }) {
     async function loadTenants() {
       setLoading(true)
       setError(null)
+      traceBootstrap('start', null, 'TenantContext.loadTenants')
 
       try {
         const invitationToken = getInvitationToken()
@@ -99,11 +102,14 @@ export function TenantProvider({ children }) {
         if (nextActiveTenantId) {
           setStoredActiveTenantId(nextActiveTenantId)
         }
+
+        traceBootstrap('ready', nextActiveTenantId, `${nextTenants.length} tenant(s)`)
       } catch (loadError) {
         if (!active) return
         setTenants([])
         setActiveTenantIdState(null)
         setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
+        traceBootstrap('error', null, loadError?.message)
       } finally {
         if (active) setLoading(false)
       }

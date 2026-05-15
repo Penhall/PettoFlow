@@ -21,6 +21,7 @@ import { useReceivables } from './hooks/useReceivables'
 import { useTenant } from './hooks/useTenant.js'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
+import { traceBootstrap } from './lib/diagnostics.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import {
@@ -132,7 +133,7 @@ function App() {
 
   const { user, signOut, isPlatformAdmin } = useAuth()
   const { activeTenantId } = useTenant()
-  const { activities } = useActivities()
+  const { activities } = useActivities({ tenantId: activeTenantId })
   const onboarding = useOnboarding({ tenantId: activeTenantId, enabled: Boolean(activeTenantId) })
   const {
     isOpen: paletteOpen,
@@ -142,7 +143,7 @@ function App() {
     close: closePalette,
     results,
   } = useCommandPalette(tasks, clients, activities)
-  const { createReceivable, listReceivables } = useReceivables()
+  const { createReceivable, listReceivables } = useReceivables({ tenantId: activeTenantId })
 
   const fetchTeam = async () => {
     try {
@@ -175,6 +176,7 @@ function App() {
 
     let cancelled = false
     setLoading(true)
+    traceBootstrap('start', activeTenantId)
 
     fetchWorkspaceBootstrap(activeTenantId)
       .then((data) => {
@@ -183,16 +185,21 @@ function App() {
         setTeam(data.team || [])
         setClients(data.clients || [])
         setColumns(data.columns || [])
+        traceBootstrap('ready', activeTenantId)
       })
       .catch((error) => {
         if (cancelled) return
         console.error('Error fetching workspace data:', error)
+        traceBootstrap('error', activeTenantId, error.message)
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
 
-    return () => { cancelled = true }
+    return () => {
+      traceBootstrap('cancelled', activeTenantId)
+      cancelled = true
+    }
   }, [activeTenantId])
 
   useEffect(() => {
@@ -378,7 +385,7 @@ function App() {
     delete payload.related_to
 
     try {
-      const created = await createTaskRecord({ ...payload, created_at: new Date().toISOString() })
+      const created = await createTaskRecord({ ...payload, created_at: new Date().toISOString() }, activeTenantId)
       setTasks((prev) => [created, ...prev])
       setShowAddModal(false)
       return created
@@ -411,7 +418,7 @@ function App() {
 
     let updatedTask
     try {
-      updatedTask = await updateTaskRecord(id, cleanUpdates)
+      updatedTask = await updateTaskRecord(id, cleanUpdates, activeTenantId)
     } catch (error) {
       console.error('Error updating task:', error)
       alert('Erro ao atualizar tarefa: ' + error.message)
@@ -423,7 +430,7 @@ function App() {
     if (movingToTerminal) {
       const existing = listReceivables({ taskId: Number(id) })
       if (shouldCreateReceivable(updatedTask, existing)) {
-        const allAccounts = await listActiveAccounts()
+        const allAccounts = await listActiveAccounts(activeTenantId)
         const principal = findPrincipal(allAccounts || [])
         if (principal) {
           await createReceivable(id, updatedTask.deal_value, principal.id)
@@ -438,7 +445,7 @@ function App() {
 
   const deleteTask = async (id) => {
     try {
-      await deleteTaskRecord(id)
+      await deleteTaskRecord(id, activeTenantId)
       setTasks((prev) => prev.filter((task) => task.id !== id))
     } catch (error) {
       console.error('Error deleting task:', error)
@@ -447,7 +454,7 @@ function App() {
 
   const archiveTask = async (id) => {
     try {
-      await archiveTaskRecord(id)
+      await archiveTaskRecord(id, activeTenantId)
       setTasks((prev) => prev.filter((task) => task.id !== id))
     } catch (error) {
       console.error('Error archiving task:', error)
@@ -456,7 +463,7 @@ function App() {
 
   const restoreTask = async (id) => {
     try {
-      const restored = await restoreTaskRecord(id)
+      const restored = await restoreTaskRecord(id, activeTenantId)
       if (restored) {
         setTasks((prev) => [restored, ...prev.filter((task) => task.id !== id)])
       } else {
@@ -470,7 +477,7 @@ function App() {
   const addColumn = async (name) => {
     const orderIndex = columns.length > 0 ? Math.max(...columns.map((column) => column.order_index)) + 1 : 1
     try {
-      const created = await createColumnRecord({ name, order_index: orderIndex })
+      const created = await createColumnRecord({ name, order_index: orderIndex }, activeTenantId)
       setColumns((prev) => [...prev, created])
     } catch (error) {
       console.error('Error adding column:', error)
@@ -480,7 +487,7 @@ function App() {
 
   const deleteColumn = async (id) => {
     try {
-      await deleteColumnRecord(id)
+      await deleteColumnRecord(id, activeTenantId)
       setColumns((prev) => prev.filter((column) => column.id !== id))
     } catch (error) {
       console.error('Error deleting column:', error)
