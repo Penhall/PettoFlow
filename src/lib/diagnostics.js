@@ -336,3 +336,35 @@ export function resetPerformanceCounters() {
   Object.keys(PROVIDER_UPDATE_COUNTS).forEach((k) => delete PROVIDER_UPDATE_COUNTS[k])
   Object.keys(SUSPENSE_TIMINGS).forEach((k) => delete SUSPENSE_TIMINGS[k])
 }
+
+// ═══════════════════════════════════════════
+// Product-Level Telemetry Counters (O3)
+// ═══════════════════════════════════════════
+
+export function countOnboardingCompleted() {
+  incCounter('onboarding_completed')
+}
+
+export function countOnboardingDropOff() {
+  incCounter('onboarding_dropoff')
+}
+
+export function countOverlayInterruption() {
+  incCounter('overlay_interruptions')
+}
+
+export function countCommandFailure() {
+  incCounter('command_failures')
+}
+
+export function countTelegramIntegrationFailure() {
+  incCounter('telegram_failures')
+}
+
+export function countSettingsSaveConflict() {
+  incCounter('settings_conflicts')
+}
+
+export function countOnboardingRetry() {
+  incCounter('onboarding_retries')
+}

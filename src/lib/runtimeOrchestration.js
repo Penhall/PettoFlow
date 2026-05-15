@@ -17,6 +17,7 @@ function createEmptyTransitionMap() {
     tenant: null,
     auth: null,
     bootstrap: null,
+    'ui-overlay': null,
   }
 }
 

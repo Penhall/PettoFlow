@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getBotConfig, updateBotConfig, deleteBotConfig } from '../../lib/botConfig.js'
+import { countTelegramIntegrationFailure } from '../../lib/diagnostics.js'
 import OnboardingWizard from './OnboardingWizard.jsx'
 
 function ConfigStatus({ config, onDisconnect }) {
@@ -23,6 +24,7 @@ function ConfigStatus({ config, onDisconnect }) {
       setSuccess(next ? 'Bot ativado.' : 'Bot pausado.')
     } catch (err) {
       setError(err.message)
+      countTelegramIntegrationFailure()
     } finally {
       setSaving(false)
     }
@@ -41,6 +43,7 @@ function ConfigStatus({ config, onDisconnect }) {
       setLlmKey('')
     } catch (err) {
       setError(err.message)
+      countTelegramIntegrationFailure()
     } finally {
       setSaving(false)
     }
@@ -55,6 +58,7 @@ function ConfigStatus({ config, onDisconnect }) {
       setSuccess('Limiar de confirmacao atualizado.')
     } catch (err) {
       setError(err.message)
+      countTelegramIntegrationFailure()
     } finally {
       setSaving(false)
     }
@@ -177,6 +181,7 @@ function ConfigStatus({ config, onDisconnect }) {
               onDisconnect()
             } catch (err) {
               setError(err.message)
+              countTelegramIntegrationFailure()
             }
           }}
           style={{ color: '#fecaca', border: '1px solid rgba(220, 38, 38, 0.4)' }}
@@ -204,6 +209,7 @@ export default function TelegramSection() {
         setConfig(null)
       } else {
         setError(err.message)
+        countTelegramIntegrationFailure()
       }
     } finally {
       setLoading(false)

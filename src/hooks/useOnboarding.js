@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { traceAsyncFailure } from '../lib/diagnostics.js'
+import {
+  traceAsyncFailure,
+  countOnboardingCompleted,
+  countOnboardingDropOff,
+  countOnboardingRetry,
+  countOverlayInterruption,
+} from '../lib/diagnostics.js'
+import { useRuntimeOrchestration } from './useRuntimeOrchestration.js'
 import { getOnboardingState, recordOnboardingEvent, updateOnboardingState } from '../lib/onboardingApi.js'
 import { CURRENT_ONBOARDING_VERSION } from '../lib/onboardingState.js'
 import { ONBOARDING_CHECKLIST, QUICK_ACTIONS, TUTORIAL_CATALOG } from '../lib/tutorialCatalog.js'
@@ -34,6 +41,10 @@ export function useOnboarding({ tenantId, enabled = true }) {
   const [error, setError] = useState(null)
   const [initializationMode, setInitializationMode] = useState('guided_seeded')
   const [seedProfile, setSeedProfile] = useState(null)
+
+  // Orchestration integration
+  const { startTransition: startOrchTransition, completeTransition: completeOrchTransition } =
+    useRuntimeOrchestration()
 
   // committedStateRef tracks the last server-confirmed state.
   // Updated synchronously inside queue execution — before the next queued
@@ -80,6 +91,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
         if (cancelled) return
         console.error('Error fetching onboarding state:', nextError)
         traceAsyncFailure('onboarding-failure', nextError, { stage: 'load', tenantId })
+        countOnboardingRetry()
         setError(nextError)
         const fallback = buildFallbackState()
         setState(fallback)
@@ -158,13 +170,39 @@ export function useOnboarding({ tenantId, enabled = true }) {
     })
 
     patched.then((nextState) => {
-      if (nextState) emitEvent('checklist_item_completed', { itemId, ...metadata })
+      if (nextState) {
+        emitEvent('checklist_item_completed', { itemId, ...metadata })
+        // Count completed — if all items done, count as full onboarding completion
+        const totalItems = ONBOARDING_CHECKLIST.length
+        const completedItems = Object.values(nextState.checklistState?.items || {}).filter(
+          (item) => item.completed
+        ).length
+        if (completedItems >= totalItems) {
+          countOnboardingCompleted()
+        }
+      }
     }).catch(() => {})
 
     return patched
   }
 
   const dismissSurface = ({ scope, reason = 'manual_close' }) => {
+    startOrchTransition('ui-overlay', {
+      from: scope,
+      to: 'dismissed',
+      detail: { reason, source: 'onboarding' },
+    })
+    countOverlayInterruption()
+
+    // Track drop-off if onboarding panel is dismissed with pending items
+    const checkItems = ONBOARDING_CHECKLIST.map((item) => ({
+      completed: Boolean(state.checklistState?.items?.[item.id]?.completed),
+    }))
+    const hasPendingItems = checkItems.some((item) => !item.completed)
+    if (hasPendingItems) {
+      countOnboardingDropOff()
+    }
+
     return patchState((current) => ({
       dismissState: {
         ...(current.dismissState || {}),
@@ -175,7 +213,12 @@ export function useOnboarding({ tenantId, enabled = true }) {
           dismiss_reason: reason,
         },
       },
-    }))
+    })).then((result) => {
+      if (result) {
+        completeOrchTransition('ui-overlay', { scope, reason })
+      }
+      return result
+    })
   }
 
   const markTutorialOpened = (tutorialId) => {

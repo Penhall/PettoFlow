@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { listCommands, toggleCommand, deleteCommand, seedDefaultCommands } from '../../lib/botCommands.js'
+import { countCommandFailure } from '../../lib/diagnostics.js'
 import CommandForm from './CommandForm.jsx'
 
 function flattenGroup(commands, groupName) {
@@ -30,6 +31,7 @@ export default function CommandsSection() {
       setCommands(data?.commands ?? [])
     } catch (err) {
       setError(err.message)
+      countCommandFailure()
     } finally {
       setLoading(false)
     }
@@ -48,6 +50,7 @@ export default function CommandsSection() {
       setCommands(prev => prev.map(c => c.id === cmd.id ? { ...c, is_active: !c.is_active } : c))
     } catch (err) {
       setError(err.message)
+      countCommandFailure()
     }
   }
 
@@ -58,6 +61,7 @@ export default function CommandsSection() {
       setCommands(prev => prev.filter(c => c.id !== cmd.id))
     } catch (err) {
       setError(err.message)
+      countCommandFailure()
     }
   }
 
@@ -73,6 +77,7 @@ export default function CommandsSection() {
       })
     } catch (err) {
       setError(err.message)
+      countCommandFailure()
     }
   }
 

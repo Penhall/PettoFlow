@@ -12,6 +12,14 @@ vi.mock('../lib/onboardingApi.js', () => ({
   recordOnboardingEvent: (...args) => recordOnboardingEventMock(...args),
 }))
 
+vi.mock('./useRuntimeOrchestration.js', () => ({
+  useRuntimeOrchestration: () => ({
+    startTransition: vi.fn(),
+    completeTransition: vi.fn(),
+    phase: 'APP_READY',
+  }),
+}))
+
 // Stateful mock that merges each partial payload into accumulated server state,
 // simulating real PATCH semantics: only provided keys are updated, the server
 // returns the full merged state. This matches how updateOnboardingState works
