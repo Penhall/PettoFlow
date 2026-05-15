@@ -68,3 +68,37 @@ describe('workspaceCore', () => {
     )
   })
 })
+
+describe('workspaceCore — explicit tenantId threading', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'task-1', title: 'Test' }),
+    })
+  })
+
+  it('createTaskRecord with explicit tenantId does NOT call getRequiredActiveTenantId', async () => {
+    await createTaskRecord({ title: 'Test' }, 'explicit-tenant-789')
+    expect(getRequiredActiveTenantIdMock).not.toHaveBeenCalled()
+  })
+
+  it('createTaskRecord passes explicit tenantId to authenticatedFetch', async () => {
+    await createTaskRecord({ title: 'Test' }, 'explicit-tenant-789')
+    expect(authenticatedFetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/functions/v1/workspace-core/tasks'),
+      expect.objectContaining({ tenantId: 'explicit-tenant-789' }),
+    )
+  })
+
+  it('createTaskRecord without tenantId falls back to getRequiredActiveTenantId', async () => {
+    getRequiredActiveTenantIdMock.mockReturnValue('fallback-tenant')
+    await createTaskRecord({ title: 'Test' })
+    expect(getRequiredActiveTenantIdMock).toHaveBeenCalled()
+    expect(authenticatedFetchMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ tenantId: 'fallback-tenant' }),
+    )
+  })
+})
