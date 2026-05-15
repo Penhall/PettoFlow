@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Shield, RefreshCw, ArrowLeft, Users, Building2, ReceiptText, ScrollText } from 'lucide-react'
 import { fetchAdminOverview, fetchAdminProfile, listAdminUsers } from '../lib/adminApi.js'
+import { ACTION_TEXT, ADMIN_TEXT, EMPTY_STATE_TEXT, ERROR_TEXT, LOADING_TEXT } from '../content/uxText.js'
 
 function MetricCard({ icon: Icon, label, value }) {
   return (
@@ -113,7 +114,8 @@ export default function AdminPanel() {
       setUsers(nextUsers.items ?? [])
       setUserTotal(nextUsers.total ?? nextUsers.items?.length ?? 0)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar painel administrativo.')
+      console.error('Erro ao carregar painel administrativo:', loadError)
+      setError(ERROR_TEXT.adminPanel)
     } finally {
       setLoading(false)
     }
@@ -136,12 +138,12 @@ export default function AdminPanel() {
           <div style={{ display: 'grid', gap: 8 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--primary)', fontWeight: 700 }}>
               <Shield size={18} />
-              Painel administrativo NexusCRM
+              {ADMIN_TEXT.eyebrow}
             </span>
             <div>
-              <h1 style={{ margin: 0, fontSize: 30 }}>Operação global da plataforma</h1>
+              <h1 style={{ margin: 0, fontSize: 30 }}>{ADMIN_TEXT.title}</h1>
               <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)' }}>
-                {profile ? `Sessão administrativa ativa para ${profile.email}.` : 'Carregando perfil administrativo.'}
+                {profile ? `Sessão administrativa ativa para ${profile.email}.` : LOADING_TEXT.adminProfile}
               </p>
             </div>
           </div>
@@ -151,14 +153,14 @@ export default function AdminPanel() {
               type="button"
               className="icon-btn"
               onClick={() => { window.location.hash = '' }}
-              title="Voltar ao espaço de trabalho"
-              aria-label="Voltar ao espaço de trabalho"
+              title={ACTION_TEXT.backToWorkspace}
+              aria-label={ACTION_TEXT.backToWorkspace}
             >
               <ArrowLeft size={18} />
             </button>
             <button type="button" className="export-btn" onClick={() => loadAll()}>
               <RefreshCw size={16} />
-              <span>Atualizar painel</span>
+              <span>{ACTION_TEXT.refreshPanel}</span>
             </button>
           </div>
         </header>
@@ -176,7 +178,7 @@ export default function AdminPanel() {
         )}
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-          <MetricCard icon={Building2} label="Espaços" value={counts.tenants ?? '—'} />
+          <MetricCard icon={Building2} label={ADMIN_TEXT.workspaceMetric} value={counts.tenants ?? '—'} />
           <MetricCard icon={Users} label="Usuários" value={userTotal || '—'} />
           <MetricCard icon={ReceiptText} label="Assinaturas" value={counts.subscriptions ?? '—'} />
           <MetricCard icon={ScrollText} label="Auditoria" value={counts.auditLogs ?? '—'} />
@@ -184,13 +186,13 @@ export default function AdminPanel() {
 
         {loading ? (
           <section style={{ padding: 32, border: '1px solid var(--border-color)', borderRadius: 16 }}>
-            Carregando painel administrativo...
+            {LOADING_TEXT.adminPanel}
           </section>
         ) : (
           <>
             <DataTable
-              title="Espaços de trabalho e uso"
-              emptyMessage="Nenhum espaço de trabalho encontrado."
+              title={ADMIN_TEXT.workspaceUsageTitle}
+              emptyMessage={EMPTY_STATE_TEXT.noWorkspaces}
               columns={[
                 { key: 'name', label: 'Espaço' },
                 { key: 'slug', label: 'Slug' },

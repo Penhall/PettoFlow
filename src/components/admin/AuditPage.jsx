@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchAdminAudit, fetchAdminTenants } from '../../lib/adminClient.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 const PAGE_SIZE = 50
 
 const EVENT_OPTIONS = [
   { value: '', label: 'Todos os tipos' },
-  { value: 'tenant.created', label: 'Tenant criado' },
-  { value: 'tenant.updated', label: 'Tenant atualizado' },
+  { value: 'tenant.created', label: 'Espaço criado' },
+  { value: 'tenant.updated', label: 'Espaço atualizado' },
   { value: 'user.invited', label: 'Usuário convidado' },
   { value: 'user.removed', label: 'Usuário removido' },
   { value: 'subscription.changed', label: 'Assinatura alterada' },
@@ -59,7 +60,7 @@ export default function AuditPage() {
         setLoadingMore(false)
       })
       .catch(err => {
-        setError(err.message)
+        setError(normalizeError(err, { operation: 'admin.audit' }).message)
         setLoading(false)
         setLoadingMore(false)
       })
@@ -107,7 +108,7 @@ export default function AuditPage() {
 
         <div className="admin-audit__filter-group">
           <label className="admin-audit__filter-label" htmlFor="audit-tenant">
-            Tenant
+            Espaço
           </label>
           <select
             id="audit-tenant"
@@ -115,7 +116,7 @@ export default function AuditPage() {
             value={filters.tenantId}
             onChange={e => handleFilterChange('tenantId', e.target.value)}
           >
-            <option value="">Todos os tenants</option>
+            <option value="">Todos os espaços</option>
             {tenants.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -152,7 +153,7 @@ export default function AuditPage() {
       {loading ? (
         <p className="admin-dashboard__loading">Carregando auditoria...</p>
       ) : error ? (
-        <p className="admin-dashboard__error">Erro: {error}</p>
+        <p className="admin-dashboard__error">{error}</p>
       ) : logs.length === 0 ? (
         <p className="admin-panel__empty">Nenhum evento de auditoria encontrado</p>
       ) : (

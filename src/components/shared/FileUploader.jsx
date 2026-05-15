@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Upload, FileText, FileImage, File, Download, Trash2 } from 'lucide-react'
 import { uploadFile, deleteFile, listAttachments, getFileUrl } from '../../lib/storage.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 const FILE_ICONS = {
   'application/pdf': FileText,
@@ -55,7 +56,7 @@ export default function FileUploader({ entityType, entityId, tenantId }) {
           continue
         }
         if (!ALLOWED_TYPES.includes(file.type)) {
-          errors.push(`"${file.name}" tipo nao permitido. Use PNG, JPG, WebP ou PDF.`)
+          errors.push(`"${file.name}" tipo não permitido. Use PNG, JPG, WebP ou PDF.`)
           continue
         }
         await uploadFile(file, entityType, entityId, tenantId)
@@ -63,7 +64,7 @@ export default function FileUploader({ entityType, entityId, tenantId }) {
       if (errors.length > 0) setError(errors.join('. '))
       await load()
     } catch (err) {
-      setError(err.message || 'Erro ao fazer upload')
+      setError(normalizeError(err, { operation: 'files.upload' }).message)
     } finally {
       setUploading(false)
     }
@@ -75,7 +76,7 @@ export default function FileUploader({ entityType, entityId, tenantId }) {
       await deleteFile(attachment)
       setAttachments((prev) => prev.filter((item) => item.id !== attachment.id))
     } catch (err) {
-      setError(err.message || 'Erro ao remover arquivo')
+      setError(normalizeError(err, { operation: 'files.delete' }).message)
     }
   }
 

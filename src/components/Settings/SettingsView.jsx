@@ -7,6 +7,7 @@ import SurfaceCard from '../shared/SurfaceCard.jsx'
 import WorkspaceOnboarding from '../tenant/WorkspaceOnboarding.jsx'
 import { lazyWithRetry } from '../../lib/lazyWithRetry.js'
 import { useTenant } from '../../hooks/useTenant.js'
+import { LOADING_TEXT, SETTINGS_TEXT } from '../../content/uxText.js'
 
 const MembersPage = lazyWithRetry(() => import('../tenant/MembersPage.jsx'), 'settings-members')
 const AuditTimeline = lazyWithRetry(() => import('../tenant/AuditTimeline.jsx'), 'settings-audit')
@@ -15,15 +16,7 @@ const MfaSetup = lazyWithRetry(() => import('../auth/MfaSetup.jsx'), 'settings-s
 const TelegramSection = lazyWithRetry(() => import('./TelegramSection.jsx'), 'settings-telegram')
 const CommandsSection = lazyWithRetry(() => import('./CommandsSection.jsx'), 'settings-commands')
 
-const TABS = [
-  { id: 'workspace', label: 'Workspace' },
-  { id: 'members', label: 'Membros' },
-  { id: 'billing', label: 'Faturamento' },
-  { id: 'security', label: 'Segurança' },
-  { id: 'audit', label: 'Auditoria' },
-  { id: 'telegram', label: 'Telegram' },
-  { id: 'commands', label: 'Comandos' },
-]
+const TABS = SETTINGS_TEXT.tabs
 
 export default function SettingsView({
   initialTab = 'members',
@@ -39,9 +32,9 @@ export default function SettingsView({
   return (
     <div className="settings-page">
       <PageHeader
-        eyebrow="Espaço de trabalho"
-        title="Configurações"
-        subtitle="Gerencie membros, integrações, auditoria e preferências do espaço de trabalho."
+        eyebrow={SETTINGS_TEXT.header.eyebrow}
+        title={SETTINGS_TEXT.header.title}
+        subtitle={SETTINGS_TEXT.header.subtitle}
       />
 
       <PageTabs
@@ -69,7 +62,7 @@ export default function SettingsView({
 
       <SurfaceCard className="settings-page__panel">
         {activeTab === 'workspace' && <WorkspaceOnboarding embed />}
-        <Suspense fallback={<DeferredSurface label="Carregando seção de configurações..." />}>
+        <Suspense fallback={<DeferredSurface label={LOADING_TEXT.settingsSection} />}>
           {activeTab === 'members' && <MembersPage />}
           {activeTab === 'billing' && <BillingPage />}
           {activeTab === 'security' && <MfaSetup />}

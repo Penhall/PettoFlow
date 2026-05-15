@@ -1,6 +1,7 @@
 import { json, preflight } from '../_shared/cors.ts'
 import { requireAuthenticatedUser } from '../_shared/auth.ts'
 import { getServiceRoleClient } from '../_shared/supabase.ts'
+import { requireTenantAccess } from '../_shared/tenant.ts'
 
 const DEFAULT_COMMANDS = [
   // Built-in (referência, sem actions)
@@ -23,28 +24,25 @@ const DEFAULT_COMMANDS = [
   { trigger: '/fim-de-dia', description: 'Pendências + extrato ao encerrar', type: 'multi', actions: [{ action: 'tasks.list', params: {} }, { action: 'finance.list', params: {} }], examples: [], category: 'custom', is_default: true },
 ]
 
-function findConfigId(routeParts: string[]): number | null {
-  // routeParts = ['commands', ...] or routeParts = []
-  // The config ID is implicit (single-row)
-  return null
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return preflight(req)
 
   const auth = await requireAuthenticatedUser(req)
   if (!auth.ok) return auth.response
+  const tenant = await requireTenantAccess(req, auth.user.id)
+  if (!tenant.ok) return tenant.response
+  const tenantId = tenant.tenantId
 
   const sb = getServiceRoleClient()
 
-  // Find the single bot config
+  // Find the tenant's bot config.
   const { data: config, error: configError } = await sb
     .from('bot_configs')
     .select('id')
-    .limit(1)
+    .eq('tenant_id', tenantId)
     .maybeSingle()
 
-  if (configError) return json(req, { error: configError.message }, 500)
+  if (configError) return json(req, { error: 'Erro ao buscar configuracao do bot.' }, 500)
 
   const url = new URL(req.url)
   const parts = url.pathname.split('/').filter(Boolean)
@@ -59,11 +57,12 @@ Deno.serve(async (req: Request) => {
     const { data: commands, error } = await sb
       .from('bot_commands')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('bot_config_id', config.id)
       .order('category', { ascending: true })
       .order('is_default', { ascending: false })
 
-    if (error) return json(req, { error: error.message }, 500)
+    if (error) return json(req, { error: 'Erro ao listar comandos.' }, 500)
 
     const categories = [...new Set((commands ?? []).map(c => c.category))]
     return json(req, { commands: commands ?? [], categories })
@@ -100,6 +99,7 @@ Deno.serve(async (req: Request) => {
     const { data: existing } = await sb
       .from('bot_commands')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('bot_config_id', config.id)
       .eq('trigger', trigger)
       .maybeSingle()
@@ -112,6 +112,7 @@ Deno.serve(async (req: Request) => {
       .from('bot_commands')
       .insert({
         bot_config_id: config.id,
+        tenant_id: tenantId,
         trigger,
         description,
         type,
@@ -124,7 +125,7 @@ Deno.serve(async (req: Request) => {
       .select()
       .single()
 
-    if (insertError) return json(req, { error: insertError.message }, 500)
+    if (insertError) return json(req, { error: 'Erro ao criar comando.' }, 500)
 
     return json(req, { command })
   }
@@ -137,6 +138,7 @@ Deno.serve(async (req: Request) => {
     const { data: existing } = await sb
       .from('bot_commands')
       .select('trigger')
+      .eq('tenant_id', tenantId)
       .eq('bot_config_id', config.id)
 
     const existingTriggers = new Set((existing ?? []).map(c => c.trigger))
@@ -148,6 +150,7 @@ Deno.serve(async (req: Request) => {
 
     const rows = toInsert.map(cmd => ({
       bot_config_id: config.id,
+      tenant_id: tenantId,
       trigger: cmd.trigger,
       description: cmd.description,
       type: cmd.type,
@@ -163,7 +166,7 @@ Deno.serve(async (req: Request) => {
       .insert(rows)
       .select()
 
-    if (insertError) return json(req, { error: insertError.message }, 500)
+    if (insertError) return json(req, { error: 'Erro ao instalar comandos padrao.' }, 500)
 
     return json(req, { commands: inserted ?? [], seeded: toInsert.length })
   }
@@ -206,6 +209,7 @@ Deno.serve(async (req: Request) => {
       .from('bot_commands')
       .update(updates)
       .eq('id', commandId)
+      .eq('tenant_id', tenantId)
       .eq('bot_config_id', config.id) // safety: only own config
       .select()
       .single()
@@ -214,7 +218,7 @@ Deno.serve(async (req: Request) => {
       if (updateError.message?.includes('row')) {
         return json(req, { error: 'Comando nao encontrado.' }, 404)
       }
-      return json(req, { error: updateError.message }, 500)
+      return json(req, { error: 'Erro ao atualizar comando.' }, 500)
     }
 
     return json(req, { command: updated })
@@ -230,11 +234,12 @@ Deno.serve(async (req: Request) => {
       .from('bot_commands')
       .delete()
       .eq('id', commandId)
+      .eq('tenant_id', tenantId)
       .eq('bot_config_id', config.id)
       .select()
       .maybeSingle()
 
-    if (deleteError) return json(req, { error: deleteError.message }, 500)
+    if (deleteError) return json(req, { error: 'Erro ao remover comando.' }, 500)
     if (!deleted) return json(req, { error: 'Comando nao encontrado.' }, 404)
 
     return json(req, { ok: true })

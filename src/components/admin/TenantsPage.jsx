@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { fetchAdminTenants } from '../../lib/adminClient.js'
 import PageHeader from '../shared/PageHeader.jsx'
 import TenantDetailModal from './TenantDetailModal.jsx'
+import { normalizeError } from '../../lib/mutationResult.js'
+import { EMPTY_STATE_TEXT, LOADING_TEXT } from '../../content/uxText.js'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -18,7 +20,7 @@ export default function TenantsPage() {
   useEffect(() => {
     fetchAdminTenants()
       .then(data => { setTenants(data.tenants ?? []); setLoading(false) })
-      .catch(err => { setError(err.message); setLoading(false) })
+      .catch(err => { setError(normalizeError(err, { operation: 'admin.workspaces' }).message); setLoading(false) })
   }, [])
 
   const filtered = tenants.filter(t =>
@@ -28,7 +30,7 @@ export default function TenantsPage() {
   if (loading) {
     return (
       <div className="admin-tenants">
-        <p className="admin-dashboard__loading">Carregando clientes...</p>
+        <p className="admin-dashboard__loading">{LOADING_TEXT.tabs['admin-tenants']}</p>
       </div>
     )
   }
@@ -36,7 +38,7 @@ export default function TenantsPage() {
   if (error) {
     return (
       <div className="admin-tenants">
-        <p className="admin-dashboard__error">Erro: {error}</p>
+        <p className="admin-dashboard__error">{error}</p>
       </div>
     )
   }
@@ -45,8 +47,8 @@ export default function TenantsPage() {
     <div className="admin-tenants">
       <PageHeader
         eyebrow="Administração"
-        title="Clientes"
-        subtitle="Gerencie clientes, planos e acesso à plataforma."
+        title="Espaços de trabalho"
+        subtitle="Gerencie espaços, planos e acesso à plataforma."
       />
 
       <div className="admin-tenants__toolbar">
@@ -60,7 +62,7 @@ export default function TenantsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="admin-panel__empty">Nenhum cliente encontrado</p>
+        <p className="admin-panel__empty">{EMPTY_STATE_TEXT.noWorkspaces}</p>
       ) : (
         <div className="admin-table-wrapper">
           <table className="admin-table">

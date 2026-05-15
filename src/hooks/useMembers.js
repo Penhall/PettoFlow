@@ -9,6 +9,7 @@ import {
   updateMemberRole as updateMemberRoleRequest,
 } from '../lib/memberApi.js'
 import { canManageMembers } from '../lib/memberPermissions.js'
+import { normalizeError } from '../lib/mutationResult.js'
 
 export function useMembers() {
   const { activeTenant, activeTenantId, refreshTenants } = useTenant()
@@ -43,7 +44,7 @@ export function useMembers() {
         setInvitations(nextInvitations)
       } catch (loadError) {
         if (!active) return
-        setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar membros.')
+        setError(normalizeError(loadError, { operation: 'members.load' }).message)
       } finally {
         if (active) setLoading(false)
       }
@@ -75,7 +76,7 @@ export function useMembers() {
       setMembers(nextMembers)
       setInvitations(nextInvitations)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar membros.')
+      setError(normalizeError(loadError, { operation: 'members.load' }).message)
       throw loadError
     } finally {
       setLoading(false)
@@ -84,7 +85,7 @@ export function useMembers() {
 
   async function inviteMember(payload) {
     if (!activeTenantId) {
-      throw new Error('Tenant ativo obrigatorio para convidar membro.')
+      throw new Error('Espaço de trabalho ativo obrigatório para convidar membro.')
     }
 
     const result = await inviteMemberRequest(activeTenantId, payload)
@@ -94,7 +95,7 @@ export function useMembers() {
 
   async function updateMemberRole(membershipId, role) {
     if (!activeTenantId) {
-      throw new Error('Tenant ativo obrigatorio para alterar role.')
+      throw new Error('Espaço de trabalho ativo obrigatório para alterar perfil.')
     }
 
     const result = await updateMemberRoleRequest(activeTenantId, membershipId, role)
@@ -104,7 +105,7 @@ export function useMembers() {
 
   async function setMemberStatus(membershipId, status) {
     if (!activeTenantId) {
-      throw new Error('Tenant ativo obrigatorio para alterar status do membro.')
+      throw new Error('Espaço de trabalho ativo obrigatório para alterar status do membro.')
     }
 
     const result = await setMemberStatusRequest(activeTenantId, membershipId, status)
@@ -114,7 +115,7 @@ export function useMembers() {
 
   async function removeMember(membershipId) {
     if (!activeTenantId) {
-      throw new Error('Tenant ativo obrigatorio para remover membro.')
+      throw new Error('Espaço de trabalho ativo obrigatório para remover membro.')
     }
 
     const result = await removeMemberRequest(activeTenantId, membershipId)

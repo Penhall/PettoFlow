@@ -3,6 +3,8 @@ import { Building2, DollarSign, Users } from 'lucide-react'
 import PageHeader from '../shared/PageHeader.jsx'
 import SurfaceCard from '../shared/SurfaceCard.jsx'
 import { fetchAdminMetrics } from '../../lib/adminClient.js'
+import { normalizeError } from '../../lib/mutationResult.js'
+import { LOADING_TEXT } from '../../content/uxText.js'
 
 function formatBRL(value) {
   return new Intl.NumberFormat('pt-BR', {
@@ -29,7 +31,7 @@ export default function AdminDashboard() {
         setLoading(false)
       })
       .catch(err => {
-        setError(err.message)
+        setError(normalizeError(err, { operation: 'admin.metrics' }).message)
         setLoading(false)
       })
   }, [])
@@ -37,7 +39,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="admin-dashboard">
-        <p className="admin-dashboard__loading">Carregando dashboard...</p>
+        <p className="admin-dashboard__loading">{LOADING_TEXT.tabs['admin-dashboard']}</p>
       </div>
     )
   }
@@ -45,7 +47,7 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div className="admin-dashboard">
-        <p className="admin-dashboard__error">Erro: {error}</p>
+        <p className="admin-dashboard__error">{error}</p>
       </div>
     )
   }
@@ -63,10 +65,10 @@ export default function AdminDashboard() {
       <PageHeader
         eyebrow="Administração"
         title="Dashboard"
-        subtitle="Visão consolidada de tenants, receita e distribuição de planos na plataforma."
+        subtitle="Visão consolidada de espaços de trabalho, receita e distribuição de planos na plataforma."
         metrics={[
-          { label: 'Total de Tenants', value: String(total_tenants), icon: Building2 },
-          { label: 'Tenants Ativos', value: String(active_tenants), icon: Users },
+          { label: 'Total de espaços', value: String(total_tenants), icon: Building2 },
+          { label: 'Espaços ativos', value: String(active_tenants), icon: Users },
           { label: 'MRR', value: formatBRL(mrr_total), icon: DollarSign },
         ]}
       />
@@ -98,12 +100,12 @@ export default function AdminDashboard() {
           <div className="dashboard-panel__header">
             <div>
               <span className="dashboard-panel__eyebrow">Crescimento</span>
-              <h2>Últimos Tenants</h2>
+              <h2>Últimos espaços</h2>
             </div>
           </div>
 
           {recent_tenants.length === 0 ? (
-            <p className="admin-panel__empty">Nenhum tenant criado ainda</p>
+            <p className="admin-panel__empty">Nenhum espaço de trabalho criado ainda</p>
           ) : (
             <div className="admin-tenant-list">
               {recent_tenants.slice(0, 5).map(tenant => (

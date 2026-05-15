@@ -24,6 +24,7 @@ import SurfaceCard from '../shared/SurfaceCard.jsx'
 import EmptyState from '../shared/EmptyState.jsx'
 import { calculateFinanceTotals } from '../../lib/financeUtils'
 import { centsToReal } from '../../lib/finUtils'
+import { getMutationData, getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 
 const FINANCE_TABS = [
   { id: 'extrato', label: 'Extrato' },
@@ -53,6 +54,7 @@ const FinanceView = ({
   const [editingAccount, setEditingAccount] = useState(null)
   const [editingRule, setEditingRule] = useState(null)
   const [calendarClickDate, setCalendarClickDate] = useState(null)
+  const [formError, setFormError] = useState('')
 
   const { addActivity } = useActivities({ tenantId: activeTenantId })
   const { accounts, addAccount, updateAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts({ tenantId: activeTenantId })
@@ -99,37 +101,63 @@ const FinanceView = ({
   })
 
   const handleSaveTransaction = async (form) => {
-    if (editingTransaction) await updateTransaction(editingTransaction.id, form)
-    else await addTransaction(form)
+    setFormError('')
+    const result = editingTransaction
+      ? await updateTransaction(editingTransaction.id, form)
+      : await addTransaction(form)
+    if (!isMutationOk(result)) {
+      setFormError(getMutationMessage(result))
+      return result
+    }
     setShowTransactionForm(false)
     setEditingTransaction(null)
     setCalendarClickDate(null)
+    return result
   }
 
   const handleSaveAccount = async (formData, demotedCategory) => {
     const { category, ...rest } = formData
-    let saved
+    setFormError('')
+    let result
     if (editingAccount) {
       if (category !== editingAccount.category) {
-        await updateAccount(editingAccount.id, rest)
-        await setAccountCategory(editingAccount.id, category, demotedCategory)
+        result = await updateAccount(editingAccount.id, rest)
+        if (!isMutationOk(result)) return result
+        result = await setAccountCategory(editingAccount.id, category, demotedCategory)
       } else {
-        await updateAccount(editingAccount.id, { ...rest, category })
+        result = await updateAccount(editingAccount.id, { ...rest, category })
       }
     } else {
-      saved = await addAccount({ ...rest, category: 'extras' })
-      if (saved && category !== 'extras') {
-        await setAccountCategory(saved.id, category, demotedCategory)
+      result = await addAccount({ ...rest, category: 'extras' })
+      if (!isMutationOk(result)) {
+        setFormError(getMutationMessage(result))
+        return result
       }
+      const saved = getMutationData(result)
+      if (saved && category !== 'extras') {
+        result = await setAccountCategory(saved.id, category, demotedCategory)
+      }
+    }
+    if (!isMutationOk(result)) {
+      setFormError(getMutationMessage(result))
+      return result
     }
     setShowAccountForm(false)
     setEditingAccount(null)
+    return result
   }
 
   const handleSaveRule = async (form) => {
-    if (editingRule && editingRule !== 'new') await updateRule(editingRule.id, form)
-    else await addRule(form)
+    setFormError('')
+    const result = editingRule && editingRule !== 'new'
+      ? await updateRule(editingRule.id, form)
+      : await addRule(form)
+    if (!isMutationOk(result)) {
+      setFormError(getMutationMessage(result))
+      return result
+    }
     setEditingRule(null)
+    return result
   }
 
   const primaryAction = activeTab === 'extrato'
@@ -289,11 +317,12 @@ const FinanceView = ({
           receivables={pendingReceivables}
           onInvoice={async (id, amount, date) => {
             const result = await invoiceReceivable(id, amount, date, addTransaction)
-            if (!result) {
-              alert('Erro ao faturar. Tente novamente.')
-              return
+            if (!isMutationOk(result)) {
+              setFormError(getMutationMessage(result))
+              return result
             }
             refreshReceivables()
+            return result
           }}
           addActivity={addActivity}
           onAddTask={onAddTask}
@@ -417,6 +446,9 @@ const FinanceView = ({
       ) : null}
 
       <SurfaceCard className="finance-page__surface" padded={activeTab !== 'extrato'}>
+        {formError ? (
+          <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '0 0 12px' }}>{formError}</p>
+        ) : null}
         {renderFinanceContent()}
       </SurfaceCard>
 

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import AdminPanel from './AdminPanel.jsx'
 import ClaimMasterBanner from '../components/admin/ClaimMasterBanner.jsx'
 import { supabase } from '../lib/supabaseClient.js'
+import { ACTION_TEXT, ADMIN_TEXT } from '../content/uxText.js'
 
 export default function AdminRoute() {
   const { isPlatformAdmin, user, refreshSession } = useAuth()
@@ -26,15 +27,15 @@ export default function AdminRoute() {
 
   return (
     <AuthLayout
-      title="Acesso administrativo negado"
-      description="Esta área interna do NexusCRM exige flag administrativa global."
+      title={ADMIN_TEXT.deniedTitle}
+      description={ADMIN_TEXT.deniedDescription}
     >
       <button
         type="button"
         className="auth-submit"
         onClick={() => { window.location.hash = '' }}
       >
-        Voltar ao espaço de trabalho
+        {ACTION_TEXT.backToWorkspace}
       </button>
     </AuthLayout>
   )

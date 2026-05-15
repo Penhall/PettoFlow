@@ -2,10 +2,11 @@
 import { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { escapeHtml } from '../../_shared/telegram.ts'
 
-async function getBoardStatuses(sb: SupabaseClient): Promise<{ initial: string; terminal: string }> {
+async function getBoardStatuses(sb: SupabaseClient, tenantId: string): Promise<{ initial: string; terminal: string }> {
   const { data } = await sb
     .from('kanban_columns')
     .select('name')
+    .eq('tenant_id', tenantId)
     .order('order_index', { ascending: true })
 
   if (!data || data.length === 0) {
@@ -20,24 +21,27 @@ async function getBoardStatuses(sb: SupabaseClient): Promise<{ initial: string; 
 
 export async function createTask(
   sb: SupabaseClient,
+  tenantId: string,
   title: string
 ): Promise<string> {
-  const { initial } = await getBoardStatuses(sb)
+  const { initial } = await getBoardStatuses(sb, tenantId)
   const { error } = await sb
     .from('tasks')
-    .insert({ title, status: initial, priority: 'Média' })
+    .insert({ tenant_id: tenantId, title, status: initial, priority: 'Média' })
   if (error) throw error
   return `✅ Tarefa criada: <b>${escapeHtml(title)}</b>`
 }
 
 export async function listTasks(
   sb: SupabaseClient,
+  tenantId: string,
   chatId: string
 ): Promise<string> {
-  const { terminal } = await getBoardStatuses(sb)
+  const { terminal } = await getBoardStatuses(sb, tenantId)
   const { data, error } = await sb
     .from('tasks')
     .select('id, title, status, priority')
+    .eq('tenant_id', tenantId)
     .is('archived_at', null)
     .not('status', 'eq', terminal)
     .order('created_at', { ascending: false })
@@ -67,8 +71,14 @@ export async function listTasks(
 
   lines.push('\nUse /ok [número] para concluir.')
 
-  await sb.from('bot_pending_confirmations').delete().eq('chat_id', chatId).eq('action_type', 'task_list_context')
+  await sb
+    .from('bot_pending_confirmations')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .eq('chat_id', chatId)
+    .eq('action_type', 'task_list_context')
   await sb.from('bot_pending_confirmations').insert({
+    tenant_id: tenantId,
     chat_id: chatId,
     action_type: 'task_list_context',
     action_payload: { items: listContext },
@@ -80,13 +90,15 @@ export async function listTasks(
 
 export async function completeTask(
   sb: SupabaseClient,
+  tenantId: string,
   chatId: string,
   num: number
 ): Promise<string> {
-  const { terminal } = await getBoardStatuses(sb)
+  const { terminal } = await getBoardStatuses(sb, tenantId)
   const { data: ctx } = await sb
     .from('bot_pending_confirmations')
     .select('action_payload, expires_at')
+    .eq('tenant_id', tenantId)
     .eq('chat_id', chatId)
     .eq('action_type', 'task_list_context')
     .single()
@@ -103,6 +115,7 @@ export async function completeTask(
   const { error } = await sb
     .from('tasks')
     .update({ status: terminal, completed_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
     .eq('id', item.id)
 
   if (error) throw error
@@ -111,6 +124,7 @@ export async function completeTask(
 
 export async function setPriority(
   sb: SupabaseClient,
+  tenantId: string,
   chatId: string,
   num: number,
   priority: string
@@ -118,6 +132,7 @@ export async function setPriority(
   const { data: ctx } = await sb
     .from('bot_pending_confirmations')
     .select('action_payload, expires_at')
+    .eq('tenant_id', tenantId)
     .eq('chat_id', chatId)
     .eq('action_type', 'task_list_context')
     .single()
@@ -131,7 +146,11 @@ export async function setPriority(
 
   if (!item) return `❌ Número ${num} não encontrado. Use /tarefas para atualizar.`
 
-  const { error } = await sb.from('tasks').update({ priority }).eq('id', item.id)
+  const { error } = await sb
+    .from('tasks')
+    .update({ priority })
+    .eq('tenant_id', tenantId)
+    .eq('id', item.id)
   if (error) throw error
   return `✅ Prioridade de <b>${escapeHtml(item.title)}</b> alterada para <b>${escapeHtml(priority)}</b>`
 }

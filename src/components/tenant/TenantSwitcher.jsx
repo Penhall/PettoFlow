@@ -1,4 +1,5 @@
 import { useTenant } from '../../hooks/useTenant.js'
+import { PRODUCT } from '../../content/uxText.js'
 
 export default function TenantSwitcher() {
   const { tenants, activeTenantId, setActiveTenant } = useTenant()
@@ -7,7 +8,7 @@ export default function TenantSwitcher() {
 
   if (tenants.length === 1) {
     return (
-      <div className="tenant-switcher tenant-switcher--single" aria-label="Espaço de trabalho ativo">
+      <div className="tenant-switcher tenant-switcher--single" aria-label={`${PRODUCT.workspace} ativo`}>
         <strong>{tenants[0].name}</strong>
       </div>
     )
@@ -18,7 +19,7 @@ export default function TenantSwitcher() {
       <select
         id="tenant-switcher-select"
         className="tenant-switcher__select"
-        aria-label="Espaço de trabalho ativo"
+        aria-label={`${PRODUCT.workspace} ativo`}
         value={activeTenantId ?? ''}
         onChange={(event) => setActiveTenant(event.target.value)}
       >

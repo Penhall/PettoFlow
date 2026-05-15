@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { listCommands, toggleCommand, deleteCommand, seedDefaultCommands } from '../../lib/botCommands.js'
 import { countCommandFailure } from '../../lib/diagnostics.js'
+import { normalizeError } from '../../lib/mutationResult.js'
+import { useTenant } from '../../hooks/useTenant.js'
+import { EMPTY_STATE_TEXT, ERROR_TEXT, LOADING_TEXT, SETTINGS_TEXT } from '../../content/uxText.js'
 import CommandForm from './CommandForm.jsx'
 
 function flattenGroup(commands, groupName) {
@@ -11,11 +14,12 @@ function flattenGroup(commands, groupName) {
 const GROUP_LABELS = {
   tasks: 'Tarefas',
   activities: 'Atividades',
-  finance: 'Financas',
+  finance: 'Finanças',
   custom: 'Personalizados',
 }
 
 export default function CommandsSection() {
+  const { activeTenantId } = useTenant()
   const [commands, setCommands] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -27,15 +31,19 @@ export default function CommandsSection() {
     setLoading(true)
     setError('')
     try {
-      const data = await listCommands()
+      if (!activeTenantId) {
+        setCommands([])
+        return
+      }
+      const data = await listCommands(activeTenantId)
       setCommands(data?.commands ?? [])
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'commands.load' }).message || ERROR_TEXT.commands)
       countCommandFailure()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [activeTenantId])
 
   useEffect(() => { load() }, [load])
 
@@ -46,10 +54,10 @@ export default function CommandsSection() {
 
   async function handleToggle(cmd) {
     try {
-      await toggleCommand(cmd.id, !cmd.is_active)
+      await toggleCommand(activeTenantId, cmd.id, !cmd.is_active)
       setCommands(prev => prev.map(c => c.id === cmd.id ? { ...c, is_active: !c.is_active } : c))
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'commands.toggle' }).message)
       countCommandFailure()
     }
   }
@@ -57,17 +65,17 @@ export default function CommandsSection() {
   async function handleDelete(cmd) {
     if (!confirm(`Deletar comando "${cmd.trigger}"?`)) return
     try {
-      await deleteCommand(cmd.id)
+      await deleteCommand(activeTenantId, cmd.id)
       setCommands(prev => prev.filter(c => c.id !== cmd.id))
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'commands.delete' }).message)
       countCommandFailure()
     }
   }
 
   async function handleSeed() {
     try {
-      const data = await seedDefaultCommands()
+      const data = await seedDefaultCommands(activeTenantId)
       setCommands(prev => {
         const existing = new Map(prev.map(c => [c.id, c]))
         for (const cmd of data?.commands ?? []) {
@@ -76,7 +84,7 @@ export default function CommandsSection() {
         return [...existing.values()]
       })
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'commands.seed' }).message)
       countCommandFailure()
     }
   }
@@ -141,22 +149,26 @@ export default function CommandsSection() {
     )
   }
 
+  if (!activeTenantId) {
+    return <div style={{ color: 'var(--text-secondary)' }}>{SETTINGS_TEXT.noActiveCommandsWorkspace}</div>
+  }
+
   if (loading && commands.length === 0) {
-    return <div style={{ color: 'var(--text-secondary)' }}>Carregando comandos...</div>
+    return <div style={{ color: 'var(--text-secondary)' }}>{LOADING_TEXT.commands}</div>
   }
 
   if (error) {
-    return <div style={{ color: '#fecaca', marginBottom: 12 }}>Erro: {error}</div>
+    return <div style={{ color: '#fecaca', marginBottom: 12 }}>{error}</div>
   }
 
   if (commands.length === 0) {
     return (
       <div style={{ maxWidth: 600 }}>
         <p style={{ marginBottom: 16, color: 'var(--text-secondary)' }}>
-          Nenhum comando encontrado. Use o botao abaixo para instalar os comandos padrao.
+          {EMPTY_STATE_TEXT.noCommands}
         </p>
         <button type="button" className="icon-btn" onClick={handleSeed}>
-          Instalar comandos padrao
+          Instalar comandos padrão
         </button>
       </div>
     )
@@ -219,7 +231,7 @@ export default function CommandsSection() {
         <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden' }}>
           {custom.length === 0 ? (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
-              Nenhum comando personalizado ainda.
+              {EMPTY_STATE_TEXT.noCustomCommands}
             </div>
           ) : (
             <div>
@@ -232,7 +244,7 @@ export default function CommandsSection() {
       {/* Re-seed */}
       <div style={{ marginTop: 16 }}>
         <button type="button" className="icon-btn" onClick={handleSeed} style={{ fontSize: '0.85em' }}>
-          Restaurar comandos padrao
+          Restaurar comandos padrão
         </button>
       </div>
 
@@ -252,6 +264,7 @@ export default function CommandsSection() {
         >
           <div style={{ background: 'var(--card-bg, #1a1a2e)', padding: 24, borderRadius: 16, maxWidth: 520, width: '90%' }}>
             <CommandForm
+              tenantId={activeTenantId}
               command={editing}
               onSave={(result) => {
                 if (editing) {

@@ -6,6 +6,7 @@ import {
   createBillingPortalSession,
   fetchTenantBillingOverview,
 } from '../../lib/billingApi.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '') return 'Sob consulta'
@@ -47,7 +48,7 @@ export default function BillingPage() {
       const data = await fetchTenantBillingOverview(activeTenantId)
       setOverview(data)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar faturamento do espaço de trabalho.')
+      setError(normalizeError(loadError, { operation: 'billing.load' }).message)
     } finally {
       setLoading(false)
     }
@@ -67,7 +68,7 @@ export default function BillingPage() {
         if (active) setOverview(data)
       } catch (loadError) {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar faturamento do espaço de trabalho.')
+          setError(normalizeError(loadError, { operation: 'billing.load' }).message)
         }
       } finally {
         if (active) setLoading(false)
@@ -110,7 +111,7 @@ export default function BillingPage() {
         throw new Error('Checkout Stripe sem URL de redirecionamento.')
       }
     } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : 'Erro ao iniciar checkout.')
+      setError(normalizeError(checkoutError, { operation: 'billing.checkout' }).message)
     } finally {
       setBusyPlanKey('')
     }
@@ -129,7 +130,7 @@ export default function BillingPage() {
         throw new Error('Portal Stripe sem URL de redirecionamento.')
       }
     } catch (portalError) {
-      setError(portalError instanceof Error ? portalError.message : 'Erro ao abrir portal de faturamento.')
+      setError(normalizeError(portalError, { operation: 'billing.portal' }).message)
     } finally {
       setBusyPlanKey('')
     }

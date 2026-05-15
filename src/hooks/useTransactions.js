@@ -6,6 +6,7 @@ import {
   updateTransactionRecord,
   deleteTransactionRecord,
 } from '../lib/workspaceCore'
+import { fail, isMutationOk, ok, runMutation } from '../lib/mutationResult.js'
 import { filterFixtureTransactions, getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 function normalizeTransactionsArgs(optionsOrFilters = {}, maybeRules = []) {
@@ -83,58 +84,49 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
     )
 
   const addTransaction = async (form) => {
-    if (visualMode) return form
-    if (!tenantId) return null
+    if (visualMode) return ok(form)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'transactions.add', code: 'missing_tenant' })
 
     const { enriched, ruleMatched } = runRulesEngine(form, getSortedRules())
     const dbPayload = { ...enriched }
     delete dbPayload.payee_name
     const payload = { ...dbPayload, needs_review: !ruleMatched }
 
-    try {
+    return runMutation('transactions.add', async () => {
       const created = await createTransactionRecord(payload, tenantId)
       setTransactions((current) => [created, ...current])
       return created
-    } catch (error) {
-      console.error('Error adding transaction:', error)
-      return null
-    }
+    })
   }
 
   const updateTransaction = async (id, updates) => {
-    if (visualMode) return { id, ...updates }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...updates })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'transactions.update', code: 'missing_tenant' })
 
     const dbUpdates = { ...updates }
     delete dbUpdates.payee_name
 
-    try {
+    return runMutation('transactions.update', async () => {
       const updated = await updateTransactionRecord(id, dbUpdates, tenantId)
       setTransactions((current) => current.map((transaction) => (transaction.id === id ? updated : transaction)))
       return updated
-    } catch (error) {
-      console.error('Error updating transaction:', error)
-      return null
-    }
+    })
   }
 
   const deleteTransaction = async (id) => {
-    if (visualMode) return true
-    if (!tenantId) return false
+    if (visualMode) return ok(true)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'transactions.delete', code: 'missing_tenant' })
 
-    try {
+    return runMutation('transactions.delete', async () => {
       await deleteTransactionRecord(id, tenantId)
       setTransactions((current) => current.filter((transaction) => transaction.id !== id))
       return true
-    } catch (error) {
-      console.error('Error deleting transaction:', error)
-      return false
-    }
+    })
   }
 
   const applyRules = async () => {
-    if (visualMode) return true
-    if (!tenantId) return false
+    if (visualMode) return ok(true)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'transactions.applyRules', code: 'missing_tenant' })
 
     const sortedRules = getSortedRules()
     const pendingTransactions = transactions.filter((transaction) => transaction.needs_review)
@@ -142,11 +134,12 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
     for (const transaction of pendingTransactions) {
       const { enriched, ruleMatched } = runRulesEngine(transaction, sortedRules)
       if (ruleMatched) {
-        await updateTransaction(transaction.id, { ...enriched, needs_review: false })
+        const result = await updateTransaction(transaction.id, { ...enriched, needs_review: false })
+        if (!isMutationOk(result)) return result
       }
     }
 
-    return true
+    return ok(true)
   }
 
   return { transactions, loading, addTransaction, updateTransaction, deleteTransaction, applyRules }

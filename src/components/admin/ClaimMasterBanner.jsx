@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { adminFetch } from '../../lib/adminClient.js'
+import { normalizeError } from '../../lib/mutationResult.js'
+import { PRODUCT } from '../../content/uxText.js'
 
 export default function ClaimMasterBanner({ onClaimed }) {
   const [isEmpty, setIsEmpty] = useState(null)
@@ -22,7 +24,7 @@ export default function ClaimMasterBanner({ onClaimed }) {
       await adminFetch('/claim-master', { method: 'POST' })
       onClaimed()
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'admin.claimMaster' }).message)
       setClaiming(false)
     }
   }
@@ -58,7 +60,7 @@ export default function ClaimMasterBanner({ onClaimed }) {
             color: 'var(--primary)',
           }}
         >
-          NexusCRM
+          {PRODUCT.name}
         </p>
         <h2
           style={{
@@ -68,11 +70,11 @@ export default function ClaimMasterBanner({ onClaimed }) {
             color: 'var(--text-primary)',
           }}
         >
-          Bem-vindo ao Gestão SaaS
+          Bem-vindo à administração da plataforma
         </h2>
         <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
           Nenhum administrador foi configurado ainda. Reivindique o acesso master
-          para gerenciar tenants, planos e configurações da plataforma.
+          para gerenciar espaços de trabalho, planos e configurações da plataforma.
         </p>
 
         {error && (

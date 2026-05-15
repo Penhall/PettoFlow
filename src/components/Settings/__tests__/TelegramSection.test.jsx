@@ -13,6 +13,10 @@ vi.mock('../../../lib/botCommands.js', () => ({
   seedDefaultCommands: vi.fn(),
 }))
 
+vi.mock('../../../hooks/useTenant.js', () => ({
+  useTenant: () => ({ activeTenantId: 'tenant-1' }),
+}))
+
 describe('TelegramSection', () => {
   it('renderiza o estado inicial com opcao de configurar quando nao ha config', async () => {
     render(<TelegramSection />)

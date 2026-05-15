@@ -18,6 +18,7 @@ import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
 import SurfaceCard from '../shared/SurfaceCard.jsx'
+import { getMutationData, getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 
 const EMPTY_FILTERS = {}
 const ACTIVITY_TABS = [
@@ -80,16 +81,16 @@ const ActivitiesView = ({
   }
 
   const handleSave = async (form) => {
-    let saved
+    let result
     if (editingActivity) {
-      saved = await updateActivity(editingActivity.id, form)
+      result = await updateActivity(editingActivity.id, form)
     } else {
-      saved = await addActivity(form)
+      result = await addActivity(form)
     }
-    if (!saved) return null
+    if (!isMutationOk(result)) return result
     setShowForm(false)
     setEditingActivity(null)
-    return saved
+    return getMutationData(result)
   }
 
   const handleClose = () => {
@@ -117,17 +118,22 @@ const ActivitiesView = ({
   }
 
   const handleDeleteTemplate = async (id) => {
-    await deleteTemplate(id)
+    return deleteTemplate(id)
   }
 
   const handleSaveTemplate = async (formData) => {
+    let result
     if (editingTemplate) {
-      await updateTemplate(editingTemplate.id, formData)
+      result = await updateTemplate(editingTemplate.id, formData)
     } else {
-      await createTemplate(formData)
+      result = await createTemplate(formData)
+    }
+    if (!isMutationOk(result)) {
+      return getMutationMessage(result)
     }
     setShowTemplateForm(false)
     setEditingTemplate(null)
+    return null
   }
 
   const handleCloseTemplateForm = () => {

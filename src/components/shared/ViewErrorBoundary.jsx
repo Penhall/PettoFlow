@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import { traceAsyncFailure } from '../../lib/diagnostics.js'
+import { ACTION_TEXT, ERROR_TEXT } from '../../content/uxText.js'
 import EmptyState from './EmptyState.jsx'
 import SurfaceCard from './SurfaceCard.jsx'
 
@@ -28,7 +29,7 @@ export default class ViewErrorBoundary extends Component {
   }
 
   render() {
-    const { areaLabel = 'esta area', children } = this.props
+    const { areaLabel = 'esta área', children } = this.props
     const { error } = this.state
 
     if (this.state.hasError) {
@@ -42,18 +43,18 @@ export default class ViewErrorBoundary extends Component {
           <EmptyState
             title={
               isChunkError
-                ? `Os modulos de ${areaLabel} ficaram desatualizados`
-                : `Nao foi possivel carregar ${areaLabel}`
+                ? ERROR_TEXT.chunkTitle(areaLabel)
+                : `Não foi possível carregar ${areaLabel}`
             }
             description={
               isChunkError
-                ? 'O navegador manteve uma versao antiga do app enquanto esta area ja foi publicada em um novo bundle.'
-                : 'A interface desta area encontrou um erro inesperado durante a renderizacao.'
+                ? ERROR_TEXT.chunkDescription
+                : ERROR_TEXT.viewRender
             }
             detail={
               isChunkError
-                ? 'Recarregue a pagina para buscar os modulos atualizados. Isso costuma acontecer logo apos um deploy novo.'
-                : 'Tente abrir a area novamente. Se o problema persistir, atualize a pagina para recarregar os modulos internos.'
+                ? ERROR_TEXT.chunkDetail
+                : ERROR_TEXT.viewRetry
             }
             action={(
               <button
@@ -68,7 +69,7 @@ export default class ViewErrorBoundary extends Component {
                   this.setState({ hasError: false, error: null })
                 }}
               >
-                {isChunkError ? 'Recarregar pagina' : 'Tentar novamente'}
+                {isChunkError ? ACTION_TEXT.reloadPage : ACTION_TEXT.retry}
               </button>
             )}
           />

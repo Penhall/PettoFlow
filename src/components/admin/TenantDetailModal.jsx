@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchAdminTenantDetail, updateTenantPlan, suspendTenant, reactivateTenant } from '../../lib/adminClient.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -27,7 +28,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
         setSelectedPlan(data.tenant?.subscription?.plan?.slug ?? 'free')
         setLoading(false)
       })
-      .catch(err => { setError(err.message); setLoading(false) })
+      .catch(err => { setError(normalizeError(err, { operation: 'admin.workspaceDetail' }).message); setLoading(false) })
   }, [tenantId])
 
   useEffect(() => { loadTenant() }, [loadTenant])
@@ -40,7 +41,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
       setPlanFeedback({ ok: true, msg: 'Plano alterado com sucesso.' })
       loadTenant()
     } catch (err) {
-      setPlanFeedback({ ok: false, msg: err.message })
+      setPlanFeedback({ ok: false, msg: normalizeError(err, { operation: 'admin.workspacePlan' }).message })
     } finally {
       setPlanLoading(false)
     }
@@ -53,14 +54,14 @@ export default function TenantDetailModal({ tenantId, onClose }) {
     try {
       if (isActive) {
         await suspendTenant(tenantId)
-        setSuspendFeedback({ ok: true, msg: 'Tenant suspenso com sucesso.' })
+        setSuspendFeedback({ ok: true, msg: 'Espaço de trabalho suspenso com sucesso.' })
       } else {
         await reactivateTenant(tenantId)
-        setSuspendFeedback({ ok: true, msg: 'Tenant reativado com sucesso.' })
+        setSuspendFeedback({ ok: true, msg: 'Espaço de trabalho reativado com sucesso.' })
       }
       loadTenant()
     } catch (err) {
-      setSuspendFeedback({ ok: false, msg: err.message })
+      setSuspendFeedback({ ok: false, msg: normalizeError(err, { operation: 'admin.workspaceStatus' }).message })
     } finally {
       setSuspendLoading(false)
     }
@@ -73,7 +74,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal admin-tenant-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Detalhes do Tenant</h2>
+          <h2>Detalhes do espaço</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Fechar">✕</button>
         </div>
 
@@ -83,7 +84,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
           )}
 
           {error && (
-            <p className="admin-dashboard__error">Erro: {error}</p>
+            <p className="admin-dashboard__error">{error}</p>
           )}
 
           {!loading && !error && tenant && (
@@ -172,8 +173,8 @@ export default function TenantDetailModal({ tenantId, onClose }) {
                       {suspendLoading
                         ? 'Processando...'
                         : isActive
-                          ? 'Suspender Tenant'
-                          : 'Reativar Tenant'}
+                          ? 'Suspender espaço'
+                          : 'Reativar espaço'}
                     </button>
                   </div>
                   {suspendFeedback && (

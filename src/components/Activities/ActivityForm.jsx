@@ -5,6 +5,7 @@ import { X, Calendar, FileText, ChevronDown } from 'lucide-react'
 import RelationChips from './RelationChips'
 import { realToCents } from '../../lib/finUtils'
 import { lazyWithRetry } from '../../lib/lazyWithRetry.js'
+import { getMutationData, getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 
 // Lazy load do Tiptap — carrega ambos os pacotes juntos
 const TiptapEditor = lazyWithRetry(() =>
@@ -95,10 +96,15 @@ const ActivityForm = ({
     if (!form.title.trim()) return
     setSubmitError(null)
     try {
-      const savedActivity = await onSave({
+      const saveResult = await onSave({
         ...form,
         scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
       })
+      if (!isMutationOk(saveResult)) {
+        setSubmitError(getMutationMessage(saveResult))
+        return
+      }
+      const savedActivity = getMutationData(saveResult)
 
       if (!savedActivity?.id) {
         setSubmitError('Erro ao salvar atividade. Tente novamente.')
@@ -110,26 +116,34 @@ const ActivityForm = ({
         if (amountCents > 0) {
           if (finMode === 'transaction' && addTransaction) {
             if (!principalAccountId) {
-              alert('Nenhuma conta Principal definida. Acesse Finanças → Contas.')
+              setSubmitError('Defina uma conta principal em Finanças > Contas antes de registrar o valor.')
+              return
             } else {
-              await addTransaction({
+              const transactionResult = await addTransaction({
                 account_id: principalAccountId,
                 amount: amountCents,
                 date: finDate,
                 notes: `Atividade: ${form.title}`,
                 related_to: [{ type: 'activity', id: savedActivity.id }],
               })
+              if (!isMutationOk(transactionResult)) {
+                setSubmitError(getMutationMessage(transactionResult))
+                return
+              }
             }
           } else if (finMode === 'receivable' && createReceivableFromActivity) {
-            await createReceivableFromActivity(
+            const receivableResult = await createReceivableFromActivity(
               savedActivity.id, amountCents, principalAccountId ?? null, finDate
             )
+            if (!isMutationOk(receivableResult)) {
+              setSubmitError(getMutationMessage(receivableResult))
+              return
+            }
           }
         }
       }
     } catch (err) {
       setSubmitError('Erro ao salvar. Tente novamente.')
-      console.error(err)
     }
   }
 

@@ -4,6 +4,7 @@ import {
   createCategoryGroupRecord,
   saveFinCategoryRecord,
 } from '../lib/workspaceCore'
+import { fail, ok, runMutation } from '../lib/mutationResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useFinCategories({ tenantId } = {}) {
@@ -50,45 +51,36 @@ export function useFinCategories({ tenantId } = {}) {
   }, [visualMode, fixtureGroups, fixtureCategories, tenantId])
 
   const addGroup = async (group) => {
-    if (visualMode) return group
-    if (!tenantId) return null
+    if (visualMode) return ok(group)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'finCategories.addGroup', code: 'missing_tenant' })
 
-    try {
+    return runMutation('finCategories.addGroup', async () => {
       const created = await createCategoryGroupRecord(group, tenantId)
       setGroups((current) => [...current, created])
       return created
-    } catch (error) {
-      console.error('Error adding category_group:', error)
-      return null
-    }
+    })
   }
 
   const addCategory = async (category) => {
-    if (visualMode) return category
-    if (!tenantId) return null
+    if (visualMode) return ok(category)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'finCategories.addCategory', code: 'missing_tenant' })
 
-    try {
+    return runMutation('finCategories.addCategory', async () => {
       const created = await saveFinCategoryRecord(category, tenantId)
       setCategories((current) => [...current, created])
       return created
-    } catch (error) {
-      console.error('Error adding fin_category:', error)
-      return null
-    }
+    })
   }
 
   const updateCategory = async (id, updates) => {
-    if (visualMode) return { id, ...updates }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...updates })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'finCategories.updateCategory', code: 'missing_tenant' })
 
-    try {
+    return runMutation('finCategories.updateCategory', async () => {
       const updated = await saveFinCategoryRecord({ id, ...updates }, tenantId)
       setCategories((current) => current.map((category) => (category.id === id ? updated : category)))
       return updated
-    } catch (error) {
-      console.error('Error updating fin_category:', error)
-      return null
-    }
+    })
   }
 
   return { groups, categories, loading, addGroup, addCategory, updateCategory }

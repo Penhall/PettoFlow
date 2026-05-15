@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listPayeeRecords, savePayeeRecord } from '../lib/workspaceCore'
+import { fail, ok, runMutation } from '../lib/mutationResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function usePayees({ tenantId } = {}) {
@@ -41,31 +42,25 @@ export function usePayees({ tenantId } = {}) {
   }, [visualMode, fixturePayees, tenantId])
 
   const addPayee = async (name) => {
-    if (visualMode) return { id: `visual-${name}`, name }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id: `visual-${name}`, name })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'payees.add', code: 'missing_tenant' })
 
-    try {
+    return runMutation('payees.add', async () => {
       const created = await savePayeeRecord({ name }, tenantId)
       setPayees((current) => [...current, created].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR')))
       return created
-    } catch (error) {
-      console.error('Error adding payee:', error)
-      return null
-    }
+    })
   }
 
   const updatePayee = async (id, updates) => {
-    if (visualMode) return { id, ...updates }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...updates })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'payees.update', code: 'missing_tenant' })
 
-    try {
+    return runMutation('payees.update', async () => {
       const updated = await savePayeeRecord({ id, ...updates }, tenantId)
       setPayees((current) => current.map((payee) => (payee.id === id ? updated : payee)))
       return updated
-    } catch (error) {
-      console.error('Error updating payee:', error)
-      return null
-    }
+    })
   }
 
   return { payees, loading, addPayee, updatePayee }

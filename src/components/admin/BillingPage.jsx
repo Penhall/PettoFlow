@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import PageHeader from '../shared/PageHeader.jsx'
 import { DollarSign, TrendingDown, Users, BarChart3 } from 'lucide-react'
 import { fetchAdminBilling } from '../../lib/adminClient.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 function formatBRL(value) {
   return new Intl.NumberFormat('pt-BR', {
@@ -41,7 +42,7 @@ export default function BillingPage() {
         setLoading(false)
       })
       .catch(err => {
-        setError(err.message)
+        setError(normalizeError(err, { operation: 'admin.billing' }).message)
         setLoading(false)
       })
   }, [])
@@ -57,7 +58,7 @@ export default function BillingPage() {
   if (error) {
     return (
       <div className="admin-billing">
-        <p className="admin-dashboard__error">Erro: {error}</p>
+        <p className="admin-dashboard__error">{error}</p>
       </div>
     )
   }
@@ -86,7 +87,7 @@ export default function BillingPage() {
           { label: 'MRR Total', value: formatBRL(mrr_total), icon: DollarSign },
           { label: 'MRR Perdido', value: formatBRL(churned_mrr), icon: TrendingDown },
           { label: 'Assinaturas Ativas', value: String(active_subscriptions), icon: Users },
-          { label: 'Receita Média/Tenant', value: formatBRL(avg_revenue_per_tenant), icon: BarChart3 },
+          { label: 'Receita média por espaço', value: formatBRL(avg_revenue_per_tenant), icon: BarChart3 },
         ]}
       />
 
@@ -102,7 +103,7 @@ export default function BillingPage() {
                   <th>Plano</th>
                   <th>Assinaturas Ativas</th>
                   <th>MRR</th>
-                  <th>Total Tenants</th>
+                  <th>Total de espaços</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,7 +156,7 @@ export default function BillingPage() {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Tenant</th>
+                  <th>Espaço</th>
                   <th>Plano</th>
                   <th>Status</th>
                   <th>Vencimento</th>

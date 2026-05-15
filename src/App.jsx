@@ -22,9 +22,11 @@ import { useRuntimeOrchestration } from './hooks/useRuntimeOrchestration.js'
 import { useTenant } from './hooks/useTenant.js'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
+import { fail, getMutationData, isMutationOk, normalizeError, ok, runMutation } from './lib/mutationResult.js'
 import { traceAsync, traceAsyncFailure, traceBootstrap, traceRouteTransition, traceTransitionConflict } from './lib/diagnostics.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
+import { ACTION_TEXT, EMPTY_STATE_TEXT, ERROR_TEXT, LOADING_TEXT, SHELL_TEXT } from './content/uxText.js'
 import {
   archiveTaskRecord,
   createColumnRecord,
@@ -59,39 +61,8 @@ const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
 const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit', 'admin-plans'])
 const CONTENT_SEARCH_TABS = new Set(['time', 'clientes', 'tutoriais'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
-const TAB_LOADING_LABELS = {
-  dashboard: 'Carregando dashboard...',
-  tarefas: 'Carregando tarefas...',
-  atividades: 'Carregando atividades...',
-  financas: 'Carregando finanças...',
-  time: 'Carregando time...',
-  clientes: 'Carregando clientes...',
-  arquivo: 'Carregando arquivo...',
-  calendario: 'Carregando calendário...',
-  tutoriais: 'Carregando tutoriais...',
-  settings: 'Carregando configurações...',
-  'admin-dashboard': 'Carregando dashboard admin...',
-  'admin-tenants': 'Carregando tenants...',
-  'admin-audit': 'Carregando auditoria...',
-  'admin-plans': 'Carregando planos...',
-}
-
-const TAB_ERROR_LABELS = {
-  dashboard: 'o dashboard',
-  tarefas: 'a área de tarefas',
-  atividades: 'a área de atividades',
-  financas: 'a área de finanças',
-  time: 'a área de time',
-  clientes: 'a área de clientes',
-  arquivo: 'a área de arquivo',
-  calendario: 'a área de calendário',
-  tutoriais: 'a central de tutoriais',
-  settings: 'a área de configurações',
-  'admin-dashboard': 'o dashboard admin',
-  'admin-tenants': 'a lista de tenants',
-  'admin-audit': 'a auditoria',
-  'admin-plans': 'a gestão de planos',
-}
+const TAB_LOADING_LABELS = LOADING_TEXT.tabs
+const TAB_ERROR_LABELS = SHELL_TEXT.tabErrorLabels
 
 function readInitialAppTab() {
   if (typeof window === 'undefined') return 'tarefas'
@@ -133,6 +104,7 @@ function App() {
   const [tourOpen, setTourOpen] = useState(false)
   const [tourStepIndex, setTourStepIndex] = useState(0)
   const [tourAutoPrompted, setTourAutoPrompted] = useState(false)
+  const [shellError, setShellError] = useState('')
 
   const { user, signOut, isPlatformAdmin } = useAuth()
   const { activeTenantId } = useTenant()
@@ -574,22 +546,20 @@ function App() {
   }
 
   const addTask = async (task) => {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.add', code: 'missing_tenant' })
     const payload = { ...task }
     delete payload.related_to
 
-    try {
+    return runMutation('tasks.add', async () => {
       const created = await createTaskRecord({ ...payload, created_at: new Date().toISOString() }, activeTenantId)
       setTasks((prev) => [created, ...prev])
       setShowAddModal(false)
       return created
-    } catch (error) {
-      console.error('Error adding task:', error)
-      alert('Erro ao adicionar tarefa: ' + error.message)
-      return null
-    }
+    })
   }
 
   const updateTask = async (id, updates) => {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.update', code: 'missing_tenant' })
     const cleanUpdates = { ...updates }
     delete cleanUpdates.related_to
 
@@ -610,13 +580,11 @@ function App() {
     }
 
     let updatedTask
-    try {
-      updatedTask = await updateTaskRecord(id, cleanUpdates, activeTenantId)
-    } catch (error) {
-      console.error('Error updating task:', error)
-      alert('Erro ao atualizar tarefa: ' + error.message)
-      return null
+    const updateResult = await runMutation('tasks.update', async () => updateTaskRecord(id, cleanUpdates, activeTenantId))
+    if (!isMutationOk(updateResult)) {
+      return updateResult
     }
+    updatedTask = getMutationData(updateResult)
 
     setTasks((prev) => prev.map((item) => (item.id === id ? updatedTask : item)))
 
@@ -626,65 +594,65 @@ function App() {
         const allAccounts = await listActiveAccounts(activeTenantId)
         const principal = findPrincipal(allAccounts || [])
         if (principal) {
-          await createReceivable(id, updatedTask.deal_value, principal.id)
+          const receivableResult = await createReceivable(id, updatedTask.deal_value, principal.id)
+          if (!isMutationOk(receivableResult)) return receivableResult
         } else {
-          alert('Nenhuma conta principal definida. Acesse Finanças -> Contas para definir uma conta principal.')
+          return fail(new Error('missing principal account'), { operation: 'tasks.createReceivable', code: 'validation_failed' })
         }
       }
     }
 
-    return updatedTask
+    return ok(updatedTask)
   }
 
   const deleteTask = async (id) => {
-    try {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.delete', code: 'missing_tenant' })
+    return runMutation('tasks.delete', async () => {
       await deleteTaskRecord(id, activeTenantId)
       setTasks((prev) => prev.filter((task) => task.id !== id))
-    } catch (error) {
-      console.error('Error deleting task:', error)
-    }
+      return true
+    })
   }
 
   const archiveTask = async (id) => {
-    try {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.archive', code: 'missing_tenant' })
+    return runMutation('tasks.archive', async () => {
       await archiveTaskRecord(id, activeTenantId)
       setTasks((prev) => prev.filter((task) => task.id !== id))
-    } catch (error) {
-      console.error('Error archiving task:', error)
-    }
+      return true
+    })
   }
 
   const restoreTask = async (id) => {
-    try {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.restore', code: 'missing_tenant' })
+    return runMutation('tasks.restore', async () => {
       const restored = await restoreTaskRecord(id, activeTenantId)
       if (restored) {
         setTasks((prev) => [restored, ...prev.filter((task) => task.id !== id)])
+        return restored
       } else {
-        console.error('restoreTask: no data returned for task', id)
+        throw new Error('restore returned no data')
       }
-    } catch (error) {
-      console.error('Error restoring task:', error)
-    }
+    })
   }
 
   const addColumn = async (name) => {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'columns.add', code: 'missing_tenant' })
     const orderIndex = columns.length > 0 ? Math.max(...columns.map((column) => column.order_index)) + 1 : 1
-    try {
+    return runMutation('columns.add', async () => {
       const created = await createColumnRecord({ name, order_index: orderIndex }, activeTenantId)
       setColumns((prev) => [...prev, created])
-    } catch (error) {
-      console.error('Error adding column:', error)
-      alert('Erro ao adicionar coluna Kanban: ' + error.message)
-    }
+      return created
+    })
   }
 
   const deleteColumn = async (id) => {
-    try {
+    if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'columns.delete', code: 'missing_tenant' })
+    return runMutation('columns.delete', async () => {
       await deleteColumnRecord(id, activeTenantId)
       setColumns((prev) => prev.filter((column) => column.id !== id))
-    } catch (error) {
-      console.error('Error deleting column:', error)
-    }
+      return true
+    })
   }
 
   const openAddModal = (status = 'A Fazer') => {
@@ -716,11 +684,12 @@ function App() {
   }
 
   const handleProfileSignOut = async () => {
+    setShellError('')
     try {
       await signOut()
     } catch (error) {
-      console.error('Erro ao encerrar sessão:', error)
-      alert('Não foi possível sair do NexusCRM agora.')
+      traceAsyncFailure('auth-failure', error, { stage: 'profile-sign-out' })
+      setShellError(ERROR_TEXT.authSignOut)
     }
   }
 
@@ -730,10 +699,10 @@ function App() {
         onSearch: activeTab === 'tutoriais' ? setTutorialSearchQuery : setSearchQuery,
         onSearchFocus: undefined,
         placeholder: activeTab === 'time'
-          ? 'Buscar membro ou função'
+          ? SHELL_TEXT.search.member
           : activeTab === 'tutoriais'
-            ? 'Buscar tutorial ou módulo'
-            : 'Buscar cliente ou indústria',
+            ? SHELL_TEXT.search.tutorial
+            : SHELL_TEXT.search.client,
       }
     : COMMAND_PALETTE_SEARCH_TABS.has(activeTab)
       ? {
@@ -743,29 +712,30 @@ function App() {
             setQuery(value)
           },
           onSearchFocus: openPalette,
-          placeholder: 'Ir para cliente, tarefa ou atividade',
+          placeholder: SHELL_TEXT.search.command,
         }
       : {
           value: '',
           onSearch: () => {},
           onSearchFocus: undefined,
-          placeholder: 'Pesquisar',
+          placeholder: SHELL_TEXT.search.default,
         }
 
   const renderContent = () => {
     if (bootstrapError) {
+      const safeBootstrapError = normalizeError(bootstrapError, { operation: 'workspace.bootstrap' })
       return (
         <EmptyState
-          title="NÃ£o foi possÃ­vel carregar o espaÃ§o de trabalho"
-          description="A inicializaÃ§Ã£o do workspace falhou antes da Ã¡rea operacional ficar pronta."
-          detail={bootstrapError.message || 'Tente novamente para refazer o bootstrap do tenant ativo.'}
+          title={EMPTY_STATE_TEXT.workspaceBootstrap.title}
+          description={EMPTY_STATE_TEXT.workspaceBootstrap.description}
+          detail={safeBootstrapError.message || EMPTY_STATE_TEXT.workspaceBootstrap.detail}
           action={(
             <button
               type="button"
               className="page-action-bar__button page-action-bar__button--primary"
               onClick={retryBootstrap}
             >
-              Tentar novamente
+              {ACTION_TEXT.retry}
             </button>
           )}
         />
@@ -1039,7 +1009,7 @@ function App() {
   }
 
   if (loading) {
-    return <div className="loading-screen">Carregando NexusCRM...</div>
+    return <div className="loading-screen">{LOADING_TEXT.app}</div>
   }
 
   return (
@@ -1085,7 +1055,7 @@ function App() {
             className="view-wrapper"
           >
             <ViewErrorBoundary resetKey={activeTab} areaLabel={TAB_ERROR_LABELS[activeTab] || 'esta área'}>
-              <Suspense fallback={<DeferredSurface label={TAB_LOADING_LABELS[activeTab] || 'Carregando área...'} />}>
+              <Suspense fallback={<DeferredSurface label={TAB_LOADING_LABELS[activeTab] || LOADING_TEXT.area} />}>
                 {renderContent()}
               </Suspense>
             </ViewErrorBoundary>
@@ -1096,6 +1066,12 @@ function App() {
       <Suspense fallback={null}>
         <ReminderToast activities={activities} />
       </Suspense>
+
+      {shellError ? (
+        <div role="alert" className="shell-error-toast">
+          {shellError}
+        </div>
+      ) : null}
 
       {(paletteOpen || query) ? (
         <Suspense fallback={null}>
@@ -1127,17 +1103,18 @@ function App() {
               onSave={async (entry) => {
                 if (selectedTask) {
                   const { id, ...updates } = entry
-                  const updated = await updateTask(id, updates)
-                  if (!updated) return
+                  const result = await updateTask(id, updates)
+                  if (!isMutationOk(result)) return result
                   setShowEditModal(false)
                   setSelectedTask(null)
-                  return
+                  return result
                 }
 
-                const created = await addTask(entry)
-                if (!created) return
+                const result = await addTask(entry)
+                if (!isMutationOk(result)) return result
                 setShowAddModal(false)
                 setSelectedTask(null)
+                return result
               }}
               onClose={() => {
                 setShowAddModal(false)

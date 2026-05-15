@@ -6,10 +6,11 @@ function formatCentsBRL(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-async function getPrincipalAccountId(sb: SupabaseClient): Promise<number | null> {
+async function getPrincipalAccountId(sb: SupabaseClient, tenantId: string): Promise<number | null> {
   const { data } = await sb
     .from('accounts')
     .select('id, category')
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
 
   if (!data || data.length === 0) return null
@@ -20,16 +21,18 @@ async function getPrincipalAccountId(sb: SupabaseClient): Promise<number | null>
 
 export async function recordTransaction(
   sb: SupabaseClient,
+  tenantId: string,
   direction: 'in' | 'out',
   description: string,
   amount: number
 ): Promise<string> {
-  const accountId = await getPrincipalAccountId(sb)
+  const accountId = await getPrincipalAccountId(sb, tenantId)
   if (!accountId) return '❌ Nenhuma conta encontrada. Crie uma conta no NexusCRM antes de usar este comando.'
 
   const amountCents = Math.round(Math.abs(amount) * 100)
   const signedAmount = direction === 'out' ? -amountCents : amountCents
   const { error } = await sb.from('transactions').insert({
+    tenant_id: tenantId,
     account_id: accountId,
     amount: signedAmount,
     date: new Date().toISOString().split('T')[0],
@@ -44,10 +47,11 @@ export async function recordTransaction(
   return `${emoji} ${label} registrada: <b>${escapeHtml(description)}</b> — ${formatCentsBRL(amountCents)}`
 }
 
-export async function getBalance(sb: SupabaseClient): Promise<string> {
+export async function getBalance(sb: SupabaseClient, tenantId: string): Promise<string> {
   const { data, error } = await sb
     .from('accounts')
     .select('id, name, opening_balance')
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
 
   if (error) throw error
@@ -58,6 +62,7 @@ export async function getBalance(sb: SupabaseClient): Promise<string> {
     const { data: txs } = await sb
       .from('transactions')
       .select('amount')
+      .eq('tenant_id', tenantId)
       .eq('account_id', account.id)
 
     const total = (txs ?? []).reduce((sum: number, t: { amount: number }) => sum + (t.amount ?? 0), 0)
@@ -67,10 +72,11 @@ export async function getBalance(sb: SupabaseClient): Promise<string> {
   return lines.join('\n')
 }
 
-export async function listTransactions(sb: SupabaseClient): Promise<string> {
+export async function listTransactions(sb: SupabaseClient, tenantId: string): Promise<string> {
   const { data, error } = await sb
     .from('transactions')
     .select('amount, date, notes')
+    .eq('tenant_id', tenantId)
     .order('date', { ascending: false })
     .limit(5)
 

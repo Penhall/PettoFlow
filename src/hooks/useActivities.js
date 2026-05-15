@@ -4,6 +4,7 @@ import {
   saveActivityRecord,
   deleteActivityRecord,
 } from '../lib/workspaceCore'
+import { fail, ok, runMutation } from '../lib/mutationResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useActivities({ tenantId } = {}) {
@@ -48,45 +49,39 @@ export function useActivities({ tenantId } = {}) {
   }, [visualMode, fixtureActivities, tenantId])
 
   const addActivity = async (activity) => {
-    if (visualMode) return activity
-    if (!tenantId) return null
+    if (visualMode) return ok(activity)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'activities.add', code: 'missing_tenant' })
 
-    try {
+    const result = await runMutation('activities.add', async () => {
       const created = await saveActivityRecord(activity, tenantId)
       setActivities((current) => [created, ...current])
       return created
-    } catch (error) {
-      console.error('Error adding activity:', error)
-      return null
-    }
+    })
+    return result
   }
 
   const updateActivity = async (id, updates) => {
-    if (visualMode) return { id, ...updates }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...updates })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'activities.update', code: 'missing_tenant' })
 
-    try {
+    const result = await runMutation('activities.update', async () => {
       const updated = await saveActivityRecord({ id, ...updates }, tenantId)
       setActivities((current) => current.map((activity) => (activity.id === id ? updated : activity)))
       return updated
-    } catch (error) {
-      console.error('Error updating activity:', error)
-      return null
-    }
+    })
+    return result
   }
 
   const deleteActivity = async (id) => {
-    if (visualMode) return true
-    if (!tenantId) return false
+    if (visualMode) return ok(true)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'activities.delete', code: 'missing_tenant' })
 
-    try {
+    const result = await runMutation('activities.delete', async () => {
       await deleteActivityRecord(id, tenantId)
       setActivities((current) => current.filter((activity) => activity.id !== id))
       return true
-    } catch (error) {
-      console.error('Error deleting activity:', error)
-      return false
-    }
+    })
+    return result
   }
 
   const getActivitiesFor = (type, id) =>

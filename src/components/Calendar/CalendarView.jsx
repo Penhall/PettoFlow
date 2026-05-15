@@ -13,6 +13,7 @@ import { useReceivables } from '../../hooks/useReceivables'
 import { useTransactions } from '../../hooks/useTransactions'
 import { useTenant } from '../../hooks/useTenant.js'
 import { getPrincipalAccount } from '../../lib/financeUtils'
+import { getMutationData, isMutationOk } from '../../lib/mutationResult.js'
 import ActivityForm from '../Activities/ActivityForm'
 import CalendarFilters from './CalendarFilters'
 import EventDetailPanel from './EventDetailPanel'
@@ -140,8 +141,10 @@ export default function CalendarView({
             team={team}
             templates={[]}
             onSave={async (form) => {
-              await addActivity(form)
+              const result = await addActivity(form)
+              if (!isMutationOk(result)) return result
               setDateClickDate(null)
+              return getMutationData(result)
             }}
             onClose={() => setDateClickDate(null)}
           />

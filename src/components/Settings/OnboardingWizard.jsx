@@ -2,8 +2,9 @@
 import { useState } from 'react'
 import { saveBotConfig } from '../../lib/botConfig.js'
 import { seedDefaultCommands } from '../../lib/botCommands.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
-export default function OnboardingWizard({ onConnected }) {
+export default function OnboardingWizard({ tenantId, onConnected }) {
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -19,14 +20,14 @@ export default function OnboardingWizard({ onConnected }) {
 
     try {
       try {
-        await saveBotConfig({ telegramBotToken: trimmedToken })
+        await saveBotConfig({ tenantId, telegramBotToken: trimmedToken })
       } catch (err) {
-        setError(`Erro ao conectar: ${err.message}`)
+        setError(normalizeError(err, { operation: 'telegram.connect' }).message)
         return
       }
 
       try {
-        await seedDefaultCommands()
+        await seedDefaultCommands(tenantId)
       } catch (err) {
         console.warn('Seed de comandos falhou (nao critico):', err)
       }

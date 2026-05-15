@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTenant } from '../../hooks/useTenant.js'
+import { ACTION_TEXT, ERROR_TEXT, PRODUCT } from '../../content/uxText.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 function slugifyWorkspaceName(value) {
   return value
@@ -45,7 +47,7 @@ export default function WorkspaceOnboarding({ embed = false }) {
     try {
       await createWorkspace({ name: trimmedName, slug: normalizedSlug })
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Não foi possível criar o espaço de trabalho.')
+      setError(normalizeError(submitError, { operation: 'workspace.create' }).message || ERROR_TEXT.createWorkspace)
     } finally {
       setLoading(false)
     }
@@ -90,7 +92,7 @@ export default function WorkspaceOnboarding({ embed = false }) {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Criando espaço de trabalho...' : 'Criar espaço de trabalho'}
+            {loading ? ACTION_TEXT.creatingWorkspace : ACTION_TEXT.createWorkspace}
           </button>
         </form>
       </div>
@@ -101,7 +103,7 @@ export default function WorkspaceOnboarding({ embed = false }) {
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="workspace-onboarding-title">
         <div className="auth-copy">
-          <span className="auth-eyebrow">NexusCRM</span>
+          <span className="auth-eyebrow">{PRODUCT.name}</span>
           <h1 id="workspace-onboarding-title">Criar seu espaço de trabalho</h1>
           <p>Organize clientes, tarefas, atividades e finanças em um único espaço de trabalho.</p>
         </div>
@@ -137,7 +139,7 @@ export default function WorkspaceOnboarding({ embed = false }) {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Criando espaço de trabalho...' : 'Criar espaço de trabalho'}
+            {loading ? ACTION_TEXT.creatingWorkspace : ACTION_TEXT.createWorkspace}
           </button>
         </form>
       </section>

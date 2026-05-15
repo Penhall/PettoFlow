@@ -22,11 +22,13 @@ const TYPE_LABELS: Record<string, string> = {
 
 export async function logActivity(
   sb: SupabaseClient,
+  tenantId: string,
   type: string,
   text: string
 ): Promise<string> {
   const title = text || `${TYPE_LABELS[type] ?? type} via Telegram`
   const { error } = await sb.from('activities').insert({
+    tenant_id: tenantId,
     title,
     type,
     body: makeTiptapBody(text),
@@ -37,10 +39,11 @@ export async function logActivity(
   return `✅ ${TYPE_LABELS[type] ?? type} registrada: <b>${escapeHtml(title)}</b>`
 }
 
-export async function listActivities(sb: SupabaseClient): Promise<string> {
+export async function listActivities(sb: SupabaseClient, tenantId: string): Promise<string> {
   const { data, error } = await sb
     .from('activities')
     .select('title, type, scheduled_at')
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(5)
 

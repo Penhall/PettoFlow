@@ -6,6 +6,7 @@ import {
   updateAdminPlan,
   deleteAdminPlan,
 } from '../../lib/adminClient.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 const EMPTY_FORM = {
   name: '',
@@ -122,7 +123,7 @@ function PlanoFormModal({ plan, onClose, onSaved }) {
       }
       onSaved()
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: isEdit ? 'admin.plans.update' : 'admin.plans.create' }).message)
     } finally {
       setSaving(false)
     }
@@ -294,7 +295,7 @@ function DeleteConfirmModal({ plan, onClose, onConfirm, deleting }) {
         ) : blocked ? (
           <p className="admin-dashboard__error">
             O plano <strong>{plan.name}</strong> possui {plan.active_subscriptions_count} assinatura(s) ativa(s).
-            Remova ou migre os tenants antes de excluir.
+            Remova ou migre os espaços de trabalho antes de excluir.
           </p>
         ) : (
           <p>Tem certeza que deseja excluir o plano <strong>{plan.name}</strong>? Esta ação não pode ser desfeita.</p>
@@ -332,7 +333,7 @@ export default function PlansPage() {
     setError(null)
     fetchAdminPlans()
       .then((data) => { setPlans(data.plans ?? []); setLoading(false) })
-      .catch((err) => { setError(err.message); setLoading(false) })
+      .catch((err) => { setError(normalizeError(err, { operation: 'admin.plans.load' }).message); setLoading(false) })
   }
 
   useEffect(() => { load() }, [])
@@ -351,7 +352,7 @@ export default function PlansPage() {
       setDeletingPlan(null)
       load()
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'admin.plans.delete' }).message)
       setDeletingPlan(null)
     } finally {
       setDeleting(false)
@@ -369,7 +370,7 @@ export default function PlansPage() {
   if (error) {
     return (
       <div className="admin-plans">
-        <p className="admin-dashboard__error">Erro: {error}</p>
+        <p className="admin-dashboard__error">{error}</p>
       </div>
     )
   }

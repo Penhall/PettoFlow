@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Shield, ShieldOff, CheckCircle, Copy } from 'lucide-react'
 import { useMfa } from '../../hooks/useMfa.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 export default function MfaSetup() {
   const {
@@ -55,7 +56,7 @@ export default function MfaSetup() {
       setSecret(data.secret || '')
       setStep('qr')
     } catch (err) {
-      setError(err.message || 'Não foi possível iniciar a configuração de 2FA.')
+      setError(normalizeError(err, { operation: 'mfa.setup' }).message)
     }
   }
 

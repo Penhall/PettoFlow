@@ -1,6 +1,7 @@
 // src/components/Settings/CommandForm.jsx
 import { useState } from 'react'
 import { createCommand, updateCommand } from '../../lib/botCommands.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 const MULTI_ACTIONS = [
   { value: '', label: '— selecione —' },
@@ -33,7 +34,7 @@ function buildActions(type, shortcutData, templateData, multiData) {
   return []
 }
 
-export default function CommandForm({ command, onSave, onCancel }) {
+export default function CommandForm({ tenantId, command, onSave, onCancel }) {
   const isEdit = !!command
 
   const [trigger, setTrigger] = useState(command?.trigger ?? '/')
@@ -107,13 +108,13 @@ export default function CommandForm({ command, onSave, onCancel }) {
     try {
       let result
       if (isEdit) {
-        result = await updateCommand(command.id, payload)
+        result = await updateCommand(tenantId, command.id, payload)
       } else {
-        result = await createCommand(payload)
+        result = await createCommand(tenantId, payload)
       }
-      onSave(result)
+      onSave(result?.command ?? result)
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: isEdit ? 'commands.update' : 'commands.create' }).message)
     } finally {
       setSaving(false)
     }

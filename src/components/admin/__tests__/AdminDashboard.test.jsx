@@ -26,7 +26,7 @@ describe('AdminDashboard', () => {
 
     render(<AdminDashboard />)
 
-    expect(screen.getByText('Carregando dashboard...')).toBeTruthy()
+    expect(screen.getByText('Carregando dashboard administrativo...')).toBeTruthy()
   })
 
   it('renderiza métricas e tenants recentes após carregamento', async () => {
@@ -48,7 +48,7 @@ describe('AdminDashboard', () => {
     render(<AdminDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Acesso negado|Erro/i)).toBeTruthy()
+      expect(screen.getByText(/Não foi possível salvar a alteração/i)).toBeTruthy()
     })
   })
 })

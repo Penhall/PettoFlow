@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTenant } from '../../hooks/useTenant.js'
 import { listTenantAuditLogs } from '../../lib/billingApi.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -36,7 +37,7 @@ export default function AuditTimeline() {
         if (active) setItems(data.items ?? [])
       } catch (loadError) {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar auditoria.')
+          setError(normalizeError(loadError, { operation: 'workspace.audit' }).message)
         }
       } finally {
         if (active) setLoading(false)

@@ -3,6 +3,7 @@ import { useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Building2, CheckSquare, Activity, Plus } from 'lucide-react'
 import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
+import { SHELL_TEXT } from '../../content/uxText.js'
 
 const TYPE_ICONS = {
   client:   Building2,
@@ -45,7 +46,7 @@ const CommandPalette = ({ isOpen, query, setQuery, results, onClose, onSelect, o
                 ref={inputRef}
                 type="text"
                 className="palette-input"
-                placeholder="Buscar cliente, tarefa ou atividade..."
+                placeholder={SHELL_TEXT.search.palette}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
               />

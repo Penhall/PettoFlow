@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import { normalizeError } from '../lib/mutationResult.js'
 
 export function useMfa() {
   const [factors, setFactors] = useState([])
@@ -19,7 +20,7 @@ export function useMfa() {
       setFactors(allFactors)
       return allFactors
     } catch (err) {
-      setError(err.message || 'Erro ao listar fatores')
+      setError(normalizeError(err, { operation: 'mfa.factors' }).message)
       return []
     } finally {
       setLoading(false)
@@ -48,7 +49,7 @@ export function useMfa() {
         secret: data.totp?.secret ?? null,
       }
     } catch (err) {
-      setError(err.message || 'Erro ao iniciar configuração MFA')
+      setError(normalizeError(err, { operation: 'mfa.enroll' }).message)
       throw err
     } finally {
       setLoading(false)
@@ -91,7 +92,7 @@ export function useMfa() {
       if (unenrollError) throw unenrollError
       await listFactors()
     } catch (err) {
-      setError(err.message || 'Erro ao desativar 2FA')
+      setError(normalizeError(err, { operation: 'mfa.unenroll' }).message)
     } finally {
       setLoading(false)
     }

@@ -18,15 +18,17 @@ async function parseResponse(res, fallbackMessage) {
   return data
 }
 
-export async function getBotConfig() {
-  const res = await authenticatedFetch(BOT_CONFIG_URL, { method: 'GET' })
+export async function getBotConfig(tenantId) {
+  const res = await authenticatedFetch(BOT_CONFIG_URL, { method: 'GET', tenantId, requireTenant: true })
   if (res.status === 404 || res.status === 204) return null
   return parseResponse(res, `Erro ao buscar config: ${res.status}`)
 }
 
-export async function saveBotConfig({ telegramBotToken, llmApiKey, llmProvider, confirmationThreshold }) {
+export async function saveBotConfig({ tenantId, telegramBotToken, llmApiKey, llmProvider, confirmationThreshold }) {
   const res = await authenticatedFetch(BOT_CONFIG_URL, {
     method: 'POST',
+    tenantId,
+    requireTenant: true,
     body: JSON.stringify({
       telegram_bot_token: telegramBotToken,
       llm_api_key: llmApiKey || undefined,
@@ -37,17 +39,21 @@ export async function saveBotConfig({ telegramBotToken, llmApiKey, llmProvider, 
   return parseResponse(res, `Erro ${res.status}`)
 }
 
-export async function updateBotConfig(patch) {
+export async function updateBotConfig(tenantId, patch) {
   const res = await authenticatedFetch(BOT_CONFIG_URL, {
     method: 'PATCH',
+    tenantId,
+    requireTenant: true,
     body: JSON.stringify(patch),
   })
   return parseResponse(res, `Erro ao atualizar: ${res.status}`)
 }
 
-export async function deleteBotConfig() {
+export async function deleteBotConfig(tenantId) {
   const res = await authenticatedFetch(BOT_CONFIG_URL, {
     method: 'DELETE',
+    tenantId,
+    requireTenant: true,
   })
   return parseResponse(res, `Erro ao remover: ${res.status}`)
 }

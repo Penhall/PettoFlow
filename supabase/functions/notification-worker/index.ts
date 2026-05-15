@@ -170,6 +170,7 @@ Deno.serve(async (req: Request) => {
     const { error: updateError } = await sb
       .from('activities')
       .update({ notified_at: new Date().toISOString() })
+      .eq('tenant_id', activity.tenant_id)
       .eq('id', activity.id)
       .is('notified_at', null)
 

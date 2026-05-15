@@ -4,6 +4,7 @@ import {
   saveActivityTemplateRecord,
   deleteActivityTemplateRecord,
 } from '../lib/workspaceCore'
+import { fail, ok, runMutation } from '../lib/mutationResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useActivityTemplates({ tenantId } = {}) {
@@ -43,45 +44,36 @@ export function useActivityTemplates({ tenantId } = {}) {
   }, [fetch])
 
   const createTemplate = async (data) => {
-    if (visualMode) return data
-    if (!tenantId) return null
+    if (visualMode) return ok(data)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'activityTemplates.create', code: 'missing_tenant' })
 
-    try {
+    return runMutation('activityTemplates.create', async () => {
       const created = await saveActivityTemplateRecord(data, tenantId)
       await fetch()
       return created
-    } catch (error) {
-      console.error('Error creating template:', error)
-      return null
-    }
+    })
   }
 
   const updateTemplate = async (id, data) => {
-    if (visualMode) return { id, ...data }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...data })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'activityTemplates.update', code: 'missing_tenant' })
 
-    try {
+    return runMutation('activityTemplates.update', async () => {
       const updated = await saveActivityTemplateRecord({ id, ...data }, tenantId)
       setTemplates((current) => current.map((template) => (template.id === id ? updated : template)))
       return updated
-    } catch (error) {
-      console.error('Error updating template:', error)
-      return null
-    }
+    })
   }
 
   const deleteTemplate = async (id) => {
-    if (visualMode) return true
-    if (!tenantId) return false
+    if (visualMode) return ok(true)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'activityTemplates.delete', code: 'missing_tenant' })
 
-    try {
+    return runMutation('activityTemplates.delete', async () => {
       await deleteActivityTemplateRecord(id, tenantId)
       setTemplates((current) => current.filter((template) => template.id !== id))
       return true
-    } catch (error) {
-      console.error('Error deleting template:', error)
-      return false
-    }
+    })
   }
 
   const applyTemplate = (templateId) => {

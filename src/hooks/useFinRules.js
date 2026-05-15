@@ -4,6 +4,7 @@ import {
   saveFinRuleRecord,
   deleteFinRuleRecord,
 } from '../lib/workspaceCore'
+import { fail, ok, runMutation } from '../lib/mutationResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useFinRules({ tenantId } = {}) {
@@ -45,45 +46,36 @@ export function useFinRules({ tenantId } = {}) {
   }, [visualMode, fixtureRules, tenantId])
 
   const addRule = async (rule) => {
-    if (visualMode) return rule
-    if (!tenantId) return null
+    if (visualMode) return ok(rule)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'finRules.add', code: 'missing_tenant' })
 
-    try {
+    return runMutation('finRules.add', async () => {
       const created = await saveFinRuleRecord(rule, tenantId)
       setRules((current) => [...current, created])
       return created
-    } catch (error) {
-      console.error('Error adding fin_rule:', error)
-      return null
-    }
+    })
   }
 
   const updateRule = async (id, updates) => {
-    if (visualMode) return { id, ...updates }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...updates })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'finRules.update', code: 'missing_tenant' })
 
-    try {
+    return runMutation('finRules.update', async () => {
       const updated = await saveFinRuleRecord({ id, ...updates }, tenantId)
       setRules((current) => current.map((rule) => (rule.id === id ? updated : rule)))
       return updated
-    } catch (error) {
-      console.error('Error updating fin_rule:', error)
-      return null
-    }
+    })
   }
 
   const deleteRule = async (id) => {
-    if (visualMode) return true
-    if (!tenantId) return false
+    if (visualMode) return ok(true)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'finRules.delete', code: 'missing_tenant' })
 
-    try {
+    return runMutation('finRules.delete', async () => {
       await deleteFinRuleRecord(id, tenantId)
       setRules((current) => current.filter((rule) => rule.id !== id))
       return true
-    } catch (error) {
-      console.error('Error deleting fin_rule:', error)
-      return false
-    }
+    })
   }
 
   return { rules, loading, addRule, updateRule, deleteRule }

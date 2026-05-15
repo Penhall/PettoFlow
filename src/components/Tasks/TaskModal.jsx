@@ -10,6 +10,7 @@ import { useTransactions }  from '../../hooks/useTransactions'
 import { useReceivables }   from '../../hooks/useReceivables'
 import { useTenant } from '../../hooks/useTenant.js'
 import { centsToReal, realToCents } from '../../lib/finUtils'
+import { getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 
 const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
   const { activeTenantId } = useTenant()
@@ -19,8 +20,10 @@ const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
   const { addTransaction }     = useTransactions({ tenantId: activeTenantId })
 
   const handleSave = async (txForm) => {
-    await addTransaction(txForm)
+    const result = await addTransaction(txForm)
+    if (!isMutationOk(result)) return result
     onClose()
+    return result
   }
 
   return (
@@ -56,6 +59,7 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
   })
 
   const [showTransactionForm, setShowTransactionForm] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const { activeTenantId } = useTenant()
   const { listReceivables, invoiceReceivable } = useReceivables({ tenantId: activeTenantId })
@@ -88,10 +92,14 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
 
   const change = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return
-    onSave(form)
+    setSubmitError('')
+    const result = await onSave(form)
+    if (!isMutationOk(result)) {
+      setSubmitError(getMutationMessage(result))
+    }
   }
 
   // Em telas mobile, o modal vira bottom sheet com animação de slide-up
@@ -205,7 +213,12 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
                   onClick={async () => {
                     const cents = realToCents(invoiceAmount)
                     if (!cents || cents <= 0) return
-                    await invoiceReceivable(taskReceivable.id, cents, invoiceDate, addTransaction)
+                    setSubmitError('')
+                    const result = await invoiceReceivable(taskReceivable.id, cents, invoiceDate, addTransaction)
+                    if (!isMutationOk(result)) {
+                      setSubmitError(getMutationMessage(result))
+                      return
+                    }
                     setShowInvoiceForm(false)
                   }}
                 >
@@ -343,6 +356,10 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
             />
           </div>
 
+          {submitError ? (
+            <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '4px 0 0' }}>{submitError}</p>
+          ) : null}
+
           <div className="modal-actions">
             {/* Archive confirmation inline */}
             {showArchiveConfirm && (
@@ -362,7 +379,15 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
                   type="button"
                   className="btn-primary"
                   style={{ background: '#dc2626', fontSize: 12 }}
-                  onClick={() => { onArchive?.(task.id); onClose() }}
+                  onClick={async () => {
+                    setSubmitError('')
+                    const result = await onArchive?.(task.id)
+                    if (!isMutationOk(result)) {
+                      setSubmitError(getMutationMessage(result))
+                      return
+                    }
+                    onClose()
+                  }}
                 >
                   Confirmar
                 </button>

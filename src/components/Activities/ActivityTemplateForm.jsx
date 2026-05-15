@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
+import { isMutationOk } from '../../lib/mutationResult.js'
 
 const ACTIVITY_TYPES = [
   { value: 'meeting',  label: 'Reunião' },
@@ -20,10 +21,11 @@ const ActivityTemplateForm = ({ template, onSave, onClose }) => {
     default_assigned_to: template?.default_assigned_to || '',
     tagsInput: template?.tags ? template.tags.join(', ') : '',
   })
+  const [submitError, setSubmitError] = useState('')
 
   const change = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
 
@@ -34,13 +36,17 @@ const ActivityTemplateForm = ({ template, onSave, onClose }) => {
       .map(t => t.startsWith('#') ? t : '#' + t)
       .filter(t => t !== '#')
 
-    onSave({
+    setSubmitError('')
+    const result = await onSave({
       name: form.name.trim(),
       type: form.type,
       default_notes: form.default_notes,
       default_assigned_to: form.default_assigned_to,
       tags,
     })
+    if (!isMutationOk(result) && result) {
+      setSubmitError(typeof result === 'string' ? result : 'Não foi possível salvar o modelo. Tente novamente.')
+    }
   }
 
   return (
@@ -130,6 +136,9 @@ const ActivityTemplateForm = ({ template, onSave, onClose }) => {
           </div>
 
           <div className="modal-actions">
+            {submitError ? (
+              <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '4px 0 0', width: '100%' }}>{submitError}</p>
+            ) : null}
             <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-primary">
               {template ? 'Salvar Modelo' : 'Criar Modelo'}

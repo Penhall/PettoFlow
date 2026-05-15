@@ -1,11 +1,12 @@
 import { useTenant } from '../../hooks/useTenant.js'
+import { ACTION_TEXT, ERROR_TEXT, LOADING_TEXT, PRODUCT } from '../../content/uxText.js'
 
 function TenantSelection({ tenants, onSelect }) {
   return (
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="tenant-selection-title">
         <div className="auth-copy">
-          <span className="auth-eyebrow">NexusCRM</span>
+          <span className="auth-eyebrow">{PRODUCT.name}</span>
           <h1 id="tenant-selection-title">Selecione um espaço de trabalho</h1>
           <p>Escolha o espaço de trabalho em que deseja operar antes de acessar o dashboard.</p>
         </div>
@@ -31,7 +32,7 @@ export default function TenantGate({ children }) {
   const { loading, error, hasTenant, activeTenantId, tenants, setActiveTenant, refreshTenants } = useTenant()
 
   if (loading) {
-    return <div className="loading-screen">Carregando espaços de trabalho do NexusCRM...</div>
+    return <div className="loading-screen">{LOADING_TEXT.workspaceList}</div>
   }
 
   if (error) {
@@ -39,13 +40,13 @@ export default function TenantGate({ children }) {
       <main className="auth-shell">
         <section className="auth-card">
           <div className="auth-copy">
-            <span className="auth-eyebrow">NexusCRM</span>
+            <span className="auth-eyebrow">{PRODUCT.name}</span>
             <h1>Erro ao carregar espaços de trabalho</h1>
-            <p>{error}</p>
+            <p>{ERROR_TEXT.loadWorkspaceList}</p>
           </div>
 
           <button type="button" className="auth-submit" onClick={() => refreshTenants()}>
-            Tentar novamente
+            {ACTION_TEXT.retry}
           </button>
         </section>
       </main>

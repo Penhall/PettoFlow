@@ -9,12 +9,16 @@ vi.mock('../../../lib/botCommands.js', () => ({
   seedDefaultCommands: vi.fn(),
 }))
 
+vi.mock('../../../hooks/useTenant.js', () => ({
+  useTenant: () => ({ activeTenantId: 'tenant-1' }),
+}))
+
 describe('CommandsSection', () => {
   it('mostra opcao de instalar comandos padrao quando lista vazia', async () => {
     render(<CommandsSection />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Instalar comandos padrao/i)).toBeTruthy()
+      expect(screen.getByText(/Instalar comandos padrão/i)).toBeTruthy()
     })
   })
 })

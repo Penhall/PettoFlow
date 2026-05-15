@@ -56,27 +56,27 @@ describe('TenantDetailModal', () => {
     render(<TenantDetailModal tenantId="tenant-1" onClose={() => {}} />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Não autorizado/)).toBeTruthy()
+      expect(screen.getByText(/Não foi possível salvar a alteração/i)).toBeTruthy()
     })
   })
 
-  it('exibe botão "Suspender Tenant" quando status é active', async () => {
+  it('exibe botão "Suspender espaço" quando status é active', async () => {
     adminClient.fetchAdminTenantDetail.mockResolvedValue(mockTenantData)
 
     render(<TenantDetailModal tenantId="tenant-1" onClose={() => {}} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Suspender Tenant')).toBeTruthy()
+      expect(screen.getByText('Suspender espaço')).toBeTruthy()
     })
   })
 
-  it('exibe botão "Reativar Tenant" quando status é inactive', async () => {
+  it('exibe botão "Reativar espaço" quando status é inactive', async () => {
     adminClient.fetchAdminTenantDetail.mockResolvedValue(mockInactiveTenantData)
 
     render(<TenantDetailModal tenantId="tenant-1" onClose={() => {}} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Reativar Tenant')).toBeTruthy()
+      expect(screen.getByText('Reativar espaço')).toBeTruthy()
     })
   })
 
@@ -100,42 +100,42 @@ describe('TenantDetailModal', () => {
     expect(screen.getByText('Plano alterado com sucesso.')).toBeTruthy()
   })
 
-  it('chama suspendTenant ao clicar em Suspender Tenant', async () => {
+  it('chama suspendTenant ao clicar em Suspender espaço', async () => {
     adminClient.fetchAdminTenantDetail.mockResolvedValue(mockTenantData)
     adminClient.suspendTenant.mockResolvedValue({ ok: true })
 
     render(<TenantDetailModal tenantId="tenant-1" onClose={() => {}} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Suspender Tenant')).toBeTruthy()
+      expect(screen.getByText('Suspender espaço')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('Suspender Tenant'))
+    fireEvent.click(screen.getByText('Suspender espaço'))
 
     await waitFor(() => {
       expect(adminClient.suspendTenant).toHaveBeenCalledWith('tenant-1')
     })
 
-    expect(screen.getByText('Tenant suspenso com sucesso.')).toBeTruthy()
+    expect(screen.getByText('Espaço de trabalho suspenso com sucesso.')).toBeTruthy()
   })
 
-  it('chama reactivateTenant ao clicar em Reativar Tenant', async () => {
+  it('chama reactivateTenant ao clicar em Reativar espaço', async () => {
     adminClient.fetchAdminTenantDetail.mockResolvedValue(mockInactiveTenantData)
     adminClient.reactivateTenant.mockResolvedValue({ ok: true })
 
     render(<TenantDetailModal tenantId="tenant-1" onClose={() => {}} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Reativar Tenant')).toBeTruthy()
+      expect(screen.getByText('Reativar espaço')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('Reativar Tenant'))
+    fireEvent.click(screen.getByText('Reativar espaço'))
 
     await waitFor(() => {
       expect(adminClient.reactivateTenant).toHaveBeenCalledWith('tenant-1')
     })
 
-    expect(screen.getByText('Tenant reativado com sucesso.')).toBeTruthy()
+    expect(screen.getByText('Espaço de trabalho reativado com sucesso.')).toBeTruthy()
   })
 
   it('exibe erro inline quando updateTenantPlan falha', async () => {
@@ -151,7 +151,7 @@ describe('TenantDetailModal', () => {
     fireEvent.click(screen.getByText('Alterar Plano'))
 
     await waitFor(() => {
-      expect(screen.getByText('Plano não encontrado')).toBeTruthy()
+      expect(screen.getByText(/Não foi possível salvar a alteração/i)).toBeTruthy()
     })
   })
 

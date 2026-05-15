@@ -249,6 +249,29 @@ export function countAsyncFailure(type) {
   incCounter(`async_failure_${type}`)
 }
 
+export function countMutationFailure(scope = 'unknown') {
+  incCounter('mutation_failures')
+  incCounter(`mutation_failure_${scope}`)
+}
+
+export function countPersistenceRejection() {
+  incCounter('persistence_rejections')
+}
+
+export function countRetryLoop(scope = 'unknown') {
+  incCounter('retry_loops')
+  incCounter(`retry_loop_${scope}`)
+}
+
+export function countStaleMutationRejection() {
+  incCounter('stale_mutation_rejections')
+}
+
+export function countRecoveryAttempt(scope = 'unknown') {
+  incCounter('ux_recovery_attempts')
+  incCounter(`ux_recovery_${scope}`)
+}
+
 export function resetTelemetry() {
   Object.keys(TELEMETRY).forEach((key) => delete TELEMETRY[key])
 }

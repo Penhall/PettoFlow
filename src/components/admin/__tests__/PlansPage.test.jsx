@@ -89,7 +89,7 @@ describe('PlansPage', () => {
     render(<PlansPage />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Acesso negado/)).toBeTruthy()
+      expect(screen.getByText(/Não foi possível salvar a alteração/i)).toBeTruthy()
     })
   })
 })

@@ -1,7 +1,9 @@
 import { json, preflight } from '../_shared/cors.ts'
 import { requireAuthenticatedUser } from '../_shared/auth.ts'
 import { getServiceRoleClient } from '../_shared/supabase.ts'
+import { requireTenantAccess } from '../_shared/tenant.ts'
 import { encrypt, decrypt } from '../_shared/crypto.ts'
+import { sha256Hex } from '../_shared/hash.ts'
 import { registerWebhook, deleteWebhook } from '../_shared/telegram.ts'
 
 function generateSecret(): string {
@@ -20,6 +22,9 @@ Deno.serve(async (req: Request) => {
 
   const auth = await requireAuthenticatedUser(req)
   if (!auth.ok) return auth.response
+  const tenant = await requireTenantAccess(req, auth.user.id)
+  if (!tenant.ok) return tenant.response
+  const tenantId = tenant.tenantId
 
   const sb = getServiceRoleClient()
   const encryptionKey = Deno.env.get('ENCRYPTION_KEY')
@@ -31,10 +36,10 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await sb
       .from('bot_configs')
       .select('id, is_active, confirmation_threshold, llm_provider, allowed_telegram_ids, created_at, updated_at')
-      .limit(1)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
-    if (error) return json(req, { error: error.message }, 500)
+    if (error) return json(req, { error: 'Erro ao buscar configuracao do bot.' }, 500)
     if (!data) return json(req, { config: null }, 200)
 
     return json(req, {
@@ -74,7 +79,7 @@ Deno.serve(async (req: Request) => {
     const { data: existing } = await sb
       .from('bot_configs')
       .select('id, telegram_bot_token, webhook_secret')
-      .limit(1)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
     let webhookSecret: string
@@ -92,6 +97,7 @@ Deno.serve(async (req: Request) => {
     // Encrypt sensitive fields
     const encryptedToken = await encrypt(telegramBotToken, encryptionKey)
     const encryptedSecret = await encrypt(webhookSecret, encryptionKey)
+    const webhookSecretHash = await sha256Hex(webhookSecret)
     const encryptedLlmKey = llmApiKey
       ? await encrypt(llmApiKey, encryptionKey)
       : (existing ? null : null)
@@ -109,8 +115,10 @@ Deno.serve(async (req: Request) => {
 
     // Upsert config
     const payload: Record<string, unknown> = {
+      tenant_id: tenantId,
       telegram_bot_token: encryptedToken,
       webhook_secret: encryptedSecret,
+      webhook_secret_sha256: webhookSecretHash,
       is_active: true,
       confirmation_threshold: confirmationThreshold,
       llm_api_key: encryptedLlmKey,
@@ -119,11 +127,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: config, error: upsertError } = await sb
       .from('bot_configs')
-      .upsert(payload, { onConflict: 'id' })
+      .upsert(payload, { onConflict: 'tenant_id' })
       .select('id, is_active, confirmation_threshold, llm_provider, allowed_telegram_ids, created_at, updated_at')
       .maybeSingle()
 
-    if (upsertError) return json(req, { error: upsertError.message }, 500)
+    if (upsertError) return json(req, { error: 'Erro ao salvar configuracao do bot.' }, 500)
 
     return json(req, {
       config: {
@@ -145,11 +153,11 @@ Deno.serve(async (req: Request) => {
     // Get existing config
     const { data: existing, error: fetchError } = await sb
       .from('bot_configs')
-      .select('id, telegram_bot_token')
-      .limit(1)
+      .select('id, telegram_bot_token, webhook_secret')
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
-    if (fetchError) return json(req, { error: fetchError.message }, 500)
+    if (fetchError) return json(req, { error: 'Erro ao buscar configuracao do bot.' }, 500)
     if (!existing) return json(req, { error: 'Nenhuma configuracao encontrada. Use POST primeiro.' }, 404)
 
     const updates: Record<string, unknown> = {}
@@ -190,8 +198,9 @@ Deno.serve(async (req: Request) => {
       const webhookUrl = getWebhookUrl()
       if (webhookUrl) {
         const existingToken = await decrypt(existing.telegram_bot_token, encryptionKey)
+        const existingSecret = await decrypt(existing.webhook_secret, encryptionKey)
         await deleteWebhook(existingToken)
-        const webhookResult = await registerWebhook(token, webhookUrl, '')
+        const webhookResult = await registerWebhook(token, webhookUrl, existingSecret)
         if (!webhookResult.ok) {
           console.error(`Webhook re-registration failed: ${webhookResult.description}`)
         }
@@ -205,11 +214,12 @@ Deno.serve(async (req: Request) => {
     const { data: updated, error: updateError } = await sb
       .from('bot_configs')
       .update(updates)
+      .eq('tenant_id', tenantId)
       .eq('id', existing.id)
       .select('id, is_active, confirmation_threshold, llm_provider, allowed_telegram_ids, created_at, updated_at')
       .single()
 
-    if (updateError) return json(req, { error: updateError.message }, 500)
+    if (updateError) return json(req, { error: 'Erro ao atualizar configuracao do bot.' }, 500)
 
     return json(req, {
       config: {
@@ -224,10 +234,10 @@ Deno.serve(async (req: Request) => {
     const { data: existing, error: fetchError } = await sb
       .from('bot_configs')
       .select('id, telegram_bot_token')
-      .limit(1)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
-    if (fetchError) return json(req, { error: fetchError.message }, 500)
+    if (fetchError) return json(req, { error: 'Erro ao buscar configuracao do bot.' }, 500)
     if (!existing) return json(req, { error: 'Nenhuma configuracao encontrada.' }, 404)
 
     // Delete webhook
@@ -239,11 +249,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Delete commands first (cascade should handle this, but explicit is safer)
-    await sb.from('bot_commands').delete().eq('bot_config_id', existing.id)
+    await sb.from('bot_commands').delete().eq('tenant_id', tenantId).eq('bot_config_id', existing.id)
 
     // Delete config
-    const { error: deleteError } = await sb.from('bot_configs').delete().eq('id', existing.id)
-    if (deleteError) return json(req, { error: deleteError.message }, 500)
+    const { error: deleteError } = await sb.from('bot_configs').delete().eq('tenant_id', tenantId).eq('id', existing.id)
+    if (deleteError) return json(req, { error: 'Erro ao remover configuracao do bot.' }, 500)
 
     return json(req, { ok: true })
   }

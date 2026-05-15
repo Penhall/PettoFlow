@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Plus, ChevronDown } from 'lucide-react'
 import { realToCents } from '../../lib/finUtils'
+import { getMutationData, getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 import { useTenant } from '../../hooks/useTenant.js'
 import RelationChips from '../Activities/RelationChips'
 import FileUploader from '../shared/FileUploader.jsx'
@@ -43,6 +44,7 @@ const TransactionForm = ({
   const [payeeSearch, setPayeeSearch] = useState('')
   const [showPayeeDropdown, setShowPayeeDropdown] = useState(false)
   const [creatingPayee, setCreatingPayee] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const { activeTenantId } = useTenant()
 
   useEffect(() => {
@@ -80,17 +82,26 @@ const TransactionForm = ({
   const handleCreatePayee = async () => {
     if (!payeeSearch.trim() || !addPayee || creatingPayee) return
     setCreatingPayee(true)
-    const newPayee = await addPayee(payeeSearch.trim())
+    const result = await addPayee(payeeSearch.trim())
     setCreatingPayee(false)
+    if (!isMutationOk(result)) {
+      setSubmitError(getMutationMessage(result))
+      return
+    }
+    const newPayee = getMutationData(result)
     if (newPayee) handlePayeeSelect(newPayee)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.account_id || !amountInput.trim()) return
     const cents = realToCents(amountInput)
     if (cents === 0) return
-    onSave({ ...form, amount: cents })
+    setSubmitError('')
+    const result = await onSave({ ...form, amount: cents })
+    if (!isMutationOk(result)) {
+      setSubmitError(getMutationMessage(result))
+    }
   }
 
   const filteredPayees = payees.filter(p =>
@@ -256,14 +267,24 @@ const TransactionForm = ({
                       style={{ marginTop: 6 }}
                       onClick={async () => {
                         if (!newTaskTitle.trim() || !onCreateTask) return
-                        const newTask = await onCreateTask({
+                        setSubmitError('')
+                        const taskResult = await onCreateTask({
                           title: newTaskTitle,
                           status: 'A Fazer',
                           priority: 'Média',
                         })
+                        if (!isMutationOk(taskResult)) {
+                          setSubmitError(getMutationMessage(taskResult))
+                          return
+                        }
+                        const newTask = getMutationData(taskResult)
                         if (newTask?.id) {
                           const updatedRelated = [...(transaction.related_to || []), { type: 'task', id: newTask.id }]
-                          onUpdateTransaction?.(transaction.id, { related_to: updatedRelated })
+                          const updateResult = await onUpdateTransaction?.(transaction.id, { related_to: updatedRelated })
+                          if (!isMutationOk(updateResult)) {
+                            setSubmitError(getMutationMessage(updateResult))
+                            return
+                          }
                         }
                         setNewTaskTitle('')
                         setLinkOpen(false)
@@ -275,14 +296,19 @@ const TransactionForm = ({
                   <button
                     type="button"
                     className="action-btn"
-                    onClick={() => {
-                      addActivity?.({
+                    onClick={async () => {
+                      setSubmitError('')
+                      const result = await addActivity?.({
                         title: form.notes || 'Atividade vinculada',
                         type: 'note',
                         status: 'pending',
                         scheduled_at: null,
                         related_to: [{ type: 'transaction', id: transaction.id }],
                       })
+                      if (!isMutationOk(result)) {
+                        setSubmitError(getMutationMessage(result))
+                        return
+                      }
                       setLinkOpen(false)
                     }}
                   >
@@ -310,6 +336,10 @@ const TransactionForm = ({
               <FileUploader entityType="transaction" entityId={transaction.id} tenantId={activeTenantId} />
             </div>
           )}
+
+          {submitError ? (
+            <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '4px 0 0' }}>{submitError}</p>
+          ) : null}
 
           <div className="modal-actions">
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>

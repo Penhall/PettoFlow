@@ -1,5 +1,6 @@
 import { Component, Fragment } from 'react'
 import { traceAsyncFailure, traceRetryLifecycle } from '../../lib/diagnostics.js'
+import { ACTION_TEXT, ERROR_TEXT, PRODUCT } from '../../content/uxText.js'
 
 const isDev = import.meta.env.DEV
 const MAX_RETRIES = 3
@@ -102,12 +103,12 @@ export default class RootErrorBoundary extends Component {
       return (
         <div className="root-error-boundary" role="alert" aria-live="assertive">
           <div className="root-error-boundary__card">
-            <span className="root-error-boundary__eyebrow">NexusCRM</span>
-            <h1 className="root-error-boundary__title">Algo deu errado</h1>
+            <span className="root-error-boundary__eyebrow">{PRODUCT.name}</span>
+            <h1 className="root-error-boundary__title">{ERROR_TEXT.rootTitle}</h1>
             <p className="root-error-boundary__description">
               {exhausted
-                ? 'O erro persiste após múltiplas tentativas. Recarregue a página para continuar.'
-                : 'A interface encontrou um erro inesperado e não conseguiu se recuperar automaticamente.'}
+                ? ERROR_TEXT.rootExhausted
+                : ERROR_TEXT.rootDescription}
             </p>
             <div className="root-error-boundary__actions">
               <button
@@ -115,7 +116,7 @@ export default class RootErrorBoundary extends Component {
                 className="root-error-boundary__btn root-error-boundary__btn--primary"
                 onClick={() => window.location.reload()}
               >
-                Recarregar página
+                {ACTION_TEXT.reloadPage}
               </button>
               {!exhausted && (
                 <button
@@ -123,7 +124,7 @@ export default class RootErrorBoundary extends Component {
                   className="root-error-boundary__btn root-error-boundary__btn--secondary"
                   onClick={this.handleReset}
                 >
-                  Tentar novamente
+                  {ACTION_TEXT.retry}
                 </button>
               )}
             </div>

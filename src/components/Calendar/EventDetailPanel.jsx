@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle, DollarSign, Edit, Phone, Plus, X } from 'lucide-react'
 import { centsToReal, realToCents } from '../../lib/finUtils'
+import { getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
 
 function DetailAction({ icon: Icon, label, onClick }) {
@@ -45,6 +46,7 @@ export default function EventDetailPanel({
     amount: '',
     dueDate: new Date().toISOString().slice(0, 10),
   })
+  const [error, setError] = useState('')
 
   if (!event) return null
 
@@ -56,22 +58,32 @@ export default function EventDetailPanel({
     transaction: `Transação · ${centsToReal(Math.abs(payload.amount))} · ${event.date}`,
   }[type]
 
-  const createQuickTask = () => {
+  const createQuickTask = async () => {
     if (!newTaskTitle.trim()) return
 
-    onAddTask?.({
+    setError('')
+    const result = await onAddTask?.({
       title: newTaskTitle,
       status: columns[0]?.name ?? 'A Fazer',
       priority: 'Média',
     })
+    if (!isMutationOk(result)) {
+      setError(getMutationMessage(result))
+      return
+    }
     onClose()
   }
 
-  const handleInvoiceConfirm = () => {
+  const handleInvoiceConfirm = async () => {
     const cents = realToCents(invoiceForm.amount)
     if (!cents || !invoiceForm.date) return
 
-    onInvoice?.(payload.id, cents, invoiceForm.date)
+    setError('')
+    const result = await onInvoice?.(payload.id, cents, invoiceForm.date)
+    if (!isMutationOk(result)) {
+      setError(getMutationMessage(result))
+      return
+    }
     setInnerMode(null)
     onClose()
   }
@@ -81,11 +93,16 @@ export default function EventDetailPanel({
     if (!cents || cents <= 0) return
 
     if (!principalAccountId) {
-      alert('Nenhuma conta principal definida. Acesse Finanças > Contas.')
+      setError('Defina uma conta principal em Finanças > Contas antes de faturar.')
       return
     }
 
-    await createReceivableFromActivity?.(payload.id, cents, principalAccountId, receivableForm.dueDate || null)
+    setError('')
+    const result = await createReceivableFromActivity?.(payload.id, cents, principalAccountId, receivableForm.dueDate || null)
+    if (!isMutationOk(result)) {
+      setError(getMutationMessage(result))
+      return
+    }
     setInnerMode(null)
     onClose()
   }
@@ -118,6 +135,10 @@ export default function EventDetailPanel({
         </div>
 
         <div className="calendar-detail">
+          {error ? (
+            <p className="calendar-detail__error">{error}</p>
+          ) : null}
+
           <div className="calendar-detail__actions">
             {type === 'task' ? (
               <>
@@ -126,8 +147,13 @@ export default function EventDetailPanel({
                   <DetailAction
                     icon={CheckCircle}
                     label="Concluir"
-                    onClick={() => {
-                      onUpdateTask?.(payload.id, { status: columns[columns.length - 1]?.name ?? payload.status })
+                    onClick={async () => {
+                      setError('')
+                      const result = await onUpdateTask?.(payload.id, { status: columns[columns.length - 1]?.name ?? payload.status })
+                      if (!isMutationOk(result)) {
+                        setError(getMutationMessage(result))
+                        return
+                      }
                       onClose()
                     }}
                   />

@@ -3,6 +3,7 @@ import { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 export async function requestConfirmation(
   sb: SupabaseClient,
+  tenantId: string,
   chatId: string,
   actionType: string,
   actionPayload: Record<string, unknown>,
@@ -11,10 +12,12 @@ export async function requestConfirmation(
   await sb
     .from('bot_pending_confirmations')
     .delete()
+    .eq('tenant_id', tenantId)
     .eq('chat_id', chatId)
     .eq('action_type', actionType)
 
   await sb.from('bot_pending_confirmations').insert({
+    tenant_id: tenantId,
     chat_id: chatId,
     action_type: actionType,
     action_payload: actionPayload,
@@ -26,11 +29,13 @@ export async function requestConfirmation(
 
 export async function getPendingConfirmation(
   sb: SupabaseClient,
+  tenantId: string,
   chatId: string
 ): Promise<{ action_type: string; action_payload: Record<string, unknown> } | null> {
   const { data } = await sb
     .from('bot_pending_confirmations')
     .select('action_type, action_payload, expires_at')
+    .eq('tenant_id', tenantId)
     .eq('chat_id', chatId)
     .not('action_type', 'eq', 'task_list_context')
     .order('created_at', { ascending: false })
@@ -39,7 +44,12 @@ export async function getPendingConfirmation(
 
   if (!data) return null
   if (new Date(data.expires_at) < new Date()) {
-    await sb.from('bot_pending_confirmations').delete().eq('chat_id', chatId)
+    await sb
+      .from('bot_pending_confirmations')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('chat_id', chatId)
+      .not('action_type', 'eq', 'task_list_context')
     return null
   }
   return data
@@ -47,11 +57,13 @@ export async function getPendingConfirmation(
 
 export async function clearPendingConfirmation(
   sb: SupabaseClient,
+  tenantId: string,
   chatId: string
 ): Promise<void> {
   await sb
     .from('bot_pending_confirmations')
     .delete()
+    .eq('tenant_id', tenantId)
     .eq('chat_id', chatId)
     .not('action_type', 'eq', 'task_list_context')
 }

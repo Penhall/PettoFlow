@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getPrincipalAccount as findPrincipal } from '../lib/financeUtils'
 import { listAccountRecords, saveAccountRecord } from '../lib/workspaceCore'
+import { fail, getMutationData, isMutationOk, ok, runMutation } from '../lib/mutationResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useAccounts({ tenantId } = {}) {
@@ -42,45 +43,36 @@ export function useAccounts({ tenantId } = {}) {
   }, [visualMode, fixtureAccounts, tenantId])
 
   const addAccount = async (account) => {
-    if (visualMode) return account
-    if (!tenantId) return null
+    if (visualMode) return ok(account)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'accounts.add', code: 'missing_tenant' })
 
-    try {
+    return runMutation('accounts.add', async () => {
       const created = await saveAccountRecord(account, tenantId)
       setAccounts((current) => [...current, created])
       return created
-    } catch (error) {
-      console.error('Error adding account:', error)
-      return null
-    }
+    })
   }
 
   const updateAccount = async (id, updates) => {
-    if (visualMode) return { id, ...updates }
-    if (!tenantId) return null
+    if (visualMode) return ok({ id, ...updates })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'accounts.update', code: 'missing_tenant' })
 
-    try {
+    return runMutation('accounts.update', async () => {
       const updated = await saveAccountRecord({ id, ...updates }, tenantId)
       setAccounts((current) => current.map((account) => (account.id === id ? updated : account)))
       return updated
-    } catch (error) {
-      console.error('Error updating account:', error)
-      return null
-    }
+    })
   }
 
   const closeAccount = async (id) => {
-    if (visualMode) return true
-    if (!tenantId) return null
+    if (visualMode) return ok(true)
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'accounts.close', code: 'missing_tenant' })
 
-    try {
+    return runMutation('accounts.close', async () => {
       const updated = await saveAccountRecord({ id, is_active: false }, tenantId)
       setAccounts((current) => current.map((account) => (account.id === id ? updated : account)))
       return updated
-    } catch (error) {
-      console.error('Error closing account:', error)
-      return null
-    }
+    })
   }
 
   const getPrincipalAccount = () => findPrincipal(accounts)
@@ -92,17 +84,19 @@ export function useAccounts({ tenantId } = {}) {
   }
 
   const setAccountCategory = async (accountId, category, demotedCategory = 'extras') => {
-    if (visualMode) return { accountId, category, demotedCategory }
-    if (!tenantId) return null
+    if (visualMode) return ok({ accountId, category, demotedCategory })
+    if (!tenantId) return fail(new Error('tenant required'), { operation: 'accounts.setCategory', code: 'missing_tenant' })
 
     if (category === 'principal') {
       const current = getPrincipalAccount()
       if (current && current.id !== accountId) {
-        await updateAccount(current.id, { category: demotedCategory })
+        const demoteResult = await updateAccount(current.id, { category: demotedCategory })
+        if (!isMutationOk(demoteResult)) return demoteResult
       }
     }
 
-    return updateAccount(accountId, { category })
+    const result = await updateAccount(accountId, { category })
+    return isMutationOk(result) ? ok(getMutationData(result)) : result
   }
 
   return { accounts, loading, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory }

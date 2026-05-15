@@ -16,6 +16,8 @@ import {
 } from './utils/confirm.ts'
 import { transcribeVoice } from './utils/voice.ts'
 import { executeActions } from './utils/actions.ts'
+import { resolveBotConfigFromWebhookSecret } from './utils/config.ts'
+import { traceTelegram } from './utils/telemetry.ts'
 
 const HELP_TEXT = `🤖 <b>Comandos disponíveis:</b>
 
@@ -46,19 +48,17 @@ Deno.serve(async (req: Request) => {
 
   const sb = getSupabaseClient()
   const encryptionKey = Deno.env.get('ENCRYPTION_KEY')!
-
-  const { data: configRow } = await sb
-    .from('bot_configs')
-    .select('*')
-    .limit(1)
-    .single()
+  const requestSecret = req.headers.get('x-telegram-bot-api-secret-token') ?? ''
+  const configRow = await resolveBotConfigFromWebhookSecret(sb, requestSecret, encryptionKey)
 
   if (!configRow) {
-    return new Response('Bot not configured', { status: 503 })
+    traceTelegram('tenant_resolution_rejected', { reason: 'secret_not_found' })
+    return new Response('', { status: 401 })
   }
 
   const webhookSecret = await decrypt(configRow.webhook_secret, encryptionKey)
   const botToken = await decrypt(configRow.telegram_bot_token, encryptionKey)
+  const tenantId = configRow.tenant_id
 
   const config = {
     webhook_secret: webhookSecret,
@@ -69,6 +69,10 @@ Deno.serve(async (req: Request) => {
   const auth = await validateRequest(req, config)
 
   if (!auth.valid) {
+    traceTelegram('authorization_rejected', {
+      tenantId,
+      reason: auth.paused ? 'paused' : auth.status === 401 ? 'secret_mismatch' : 'allowlist',
+    })
     if (auth.paused) {
       const body = auth.body as { message?: { chat?: { id: number } } }
       const chatId = body?.message?.chat?.id
@@ -95,7 +99,7 @@ Deno.serve(async (req: Request) => {
 
   let text = rawText
 
-  console.log(`[webhook] chatId=${chatId} rawText="${rawText}" voiceFileId=${voiceFileId ?? 'none'}`)
+  console.log('[webhook] message received', { tenantId, chatId, hasText: Boolean(rawText), hasVoice: Boolean(voiceFileId) })
 
   if (!rawText && voiceFileId) {
     console.log('[webhook] voice message detected, attempting transcription')
@@ -105,8 +109,8 @@ Deno.serve(async (req: Request) => {
       try {
         transcript = await transcribeVoice(botToken, voiceFileId, llmKey)
       } catch (voiceErr) {
-        const msg = voiceErr instanceof Error ? voiceErr.message : String(voiceErr)
-        if (chatId) await sendMessage(botToken, chatId, `🎤 Erro na transcrição: ${escapeHtml(msg)}`)
+        traceTelegram('voice_transcription_failed', { tenantId, chatId, fromId, error: voiceErr })
+        if (chatId) await sendMessage(botToken, chatId, '🎤 Não consegui transcrever o áudio. Tente novamente ou use texto.')
         return new Response('OK', { status: 200 })
       }
       if (transcript) {
@@ -127,6 +131,7 @@ Deno.serve(async (req: Request) => {
   const { data: botCommands } = await sb
     .from('bot_commands')
     .select('trigger, type, actions, is_active')
+    .eq('tenant_id', tenantId)
     .eq('bot_config_id', configRow.id)
 
   const activeCommands = (botCommands ?? []).filter((c: { is_active: boolean }) => c.is_active)
@@ -141,10 +146,10 @@ Deno.serve(async (req: Request) => {
   if (matchedCustom) {
     try {
       const actions = Array.isArray(matchedCustom.actions) ? matchedCustom.actions : []
-      const result = await executeActions(sb, chatId, actions)
+      const result = await executeActions(sb, tenantId, chatId, actions)
       await sendMessage(botToken, chatId, result || '✅ Concluído.')
     } catch (err) {
-      console.error('[custom-cmd] error:', err)
+      traceTelegram('command_failure', { tenantId, chatId, fromId, action: matchedCustom.trigger, error: err })
       await sendMessage(botToken, chatId, '⚠️ Erro ao executar comando. Tente novamente.')
     }
     return new Response('OK', { status: 200 })
@@ -161,18 +166,20 @@ Deno.serve(async (req: Request) => {
   try {
     const upperText = text.toUpperCase()
     if (upperText === 'SIM' || upperText === 'NÃO' || upperText === 'NAO') {
-      const pending = await getPendingConfirmation(sb, chatId)
+      const pending = await getPendingConfirmation(sb, tenantId, chatId)
       if (pending) {
-        await clearPendingConfirmation(sb, chatId)
+        await clearPendingConfirmation(sb, tenantId, chatId)
         if (upperText === 'SIM') {
           const p = pending.action_payload as { direction: 'in' | 'out'; description: string; amount: number }
-          responseText = await recordTransaction(sb, p.direction, p.description, p.amount)
+          responseText = await recordTransaction(sb, tenantId, p.direction, p.description, p.amount)
         } else {
+          traceTelegram('confirmation_cancelled', { tenantId, chatId, fromId, action: pending.action_type })
           responseText = '❌ Transação cancelada.'
         }
         await sendMessage(botToken, chatId, responseText)
         return new Response('OK', { status: 200 })
       }
+      traceTelegram('stale_confirmation_attempt', { tenantId, chatId, fromId })
     }
 
     let parsed = parseSlash(text)
@@ -192,22 +199,22 @@ Deno.serve(async (req: Request) => {
 
     switch (action) {
       case 'tasks.create':
-        responseText = await createTask(sb, params.title as string)
+        responseText = await createTask(sb, tenantId, params.title as string)
         break
       case 'tasks.list':
-        responseText = await listTasks(sb, chatId)
+        responseText = await listTasks(sb, tenantId, chatId)
         break
       case 'tasks.complete':
-        responseText = await completeTask(sb, chatId, params.num as number)
+        responseText = await completeTask(sb, tenantId, chatId, params.num as number)
         break
       case 'tasks.setPriority':
-        responseText = await setPriority(sb, chatId, params.num as number, params.priority as string)
+        responseText = await setPriority(sb, tenantId, chatId, params.num as number, params.priority as string)
         break
       case 'activities.log':
-        responseText = await logActivity(sb, params.type as string, params.text as string)
+        responseText = await logActivity(sb, tenantId, params.type as string, params.text as string)
         break
       case 'activities.list':
-        responseText = await listActivities(sb)
+        responseText = await listActivities(sb, tenantId)
         break
       case 'finance.record': {
         const amount = params.amount as number
@@ -216,6 +223,7 @@ Deno.serve(async (req: Request) => {
           const dirLabel = params.direction === 'out' ? 'saída' : 'entrada'
           responseText = await requestConfirmation(
             sb,
+            tenantId,
             chatId,
             'finance.record',
             params as Record<string, unknown>,
@@ -224,6 +232,7 @@ Deno.serve(async (req: Request) => {
         } else {
           responseText = await recordTransaction(
             sb,
+            tenantId,
             params.direction as 'in' | 'out',
             params.description as string,
             amount
@@ -232,15 +241,21 @@ Deno.serve(async (req: Request) => {
         break
       }
       case 'finance.balance':
-        responseText = await getBalance(sb)
+        responseText = await getBalance(sb, tenantId)
         break
       case 'finance.list':
-        responseText = await listTransactions(sb)
+        responseText = await listTransactions(sb, tenantId)
         break
       case 'bot.start':
-        if (!config.allowed_telegram_ids.includes(fromId)) {
-          const newIds = [...config.allowed_telegram_ids, fromId]
-          await sb.from('bot_configs').update({ allowed_telegram_ids: newIds }).eq('id', configRow.id)
+        const currentIds = config.allowed_telegram_ids ?? []
+        if (!currentIds.includes(fromId)) {
+          const newIds = [...currentIds, fromId]
+          await sb
+            .from('bot_configs')
+            .update({ allowed_telegram_ids: newIds })
+            .eq('tenant_id', tenantId)
+            .eq('id', configRow.id)
+          traceTelegram('telegram_user_authorized', { tenantId, chatId, fromId })
         }
         responseText = `👋 Olá! Sou o bot do NexusCRM.\nSeu ID Telegram é: <code>${fromId}</code>\n\n${HELP_TEXT}`
         break
@@ -254,7 +269,7 @@ Deno.serve(async (req: Request) => {
         responseText = '🤔 Não entendi. Tente /ajuda.'
     }
   } catch (err) {
-    console.error('Error processing message:', err)
+    traceTelegram('command_failure', { tenantId, chatId, fromId, error: err })
     responseText = '⚠️ Algo deu errado. Tente novamente em instantes.'
   }
 

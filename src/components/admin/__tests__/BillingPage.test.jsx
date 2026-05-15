@@ -92,7 +92,7 @@ describe('BillingPage', () => {
     render(<BillingPage />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Acesso negado|Erro/i)).toBeTruthy()
+      expect(screen.getByText(/Não foi possível salvar a alteração/i)).toBeTruthy()
     })
   })
 

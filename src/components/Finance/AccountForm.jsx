@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { realToCents } from '../../lib/finUtils'
+import { getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
 
 const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }) => {
   const [form, setForm] = useState({ name: '', type: 'checking', category: 'extras' })
   const [balanceInput, setBalanceInput] = useState('0,00')
   const [showDemoteConfirm, setShowDemoteConfirm] = useState(false)
   const [demotedCategory, setDemotedCategory] = useState('extras')
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     if (account) {
@@ -18,7 +20,15 @@ const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }
     }
   }, [account])
 
-  const handleSubmit = (e) => {
+  const saveForm = async (payload, nextDemotedCategory) => {
+    setSubmitError('')
+    const result = await onSave(payload, nextDemotedCategory)
+    if (!isMutationOk(result)) {
+      setSubmitError(getMutationMessage(result))
+    }
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
     const safeCategory = form.category === '__new__' ? 'extras' : form.category
@@ -26,7 +36,7 @@ const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }
       setShowDemoteConfirm(true)
       return
     }
-    onSave({ ...form, category: safeCategory, opening_balance: realToCents(balanceInput) }, undefined)
+    await saveForm({ ...form, category: safeCategory, opening_balance: realToCents(balanceInput) }, undefined)
   }
 
   return (
@@ -130,7 +140,10 @@ const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }
                   type="button"
                   className="btn-primary"
                   style={{ marginLeft: 'auto' }}
-                  onClick={() => { setShowDemoteConfirm(false); onSave({ ...form, category: form.category === '__new__' ? 'extras' : form.category, opening_balance: realToCents(balanceInput) }, demotedCategory) }}
+                  onClick={async () => {
+                    setShowDemoteConfirm(false)
+                    await saveForm({ ...form, category: form.category === '__new__' ? 'extras' : form.category, opening_balance: realToCents(balanceInput) }, demotedCategory)
+                  }}
                 >
                   Confirmar
                 </button>
@@ -144,6 +157,9 @@ const AccountForm = ({ account, onSave, onClose, categories, existingPrincipal }
               </div>
             </div>
           )}
+          {submitError ? (
+            <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '4px 0 0' }}>{submitError}</p>
+          ) : null}
           <div className="modal-actions">
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>
             <button type="submit" className="add-member-btn">{account ? 'Salvar' : 'Criar Conta'}</button>

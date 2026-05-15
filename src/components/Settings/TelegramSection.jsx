@@ -1,9 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getBotConfig, updateBotConfig, deleteBotConfig } from '../../lib/botConfig.js'
 import { countTelegramIntegrationFailure } from '../../lib/diagnostics.js'
+import { normalizeError } from '../../lib/mutationResult.js'
+import { useTenant } from '../../hooks/useTenant.js'
+import { ERROR_TEXT, LOADING_TEXT, SETTINGS_TEXT } from '../../content/uxText.js'
 import OnboardingWizard from './OnboardingWizard.jsx'
 
-function ConfigStatus({ config, onDisconnect }) {
+function ConfigStatus({ tenantId, config, onDisconnect }) {
   const [isActive, setIsActive] = useState(config?.is_active ?? true)
   const [llmKey, setLlmKey] = useState('')
   const [llmProvider, setLlmProvider] = useState(config?.llm_provider ?? 'anthropic')
@@ -19,11 +22,11 @@ function ConfigStatus({ config, onDisconnect }) {
     setError('')
     try {
       const next = !isActive
-      await updateBotConfig({ is_active: next })
+      await updateBotConfig(tenantId, { is_active: next })
       setIsActive(next)
       setSuccess(next ? 'Bot ativado.' : 'Bot pausado.')
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'telegram.toggle' }).message)
       countTelegramIntegrationFailure()
     } finally {
       setSaving(false)
@@ -35,14 +38,14 @@ function ConfigStatus({ config, onDisconnect }) {
     setError('')
     setSuccess('')
     try {
-      await updateBotConfig({
+      await updateBotConfig(tenantId, {
         llm_api_key: llmKey.trim() || null,
         llm_provider: llmProvider,
       })
       setSuccess('LLM atualizado.')
       setLlmKey('')
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'telegram.llm' }).message)
       countTelegramIntegrationFailure()
     } finally {
       setSaving(false)
@@ -54,10 +57,10 @@ function ConfigStatus({ config, onDisconnect }) {
     setError('')
     setSuccess('')
     try {
-      await updateBotConfig({ confirmation_threshold: Number(threshold) })
+      await updateBotConfig(tenantId, { confirmation_threshold: Number(threshold) })
       setSuccess('Limiar de confirmacao atualizado.')
     } catch (err) {
-      setError(err.message)
+      setError(normalizeError(err, { operation: 'telegram.threshold' }).message)
       countTelegramIntegrationFailure()
     } finally {
       setSaving(false)
@@ -177,10 +180,10 @@ function ConfigStatus({ config, onDisconnect }) {
           onClick={async () => {
             if (!confirm('Tem certeza? Esta acao remove o bot permanentemente.')) return
             try {
-              await deleteBotConfig()
+              await deleteBotConfig(tenantId)
               onDisconnect()
             } catch (err) {
-              setError(err.message)
+              setError(normalizeError(err, { operation: 'telegram.disconnect' }).message)
               countTelegramIntegrationFailure()
             }
           }}
@@ -194,6 +197,7 @@ function ConfigStatus({ config, onDisconnect }) {
 }
 
 export default function TelegramSection() {
+  const { activeTenantId } = useTenant()
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -202,19 +206,23 @@ export default function TelegramSection() {
     setLoading(true)
     setError('')
     try {
-      const data = await getBotConfig()
+      if (!activeTenantId) {
+        setConfig(null)
+        return
+      }
+      const data = await getBotConfig(activeTenantId)
       setConfig(data?.config ?? null)
     } catch (err) {
       if (err.message?.includes('403') || err.message?.includes('401')) {
         setConfig(null)
       } else {
-        setError(err.message)
+        setError(normalizeError(err, { operation: 'telegram.load' }).message || ERROR_TEXT.telegramConfig)
         countTelegramIntegrationFailure()
       }
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [activeTenantId])
 
   useEffect(() => {
     loadConfig()
@@ -225,20 +233,24 @@ export default function TelegramSection() {
   }
 
   if (loading) {
-    return <div style={{ color: 'var(--text-secondary)' }}>Carregando configuracao do bot...</div>
+    return <div style={{ color: 'var(--text-secondary)' }}>{LOADING_TEXT.telegramConfig}</div>
   }
 
   if (error) {
-    return <div style={{ color: '#fecaca' }}>Erro: {error}</div>
+    return <div style={{ color: '#fecaca' }}>{error}</div>
+  }
+
+  if (!activeTenantId) {
+    return <div style={{ color: 'var(--text-secondary)' }}>{SETTINGS_TEXT.noActiveTelegramWorkspace}</div>
   }
 
   if (!config) {
     return (
       <div>
         <p style={{ marginBottom: 16, color: 'var(--text-secondary)' }}>
-          Conecte seu bot do Telegram para gerenciar tarefas, atividades e financas diretamente pelo Telegram.
+          Conecte seu bot do Telegram para gerenciar tarefas, atividades e finanças diretamente pelo Telegram.
         </p>
-        <OnboardingWizard onConnected={handleConnected} />
+        <OnboardingWizard tenantId={activeTenantId} onConnected={handleConnected} />
       </div>
     )
   }
@@ -246,10 +258,10 @@ export default function TelegramSection() {
   return (
     <div>
       <p style={{ marginBottom: 16, color: 'var(--text-secondary)' }}>
-        Bot conectado. Gerencie as configuracoes abaixo.
+        Bot conectado. Gerencie as configurações abaixo.
         {' '}<a href="#" onClick={(e) => { e.preventDefault(); loadConfig() }} style={{ color: 'var(--primary)' }}>Atualizar</a>
       </p>
-      <ConfigStatus config={config} onRefresh={loadConfig} onDisconnect={() => setConfig(null)} />
+      <ConfigStatus tenantId={activeTenantId} config={config} onRefresh={loadConfig} onDisconnect={() => setConfig(null)} />
     </div>
   )
 }
