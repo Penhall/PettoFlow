@@ -344,6 +344,68 @@ export async function seedTenantOnboardingData({
     if (error) throw error
   }
 
+  // Seed tasks de tutorial
+  const { data: columns } = await client
+    .from('kanban_columns')
+    .select('id, name')
+    .eq('tenant_id', tenantId)
+    .order('order_index', { ascending: true })
+    .limit(1)
+
+  const firstColumnId = (columns ?? [])[0]?.id
+
+  if (firstColumnId) {
+    const tutorialTasks = [
+      {
+        tenant_id: tenantId,
+        title: '📋 Explore o Kanban — arraste tarefas entre colunas',
+        status: 'A Fazer',
+        kanban_column_id: firstColumnId,
+        ...seedOrigin,
+      },
+      {
+        tenant_id: tenantId,
+        title: '📅 Agende uma atividade no Calendário',
+        status: 'A Fazer',
+        kanban_column_id: firstColumnId,
+        ...seedOrigin,
+      },
+      {
+        tenant_id: tenantId,
+        title: '🤖 Conecte o Bot do Telegram',
+        status: 'A Fazer',
+        kanban_column_id: firstColumnId,
+        ...seedOrigin,
+      },
+      {
+        tenant_id: tenantId,
+        title: '👥 Convide um membro para o workspace',
+        status: 'A Fazer',
+        kanban_column_id: firstColumnId,
+        ...seedOrigin,
+      },
+      {
+        tenant_id: tenantId,
+        title: '💰 Registre uma transação financeira',
+        status: 'A Fazer',
+        kanban_column_id: firstColumnId,
+        ...seedOrigin,
+      },
+      {
+        tenant_id: tenantId,
+        title: '✅ Complete o tour de onboarding',
+        status: 'A Fazer',
+        kanban_column_id: firstColumnId,
+        ...seedOrigin,
+      },
+    ]
+
+    const { error: tasksError } = await client.from('tasks').insert(tutorialTasks)
+    if (tasksError) {
+      console.log(`onboarding: erro ao seedar tarefas tutorial para tenant ${tenantId}:`, tasksError.message)
+    }
+  }
+
   const seedProfile = {
     mode: DEFAULT_INITIALIZATION_MODE,
     current_onboarding_version: CURRENT_ONBOARDING_VERSION,
@@ -355,7 +417,7 @@ export async function seedTenantOnboardingData({
     counts: {
       columns: 3,
       clients: 3,
-      tasks: 3,
+      tasks: 9,
       accounts: 1,
       activities: 1,
       transactions: 1,

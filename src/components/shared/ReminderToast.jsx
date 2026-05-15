@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 // src/components/shared/ReminderToast.jsx
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, X, AlertCircle } from 'lucide-react'
 import { useReminders } from '../../hooks/useReminders'
@@ -33,8 +33,10 @@ const Toast = ({ toast, onDismiss }) => {
   )
 }
 
-const ReminderToast = ({ activities }) => {
+const ReminderToast = ({ activities, notifications = [], notificationsLoading = false }) => {
   const [toasts, setToasts] = useState([])
+  const shownNotificationIdsRef = useRef(new Set())
+  const initializedRef = useRef(false)
 
   const dismiss = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id))
@@ -47,6 +49,34 @@ const ReminderToast = ({ activities }) => {
   }, [dismiss])
 
   useReminders(activities, addToast)
+
+  useEffect(() => {
+    if (notificationsLoading) return
+
+    const activityReminders = notifications.filter((notification) => (
+      notification.type === 'activity_reminder' && !notification.read
+    ))
+
+    if (!initializedRef.current) {
+      activityReminders.forEach((notification) => {
+        shownNotificationIdsRef.current.add(notification.id)
+      })
+      initializedRef.current = true
+      return
+    }
+
+    activityReminders.forEach((notification) => {
+      if (shownNotificationIdsRef.current.has(notification.id)) return
+      shownNotificationIdsRef.current.add(notification.id)
+      addToast({
+        title: notification.title,
+        sub: notification.body,
+        type: notification.type,
+        related_to: notification.resource_type,
+        id: notification.resource_id,
+      })
+    })
+  }, [notifications, notificationsLoading, addToast])
 
   return (
     <div className="toast-stack">

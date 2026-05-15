@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, ExternalLink, RefreshCw } from 'lucide-react'
+import { CreditCard, ExternalLink, RefreshCw, Shield } from 'lucide-react'
 import { useTenant } from '../../hooks/useTenant.js'
 import {
   createBillingCheckoutSession,
@@ -227,60 +227,82 @@ export default function BillingPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-            {plans.map((plan) => {
-              const isCurrentPlan = subscription?.plan?.slug === plan.slug
-              return (
-                <article
-                  key={plan.id}
-                  style={{
-                    border: isCurrentPlan ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                    borderRadius: 16,
-                    padding: 18,
-                    background: 'var(--card-bg)',
-                    display: 'grid',
-                    gap: 14,
-                  }}
-                >
-                  <div>
-                    <h3 style={{ margin: '0 0 6px' }}>{plan.name}</h3>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{plan.description || 'Plano sem descrição comercial.'}</p>
-                  </div>
+          {!stripeConfigured && (
+            <div style={{
+              padding: 18,
+              borderRadius: 16,
+              border: '1px solid color-mix(in srgb, var(--success, #16a34a) 35%, transparent)',
+              background: 'color-mix(in srgb, var(--success, #16a34a) 8%, transparent)',
+              display: 'grid',
+              gap: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Shield size={20} color="var(--success, #16a34a)" />
+                <strong style={{ fontSize: 15 }}>Período de testes — sem custo</strong>
+              </div>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                O faturamento será ativado em breve. Durante os testes, todos os recursos estão disponíveis sem limitações.
+                {subscription?.plan?.name ? ` Seu plano atual é ${subscription.plan.name}.` : ''}
+              </p>
+            </div>
+          )}
 
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <span>Mensal: <strong>{formatCurrency(plan.priceMonthly)}</strong></span>
-                    <span>Anual: <strong>{formatCurrency(plan.priceYearly)}</strong></span>
-                  </div>
+          {stripeConfigured && plans.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+              {plans.map((plan) => {
+                const isCurrentPlan = subscription?.plan?.slug === plan.slug
+                return (
+                  <article
+                    key={plan.id}
+                    style={{
+                      border: isCurrentPlan ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                      borderRadius: 16,
+                      padding: 18,
+                      background: 'var(--card-bg)',
+                      display: 'grid',
+                      gap: 14,
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: '0 0 6px' }}>{plan.name}</h3>
+                      <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{plan.description || 'Plano sem descrição comercial.'}</p>
+                    </div>
 
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    <button
-                      type="button"
-                      className="export-btn"
-                      disabled={!manageable || !stripeConfigured || !plan.monthlyAvailable || busyPlanKey === `${plan.slug}:monthly`}
-                      onClick={() => handleCheckout(plan.slug, 'monthly')}
-                    >
-                      <CreditCard size={16} />
-                      <span>
-                        {busyPlanKey === `${plan.slug}:monthly`
-                          ? 'Abrindo checkout...'
-                          : isCurrentPlan ? 'Reconfigurar mensal' : 'Assinar mensal'}
-                      </span>
-                    </button>
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      <span>Mensal: <strong>{formatCurrency(plan.priceMonthly)}</strong></span>
+                      <span>Anual: <strong>{formatCurrency(plan.priceYearly)}</strong></span>
+                    </div>
 
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      style={{ justifyContent: 'center', width: '100%', padding: '10px 14px' }}
-                      disabled={!manageable || !stripeConfigured || !plan.yearlyAvailable || busyPlanKey === `${plan.slug}:yearly`}
-                      onClick={() => handleCheckout(plan.slug, 'yearly')}
-                    >
-                      {busyPlanKey === `${plan.slug}:yearly` ? 'Abrindo checkout anual...' : 'Assinar anual'}
-                    </button>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="export-btn"
+                        disabled={!manageable || !stripeConfigured || !plan.monthlyAvailable || busyPlanKey === `${plan.slug}:monthly`}
+                        onClick={() => handleCheckout(plan.slug, 'monthly')}
+                      >
+                        <CreditCard size={16} />
+                        <span>
+                          {busyPlanKey === `${plan.slug}:monthly`
+                            ? 'Abrindo checkout...'
+                            : isCurrentPlan ? 'Reconfigurar mensal' : 'Assinar mensal'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        style={{ justifyContent: 'center', width: '100%', padding: '10px 14px' }}
+                        disabled={!manageable || !stripeConfigured || !plan.yearlyAvailable || busyPlanKey === `${plan.slug}:yearly`}
+                        onClick={() => handleCheckout(plan.slug, 'yearly')}
+                      >
+                        {busyPlanKey === `${plan.slug}:yearly` ? 'Abrindo checkout anual...' : 'Assinar anual'}
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
         </>
       )}
     </section>

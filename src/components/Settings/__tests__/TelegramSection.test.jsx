@@ -1,11 +1,24 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import TelegramSection from '../TelegramSection.jsx'
 
+vi.mock('../../../lib/botConfig.js', () => ({
+  getBotConfig: vi.fn().mockResolvedValue({ config: null }),
+  saveBotConfig: vi.fn(),
+  updateBotConfig: vi.fn(),
+  deleteBotConfig: vi.fn(),
+}))
+
+vi.mock('../../../lib/botCommands.js', () => ({
+  seedDefaultCommands: vi.fn(),
+}))
+
 describe('TelegramSection', () => {
-  it('informa que a configuração avançada foi bloqueada temporariamente', () => {
+  it('renderiza o estado inicial com opcao de configurar quando nao ha config', async () => {
     render(<TelegramSection />)
-    expect(screen.getByText('Configuração avançada do Telegram temporariamente bloqueada')).toBeTruthy()
-    expect(screen.getByText(/será reestruturada para o modelo SaaS nas próximas fases/i)).toBeTruthy()
+
+    await waitFor(() => {
+      expect(screen.getByText(/Conectar Bot Telegram/i)).toBeTruthy()
+    })
   })
 })

@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Plus, ChevronDown } from 'lucide-react'
 import { realToCents } from '../../lib/finUtils'
+import { useTenant } from '../../hooks/useTenant.js'
 import RelationChips from '../Activities/RelationChips'
+import FileUploader from '../shared/FileUploader.jsx'
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -41,6 +43,7 @@ const TransactionForm = ({
   const [payeeSearch, setPayeeSearch] = useState('')
   const [showPayeeDropdown, setShowPayeeDropdown] = useState(false)
   const [creatingPayee, setCreatingPayee] = useState(false)
+  const { activeTenantId } = useTenant()
 
   useEffect(() => {
     if (transaction) {
@@ -300,6 +303,13 @@ const TransactionForm = ({
               Conciliado
             </label>
           </div>
+
+          {transaction?.id && (
+            <div style={{ marginTop: 16 }}>
+              <label style={{ fontSize: '0.85em', fontWeight: 600, display: 'block', marginBottom: 8 }}>Comprovante</label>
+              <FileUploader entityType="transaction" entityId={transaction.id} tenantId={activeTenantId} />
+            </div>
+          )}
 
           <div className="modal-actions">
             <button type="button" className="action-btn" onClick={onClose}>Cancelar</button>

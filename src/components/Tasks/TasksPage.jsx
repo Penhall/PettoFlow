@@ -184,15 +184,20 @@ export default function TasksPage({
       ) : null}
 
       <div className="tasks-page__content">
-        {shouldRenderEmptyState ? (
-          <EmptyState
-            title={emptyState.title}
-            description={emptyState.description}
-            detail={emptyState.detail}
-            quickActions={emptyState.quickActions}
-            tutorialAction={emptyState.tutorialAction}
-          />
-        ) : content}
+        <div className={`board-wrapper ${shouldRenderEmptyState ? 'board-wrapper--empty' : ''}`}>
+          {content}
+          {shouldRenderEmptyState && emptyState && (
+            <div className="board-empty-overlay">
+              <EmptyState
+                title={emptyState.title}
+                description={emptyState.description}
+                detail={emptyState.detail}
+                quickActions={emptyState.quickActions}
+                tutorialAction={emptyState.tutorialAction}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

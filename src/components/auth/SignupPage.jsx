@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AuthLayout from './AuthLayout.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
+import { supabase } from '../../lib/supabaseClient.js'
 
 function getSignupErrorMessage() {
   return 'Não foi possível criar sua conta agora.'
@@ -13,6 +14,7 @@ export default function SignupPage({ onSwitchToLogin }) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -38,6 +40,26 @@ export default function SignupPage({ onSwitchToLogin }) {
       setError(getSignupErrorMessage())
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleGoogleSignup() {
+    setError('')
+    setNotice('')
+    if (!supabase) {
+      setError('Cliente Supabase não configurado.')
+      return
+    }
+
+    setOauthLoading(true)
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google' })
+      if (oauthError) throw oauthError
+    } catch (err) {
+      console.error('Erro ao criar conta com Google:', err)
+      setError('Não foi possível continuar com Google agora.')
+    } finally {
+      setOauthLoading(false)
     }
   }
 
@@ -115,6 +137,21 @@ export default function SignupPage({ onSwitchToLogin }) {
         <button type="submit" disabled={loading}>
           {loading ? 'Criando conta...' : 'Criar conta'}
         </button>
+
+        <div className="oauth-divider">
+          <span>ou</span>
+        </div>
+
+        <div className="oauth-buttons">
+          <button
+            type="button"
+            className="oauth-button oauth-button--google"
+            onClick={handleGoogleSignup}
+            disabled={oauthLoading}
+          >
+            {oauthLoading ? 'Redirecionando...' : 'Entrar com Google'}
+          </button>
+        </div>
       </form>
     </AuthLayout>
   )

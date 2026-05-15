@@ -1,6 +1,7 @@
 import { Menu, Search, Shield } from 'lucide-react'
 import ThemeSwitcher from './ThemeSwitcher.jsx'
 import TenantSwitcher from '../tenant/TenantSwitcher.jsx'
+import NotificationBell from '../shared/NotificationBell.jsx'
 
 export default function Topbar({
   searchQuery = '',
@@ -13,6 +14,12 @@ export default function Topbar({
   isPlatformAdmin = false,
   onOpenAdmin = () => { window.location.hash = '/admin' },
   workspaceSelector = null,
+  notifications = [],
+  unreadCount = 0,
+  notificationsLoading = false,
+  markAsRead = () => {},
+  markAllAsRead = () => {},
+  refreshNotifications = () => {},
 }) {
   return (
     <div className="topbar-shell">
@@ -44,6 +51,15 @@ export default function Topbar({
         ) : null}
 
         <ThemeSwitcher />
+
+        <NotificationBell
+          notifications={notifications}
+          unreadCount={unreadCount}
+          loading={notificationsLoading}
+          markAsRead={markAsRead}
+          markAllAsRead={markAllAsRead}
+          refresh={refreshNotifications}
+        />
 
         {isPlatformAdmin ? (
           <button

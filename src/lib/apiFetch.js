@@ -48,8 +48,22 @@ export async function authenticatedFetch(url, options = {}) {
     return runtimeResponse
   }
 
+  const externalSignal = fetchOptions.signal
+  delete fetchOptions.signal
+
+  const FETCH_TIMEOUT_MS = 15000
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const abortFromExternal = () => controller.abort()
+
+  if (externalSignal?.aborted) {
+    controller.abort()
+  } else {
+    externalSignal?.addEventListener('abort', abortFromExternal, { once: true })
+  }
+
   try {
-    return await fetch(url, { ...fetchOptions, headers })
+    return await fetch(url, { ...fetchOptions, headers, signal: controller.signal })
   } catch (error) {
     traceAsyncFailure('network-failure', error, {
       url,
@@ -57,5 +71,8 @@ export async function authenticatedFetch(url, options = {}) {
       tenantId,
     })
     throw error
+  } finally {
+    clearTimeout(timeoutId)
+    externalSignal?.removeEventListener('abort', abortFromExternal)
   }
 }

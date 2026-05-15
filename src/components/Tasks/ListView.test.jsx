@@ -58,4 +58,22 @@ describe('ListView', () => {
 
     expect(screen.getByText('Done')).toHaveClass('status-badge', 'done')
   })
+
+  it('renders the list layout when there are no tasks', () => {
+    render(
+      <ListView
+        tasks={[]}
+        columns={[
+          { id: 1, name: 'Backlog', order_index: 1 },
+          { id: 2, name: 'Doing', order_index: 2 },
+        ]}
+        onUpdateTask={() => {}}
+        onDeleteTask={() => {}}
+      />
+    )
+
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Tarefa' })).toBeInTheDocument()
+    expect(screen.queryByText('Nenhuma tarefa encontrada')).not.toBeInTheDocument()
+  })
 })

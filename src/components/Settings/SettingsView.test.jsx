@@ -18,6 +18,10 @@ vi.mock('../billing/BillingPage.jsx', () => ({
   default: () => <div>Billing Page</div>,
 }))
 
+vi.mock('../auth/MfaSetup.jsx', () => ({
+  default: () => <div>MFA Setup</div>,
+}))
+
 vi.mock('../tenant/AuditTimeline.jsx', () => ({
   default: () => <div>Audit Timeline</div>,
 }))

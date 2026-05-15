@@ -44,6 +44,7 @@ describe('TasksPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Tarefas' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Kanban' })).toBeInTheDocument()
+    expect(within(document.querySelector('.tasks-page__content')).getByText('Kanban')).toBeInTheDocument()
     expect(within(document.querySelector('.tasks-page__content')).getByRole('button', { name: /Criar primeira tarefa/i })).toBeInTheDocument()
     expect(within(document.querySelector('.tasks-page__content')).getByRole('button', { name: /Abrir tutorial/i })).toBeInTheDocument()
     expect(onViewChange).toHaveBeenCalledWith('list')

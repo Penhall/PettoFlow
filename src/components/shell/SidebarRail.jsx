@@ -105,7 +105,7 @@ export default function SidebarRail({
               ) : null}
               {[
                 { id: 'admin-dashboard', label: 'Dashboard', icon: BarChart3 },
-                { id: 'admin-tenants', label: 'Tenants', icon: Building2 },
+                { id: 'admin-tenants', label: 'Clientes', icon: Building2 },
                 { id: 'admin-audit', label: 'Auditoria', icon: ScrollText },
                 { id: 'admin-plans', label: 'Planos', icon: Package },
               ].map(({ id, label, icon: Icon }) => (

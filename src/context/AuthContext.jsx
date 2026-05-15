@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [mfaChallenge, setMfaChallenge] = useState(null)
 
   async function syncPlatformAdmin(nextSession, isActive = () => true) {
     if (!supabase || !nextSession) {
@@ -56,7 +57,17 @@ export function AuthProvider({ children }) {
         const nextSession = data?.session ?? null
         setSession(nextSession)
         setUser(nextSession?.user ?? null)
-        await syncPlatformAdmin(nextSession, () => active)
+
+        // Libera loading ANTES do syncPlatformAdmin para evitar deadlock
+        if (active) {
+          initialLoadResolved = true
+          setLoading(false)
+        }
+
+        // Fire-and-forget: não bloqueia o bootstrap
+        syncPlatformAdmin(nextSession, () => active).catch((err) => {
+          console.error('Erro em syncPlatformAdmin (background):', err)
+        })
       } catch (error) {
         if (!active) return
         console.error('Erro ao inicializar autenticacao:', error)
@@ -65,7 +76,7 @@ export function AuthProvider({ children }) {
         setUser(null)
         setIsPlatformAdmin(false)
       } finally {
-        if (active) {
+        if (active && !initialLoadResolved) {
           initialLoadResolved = true
           setLoading(false)
         }
@@ -103,11 +114,13 @@ export function AuthProvider({ children }) {
       // loading should only transition true→false once (initial mount).
       // Token refresh / auth state changes after that should not flicker.
       if (!initialLoadResolved) {
-        await syncPlatformAdmin(resolvedSession, () => active)
         if (active) {
           initialLoadResolved = true
           setLoading(false)
         }
+        syncPlatformAdmin(resolvedSession, () => active).catch((err) => {
+          console.error('Erro em syncPlatformAdmin (background):', err)
+        })
       } else {
         // Subsequent events: fire-and-forget, no loading flicker
         syncPlatformAdmin(resolvedSession, () => active).catch(() => {})
@@ -135,13 +148,31 @@ export function AuthProvider({ children }) {
     return nextSession
   }
 
+  async function completeMfaChallenge() {
+    setMfaChallenge(null)
+    return refreshSession()
+  }
+
+  function cancelMfaChallenge() {
+    setMfaChallenge(null)
+  }
+
   async function signIn(email, password) {
     if (!supabase) {
       throw getMissingConfigError()
     }
 
+    setMfaChallenge(null)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+
+    const totpFactor = data?.user?.factors?.find(
+      (factor) => factor.factor_type === 'totp' && factor.status === 'verified'
+    )
+    if (totpFactor) {
+      setMfaChallenge({ factorId: totpFactor.id })
+    }
+
     return data
   }
 
@@ -170,6 +201,7 @@ export function AuthProvider({ children }) {
 
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    setMfaChallenge(null)
   }
 
   return (
@@ -178,6 +210,7 @@ export function AuthProvider({ children }) {
         session,
         user,
         loading,
+        mfaChallenge,
         isAuthenticated: Boolean(session),
         isPlatformAdmin,
         isConfigured: Boolean(supabase),
@@ -185,6 +218,8 @@ export function AuthProvider({ children }) {
         signUp,
         signOut,
         refreshSession,
+        completeMfaChallenge,
+        cancelMfaChallenge,
       }}
     >
       {children}

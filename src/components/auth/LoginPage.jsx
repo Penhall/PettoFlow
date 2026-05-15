@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AuthLayout from './AuthLayout.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
+import { supabase } from '../../lib/supabaseClient.js'
 
 function getLoginErrorMessage() {
   return 'Não foi possível entrar com este email e esta senha.'
@@ -11,6 +12,7 @@ export default function LoginPage({ onSwitchToSignup }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSubmit(event) {
@@ -25,6 +27,25 @@ export default function LoginPage({ onSwitchToSignup }) {
       setError(getLoginErrorMessage())
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setError('')
+    if (!supabase) {
+      setError('Cliente Supabase não configurado.')
+      return
+    }
+
+    setOauthLoading(true)
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google' })
+      if (oauthError) throw oauthError
+    } catch (err) {
+      console.error('Erro ao autenticar com Google:', err)
+      setError('Não foi possível entrar com Google agora.')
+    } finally {
+      setOauthLoading(false)
     }
   }
 
@@ -73,6 +94,21 @@ export default function LoginPage({ onSwitchToSignup }) {
         <button type="submit" disabled={loading}>
           {loading ? 'Entrando...' : 'Entrar'}
         </button>
+
+        <div className="oauth-divider">
+          <span>ou</span>
+        </div>
+
+        <div className="oauth-buttons">
+          <button
+            type="button"
+            className="oauth-button oauth-button--google"
+            onClick={handleGoogleLogin}
+            disabled={oauthLoading}
+          >
+            {oauthLoading ? 'Redirecionando...' : 'Entrar com Google'}
+          </button>
+        </div>
       </form>
     </AuthLayout>
   )

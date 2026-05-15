@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('./supabaseClient.js', () => ({
   supabase: {
@@ -15,6 +15,10 @@ describe('authenticatedFetch', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     globalThis.fetch = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('adds bearer token from the current session', async () => {
@@ -110,5 +114,56 @@ describe('authenticatedFetch', () => {
     })
 
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('aborts fetch requests after the timeout', async () => {
+    vi.useFakeTimers()
+    supabase.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'token-123' } },
+    })
+    fetch.mockImplementation((_url, options) => (
+      new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => {
+          const error = new Error('The operation was aborted.')
+          error.name = 'AbortError'
+          reject(error)
+        })
+      })
+    ))
+
+    const promise = authenticatedFetch('https://example.com/data', { method: 'GET' })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    vi.advanceTimersByTime(15000)
+
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('propagates external abort signals to fetch', async () => {
+    supabase.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'token-123' } },
+    })
+    fetch.mockImplementation((_url, options) => (
+      new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => {
+          const error = new Error('The operation was aborted.')
+          error.name = 'AbortError'
+          reject(error)
+        })
+      })
+    ))
+
+    const controller = new AbortController()
+    const promise = authenticatedFetch('https://example.com/data', {
+      method: 'GET',
+      signal: controller.signal,
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    controller.abort()
+
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
   })
 })

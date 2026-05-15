@@ -1,11 +1,20 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import CommandsSection from '../CommandsSection.jsx'
 
+vi.mock('../../../lib/botCommands.js', () => ({
+  listCommands: vi.fn().mockResolvedValue({ commands: [] }),
+  toggleCommand: vi.fn(),
+  deleteCommand: vi.fn(),
+  seedDefaultCommands: vi.fn(),
+}))
+
 describe('CommandsSection', () => {
-  it('informa que os comandos administrativos foram bloqueados temporariamente', () => {
+  it('mostra opcao de instalar comandos padrao quando lista vazia', async () => {
     render(<CommandsSection />)
-    expect(screen.getByText('Comandos administrativos do Telegram temporariamente bloqueados')).toBeTruthy()
-    expect(screen.getByText(/continuam fora do fluxo principal/i)).toBeTruthy()
+
+    await waitFor(() => {
+      expect(screen.getByText(/Instalar comandos padrao/i)).toBeTruthy()
+    })
   })
 })

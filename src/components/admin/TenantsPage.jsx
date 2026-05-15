@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchAdminTenants } from '../../lib/adminClient.js'
+import PageHeader from '../shared/PageHeader.jsx'
 import TenantDetailModal from './TenantDetailModal.jsx'
 
 function formatDate(iso) {
@@ -27,7 +28,7 @@ export default function TenantsPage() {
   if (loading) {
     return (
       <div className="admin-tenants">
-        <p className="admin-dashboard__loading">Carregando tenants...</p>
+        <p className="admin-dashboard__loading">Carregando clientes...</p>
       </div>
     )
   }
@@ -42,6 +43,12 @@ export default function TenantsPage() {
 
   return (
     <div className="admin-tenants">
+      <PageHeader
+        eyebrow="Administração"
+        title="Clientes"
+        subtitle="Gerencie clientes, planos e acesso à plataforma."
+      />
+
       <div className="admin-tenants__toolbar">
         <input
           className="admin-search"
@@ -53,7 +60,7 @@ export default function TenantsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="admin-panel__empty">Nenhum tenant encontrado</p>
+        <p className="admin-panel__empty">Nenhum cliente encontrado</p>
       ) : (
         <div className="admin-table-wrapper">
           <table className="admin-table">

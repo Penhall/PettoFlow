@@ -1,5 +1,4 @@
 import { Trash2, ArrowRight } from 'lucide-react'
-import EmptyState from '../shared/EmptyState.jsx'
 
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
@@ -24,16 +23,6 @@ const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
     if (currentIndex <= 0) return 'todo'
     if (currentIndex === orderedColumns.length - 1) return 'done'
     return 'progress'
-  }
-
-  if (tasks.length === 0) {
-    return (
-      <EmptyState
-        title="Nenhuma tarefa encontrada"
-        description="A lista mostra status, prioridade, responsável e progresso em uma superfície compacta."
-        detail="Este resultado está vazio porque nenhum item corresponde aos filtros ou à busca atual."
-      />
-    )
   }
 
   return (

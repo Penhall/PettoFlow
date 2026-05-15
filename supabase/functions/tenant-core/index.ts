@@ -224,6 +224,28 @@ Deno.serve(async (req: Request) => {
 
       if (membershipError) return ctx.fail(500, 'membership_fetch_failed', membershipError.message)
 
+      const { data: freePlan } = await serviceSb
+        .from('plans')
+        .select('id, slug')
+        .eq('slug', 'free')
+        .eq('active', true)
+        .maybeSingle()
+
+      if (freePlan) {
+        const { error: subError } = await serviceSb
+          .from('subscriptions')
+          .upsert({
+            tenant_id: tenant.id,
+            plan_id: freePlan.id,
+            status: 'active',
+            provider: 'internal',
+          }, { onConflict: 'tenant_id' })
+
+        if (subError) {
+          console.error(`[tenant-core] Falha ao criar subscription Free para tenant ${tenant.id}:`, subError.message)
+        }
+      }
+
       const defaultSettings = {
         workspace_name: tenant.name,
         onboarding_status: 'created',
