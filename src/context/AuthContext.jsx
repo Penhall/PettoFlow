@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import { traceAsyncFailure } from '../lib/diagnostics.js'
 import { AuthContext } from './authContext.js'
 
 function getMissingConfigError() {
@@ -23,6 +24,7 @@ export function AuthProvider({ children }) {
 
     if (error) {
       console.error('Erro ao carregar flag administrativa global:', error)
+      traceAsyncFailure('auth-failure', error, { stage: 'platform-admin-rpc' })
       setIsPlatformAdmin(false)
       return false
     }
@@ -48,6 +50,7 @@ export function AuthProvider({ children }) {
 
         if (error) {
           console.error('Erro ao carregar sessao inicial:', error)
+          traceAsyncFailure('auth-failure', error, { stage: 'initial-session' })
         }
 
         const nextSession = data?.session ?? null
@@ -57,6 +60,7 @@ export function AuthProvider({ children }) {
       } catch (error) {
         if (!active) return
         console.error('Erro ao inicializar autenticacao:', error)
+        traceAsyncFailure('auth-failure', error, { stage: 'auth-provider-init' })
         setSession(null)
         setUser(null)
         setIsPlatformAdmin(false)

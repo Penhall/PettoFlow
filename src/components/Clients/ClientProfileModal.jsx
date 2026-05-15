@@ -3,6 +3,7 @@ import { Building2, Mail, MessageSquare, Phone, Plus } from 'lucide-react'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useFinCategories } from '../../hooks/useFinCategories'
 import { usePayees } from '../../hooks/usePayees'
+import { useTenant } from '../../hooks/useTenant.js'
 import { useTransactions } from '../../hooks/useTransactions'
 import {
   createInteractionLogRecord,
@@ -20,11 +21,14 @@ const normalizeLogType = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
 
-function ClientTransactions({ clientId }) {
-  const { transactions: clientTransactions, loading } = useTransactions({ relatedTo: { type: 'client', id: clientId } })
-  const { accounts } = useAccounts()
-  const { payees } = usePayees()
-  const { categories } = useFinCategories()
+function ClientTransactions({ clientId, tenantId }) {
+  const { transactions: clientTransactions, loading } = useTransactions({
+    filters: { relatedTo: { type: 'client', id: clientId } },
+    tenantId,
+  })
+  const { accounts } = useAccounts({ tenantId })
+  const { payees } = usePayees({ tenantId })
+  const { categories } = useFinCategories({ tenantId })
 
   return (
     <section className="client-profile-section">
@@ -50,6 +54,7 @@ function ClientTransactions({ clientId }) {
 }
 
 export default function ClientProfileModal({ isOpen, client, clientTasks = [], onEdit, onClose }) {
+  const { activeTenantId } = useTenant()
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState({ type: 'Ligação', notes: '' })
   const [loadingLogs, setLoadingLogs] = useState(false)
@@ -67,14 +72,14 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
     setLoadingLogs(true)
 
     try {
-      const data = await listInteractionLogRecords(client.id)
+      const data = await listInteractionLogRecords(client.id, activeTenantId)
       setLogs(data || [])
     } catch (error) {
       console.error('Error fetching interaction logs:', error)
     } finally {
       setLoadingLogs(false)
     }
-  }, [client?.id])
+  }, [client?.id, activeTenantId])
 
   useEffect(() => {
     if (client?.id) {
@@ -92,7 +97,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
         client_id: client.id,
         type: newLog.type,
         notes: newLog.notes,
-      })
+      }, activeTenantId)
 
       setLogs((current) => [created, ...current])
       setNewLog({ type: 'Ligação', notes: '' })
@@ -262,7 +267,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
             </section>
           </div>
 
-          {client.id ? <ClientTransactions clientId={client.id} /> : null}
+          {client.id ? <ClientTransactions clientId={client.id} tenantId={activeTenantId} /> : null}
         </div>
       ) : null}
     </RecordSidebar>

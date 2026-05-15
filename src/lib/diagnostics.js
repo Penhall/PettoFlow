@@ -1,10 +1,6 @@
 /**
- * Runtime diagnostics for stabilization phase.
- * All output is gated behind the __NEXUS_DIAG__ flag — set in DevTools console to activate.
- * Produces no output and no side-effects in production unless the flag is set.
- *
- * Usage: window.__NEXUS_DIAG__ = true  (DevTools console)
- *        window.__NEXUS_DIAG__ = false (disable)
+ * Runtime diagnostics for stabilization work.
+ * All output is gated behind the __NEXUS_DIAG__ flag.
  */
 
 function isEnabled() {
@@ -12,131 +8,106 @@ function isEnabled() {
 }
 
 function stamp() {
-  return new Date().toISOString().slice(11, 23) // HH:MM:SS.mmm
+  return new Date().toISOString().slice(11, 23)
 }
 
 function tag(area) {
   return `[NexusDiag][${stamp()}][${area}]`
 }
 
-// ─── Render tracing ────────────────────────────────────────────────────────
-
 export function traceRender(componentName, props = {}) {
   if (!isEnabled()) return
   console.debug(tag('render'), componentName, props)
 }
 
-// ─── Async flow tracing ────────────────────────────────────────────────────
-
 export function traceAsync(label, phase, detail = null) {
   if (!isEnabled()) return
-  const phases = { start: '▶', resolve: '✔', reject: '✖', cancel: '⊘' }
+  const phases = { start: 'START', resolve: 'RESOLVE', reject: 'REJECT', cancel: 'CANCEL' }
   console.debug(tag('async'), phases[phase] || phase, label, detail ?? '')
 }
 
-// ─── Effect lifecycle tracing ──────────────────────────────────────────────
-
 export function traceEffect(componentName, effectName, phase) {
   if (!isEnabled()) return
-  const phases = { mount: '⬆', update: '↺', cleanup: '⬇' }
+  const phases = { mount: 'MOUNT', update: 'UPDATE', cleanup: 'CLEANUP' }
   console.debug(tag('effect'), phases[phase] || phase, `${componentName}#${effectName}`)
 }
 
-// ─── Modal lifecycle tracing ───────────────────────────────────────────────
-
 export function traceModal(modalName, event, detail = null) {
   if (!isEnabled()) return
-  const events = { open: '◈ OPEN', close: '◉ CLOSE', mount: '▲ MOUNT', unmount: '▼ UNMOUNT' }
+  const events = { open: 'OPEN', close: 'CLOSE', mount: 'MOUNT', unmount: 'UNMOUNT' }
   console.debug(tag('modal'), events[event] || event, modalName, detail ?? '')
 }
 
-// ─── Suspense boundary tracing ─────────────────────────────────────────────
-
 export function traceSuspense(boundaryId, phase) {
   if (!isEnabled()) return
-  const phases = { suspend: '⏳ SUSPEND', resolve: '✅ RESOLVE', error: '❌ ERROR' }
+  const phases = { suspend: 'SUSPEND', resolve: 'RESOLVE', error: 'ERROR' }
   console.debug(tag('suspense'), phases[phase] || phase, boundaryId)
 }
 
-// ─── Navigation tracing ────────────────────────────────────────────────────
-
 export function traceNavigation(from, to, method = 'tab') {
   if (!isEnabled()) return
-  console.debug(tag('nav'), `${from} → ${to}`, `(${method})`)
+  console.debug(tag('nav'), `${from} -> ${to}`, `(${method})`)
 }
-
-// ─── Context sync tracing ──────────────────────────────────────────────────
 
 export function traceContext(contextName, key, value) {
   if (!isEnabled()) return
   console.debug(tag('ctx'), contextName, key, '=', value)
 }
 
-// ─── Tenant/auth tracing ───────────────────────────────────────────────────
-
 export function traceTenant(event, tenantId = null) {
   if (!isEnabled()) return
   console.debug(tag('tenant'), event, tenantId ?? '(none)')
 }
 
-// ─── Grouped snapshot ─────────────────────────────────────────────────────
-
 export function traceSnapshot(label, data) {
   if (!isEnabled()) return
-  console.groupCollapsed(tag('snapshot') + ' ' + label)
+  console.groupCollapsed(`${tag('snapshot')} ${label}`)
   console.debug(data)
   console.groupEnd()
 }
 
-// ─── Warning ──────────────────────────────────────────────────────────────
-
 export function diagWarn(area, message, detail = null) {
   if (!isEnabled()) return
-  console.warn(tag(area), '⚠', message, detail ?? '')
+  console.warn(tag(area), 'WARN', message, detail ?? '')
 }
-
-// ─── Bootstrap lifecycle tracing ──────────────────────────────────────────────
-// phases: 'start' | 'loading' | 'ready' | 'error' | 'retry' | 'cancelled' | 'tenant-change'
 
 export function traceBootstrap(phase, tenantId = null, detail = null) {
   if (!isEnabled()) return
-  const icons = {
-    start: '🚀', loading: '⏳', ready: '✅', error: '❌',
-    retry: '↺', cancelled: '⊘', 'tenant-change': '🔄',
+  const phases = {
+    start: 'START',
+    loading: 'LOADING',
+    ready: 'READY',
+    error: 'ERROR',
+    retry: 'RETRY',
+    cancelled: 'CANCELLED',
+    'tenant-change': 'TENANT_CHANGE',
   }
-  console.debug(tag('bootstrap'), icons[phase] ?? phase, `tenant=${tenantId ?? 'none'}`, detail ?? '')
+  console.debug(tag('bootstrap'), phases[phase] ?? phase, `tenant=${tenantId ?? 'none'}`, detail ?? '')
 }
 
-// ─── Ownership tracing ─────────────────────────────────────────────────────────
-// source: 'explicit' (tenantId passed directly) | 'implicit' (read from global fallback)
-
-export function traceOwnership(operation, tenantId, source) {
+export function traceOwnership(operation, tenantId, source, meta = null) {
   if (!isEnabled()) return
-  const label = source === 'explicit' ? '✓ explicit' : '⚠ implicit-fallback'
-  console.debug(tag('ownership'), label, operation, `tenant=${tenantId ?? 'none'}`)
+  const label = source === 'explicit' ? 'EXPLICIT' : 'IMPLICIT_FALLBACK'
+  console.debug(tag('ownership'), label, operation, `tenant=${tenantId ?? 'none'}`, meta ?? '')
 }
-
-// ─── Async failure classification ─────────────────────────────────────────────
-// type: 'unhandled-rejection' | 'lazy-import' | 'async-event' | 'bootstrap-fail'
-// NOTE: React Error Boundaries do NOT catch unhandled promise rejections or
-// errors thrown in event handlers / setTimeout / setInterval. This function
-// only produces diagnostic output — it does not recover the app.
 
 export function traceAsyncFailure(type, error, context = null) {
   if (!isEnabled()) return
-  const icons = {
-    'unhandled-rejection': '⚡',
-    'lazy-import': '📦',
-    'async-event': '📡',
-    'bootstrap-fail': '🔴',
+  const classes = {
+    'unhandled-rejection': 'UNHANDLED_REJECTION',
+    'lazy-load-failure': 'LAZY_LOAD_FAILURE',
+    'async-event': 'ASYNC_EVENT_FAILURE',
+    'bootstrap-failure': 'BOOTSTRAP_FAILURE',
+    'auth-failure': 'AUTH_FAILURE',
+    'network-failure': 'NETWORK_FAILURE',
+    'onboarding-failure': 'ONBOARDING_FAILURE',
+    'transition-failure': 'TRANSITION_FAILURE',
   }
-  console.error(tag('async-fault'), icons[type] ?? type, type, error?.message ?? String(error), context ?? '')
+  console.error(tag('async-fault'), classes[type] ?? type, type, error?.message ?? String(error), context ?? '')
 }
-
-// ─── Route transition tracing ──────────────────────────────────────────────────
 
 export function traceRouteTransition(from, to, phase) {
   if (!isEnabled()) return
-  const icons = { start: '▶', complete: '✔', suspended: '⏳', error: '❌' }
-  console.debug(tag('route-transition'), icons[phase] ?? phase, `${from} → ${to}`)
+  const phases = { start: 'START', complete: 'COMPLETE', suspended: 'SUSPENDED', error: 'ERROR' }
+  console.debug(tag('route-transition'), phases[phase] ?? phase, `${from} -> ${to}`)
 }

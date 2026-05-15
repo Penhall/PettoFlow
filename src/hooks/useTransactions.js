@@ -8,7 +8,28 @@ import {
 } from '../lib/workspaceCore'
 import { filterFixtureTransactions, getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useTransactions(filters = {}, rules = []) {
+function normalizeTransactionsArgs(optionsOrFilters = {}, maybeRules = []) {
+  if (
+    optionsOrFilters &&
+    typeof optionsOrFilters === 'object' &&
+    ('tenantId' in optionsOrFilters || 'filters' in optionsOrFilters || 'rules' in optionsOrFilters)
+  ) {
+    return {
+      filters: optionsOrFilters.filters || {},
+      rules: optionsOrFilters.rules || [],
+      tenantId: optionsOrFilters.tenantId,
+    }
+  }
+
+  return {
+    filters: optionsOrFilters || {},
+    rules: maybeRules || [],
+    tenantId: undefined,
+  }
+}
+
+export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
+  const { filters, rules, tenantId } = normalizeTransactionsArgs(optionsOrFilters, maybeRules)
   const visualMode = isVisualRegressionMode()
   // getVisualFixture returns a new array reference every call; memoize so
   // the effect dep array stays stable and doesn't loop in visual mode.
@@ -34,7 +55,7 @@ export function useTransactions(filters = {}, rules = []) {
     let cancelled = false
     setLoading(true)
 
-    listTransactionRecords(filtersKey ? JSON.parse(filtersKey) : {})
+    listTransactionRecords(filtersKey ? JSON.parse(filtersKey) : {}, tenantId)
       .then((data) => {
         if (cancelled) return
         setTransactions(data || [])
@@ -48,7 +69,7 @@ export function useTransactions(filters = {}, rules = []) {
       })
 
     return () => { cancelled = true }
-  }, [filtersKey, visualMode, fixtureTransactions])
+  }, [filtersKey, visualMode, fixtureTransactions, tenantId])
 
   const getSortedRules = () =>
     [...(rulesRef.current || [])].sort((left, right) =>
@@ -64,7 +85,7 @@ export function useTransactions(filters = {}, rules = []) {
     const payload = { ...dbPayload, needs_review: !ruleMatched }
 
     try {
-      const created = await createTransactionRecord(payload)
+      const created = await createTransactionRecord(payload, tenantId)
       setTransactions((current) => [created, ...current])
       return created
     } catch (error) {
@@ -80,7 +101,7 @@ export function useTransactions(filters = {}, rules = []) {
     delete dbUpdates.payee_name
 
     try {
-      const updated = await updateTransactionRecord(id, dbUpdates)
+      const updated = await updateTransactionRecord(id, dbUpdates, tenantId)
       setTransactions((current) => current.map((transaction) => (transaction.id === id ? updated : transaction)))
       return updated
     } catch (error) {
@@ -93,7 +114,7 @@ export function useTransactions(filters = {}, rules = []) {
     if (visualMode) return true
 
     try {
-      await deleteTransactionRecord(id)
+      await deleteTransactionRecord(id, tenantId)
       setTransactions((current) => current.filter((transaction) => transaction.id !== id))
       return true
     } catch (error) {

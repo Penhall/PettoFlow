@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import FinanceView from './FinanceView.jsx'
+import { TenantContext } from '../../context/tenantContext.js'
 
 vi.mock('../../hooks/useAccounts', () => ({
   useAccounts: () => ({
@@ -96,7 +97,23 @@ vi.mock('./AccountForm', () => ({
 
 describe('FinanceView', () => {
   it('renders header, segmented tabs, and contextual action bar', () => {
-    render(<FinanceView clients={[]} tasks={[]} team={[]} onAddTask={() => {}} columns={[]} />)
+    render(
+      <TenantContext.Provider
+        value={{
+          tenants: [{ id: 'tenant-1', name: 'Atlas Bio' }],
+          activeTenant: { id: 'tenant-1', name: 'Atlas Bio' },
+          activeTenantId: 'tenant-1',
+          loading: false,
+          error: null,
+          hasTenant: true,
+          refreshTenants: async () => [],
+          createWorkspace: async () => ({}),
+          setActiveTenant: () => {},
+        }}
+      >
+        <FinanceView clients={[]} tasks={[]} team={[]} onAddTask={() => {}} columns={[]} />
+      </TenantContext.Provider>
+    )
 
     expect(screen.getByRole('heading', { name: 'Finanças' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Extrato' })).toBeInTheDocument()

@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { traceAsyncFailure } from '../../lib/diagnostics.js'
 import EmptyState from './EmptyState.jsx'
 import SurfaceCard from './SurfaceCard.jsx'
 
@@ -13,7 +14,11 @@ export default class ViewErrorBoundary extends Component {
   }
 
   componentDidCatch(error) {
-    console.error('Erro ao renderizar área interna:', error)
+    console.error('Erro ao renderizar area interna:', error)
+    traceAsyncFailure('transition-failure', error, {
+      areaLabel: this.props.areaLabel,
+      resetKey: this.props.resetKey,
+    })
   }
 
   componentDidUpdate(prevProps) {
@@ -23,7 +28,7 @@ export default class ViewErrorBoundary extends Component {
   }
 
   render() {
-    const { areaLabel = 'esta área', children } = this.props
+    const { areaLabel = 'esta area', children } = this.props
     const { error } = this.state
 
     if (this.state.hasError) {
@@ -37,18 +42,18 @@ export default class ViewErrorBoundary extends Component {
           <EmptyState
             title={
               isChunkError
-                ? `Os módulos de ${areaLabel} ficaram desatualizados`
-                : `Não foi possível carregar ${areaLabel}`
+                ? `Os modulos de ${areaLabel} ficaram desatualizados`
+                : `Nao foi possivel carregar ${areaLabel}`
             }
             description={
               isChunkError
-                ? 'O navegador manteve uma versão antiga do app enquanto esta área já foi publicada em um novo bundle.'
-                : 'A interface desta área encontrou um erro inesperado durante a renderização.'
+                ? 'O navegador manteve uma versao antiga do app enquanto esta area ja foi publicada em um novo bundle.'
+                : 'A interface desta area encontrou um erro inesperado durante a renderizacao.'
             }
             detail={
               isChunkError
-                ? 'Recarregue a página para buscar os módulos atualizados. Isso costuma acontecer logo após um deploy novo.'
-                : 'Tente abrir a área novamente. Se o problema persistir, atualize a página para recarregar os módulos internos.'
+                ? 'Recarregue a pagina para buscar os modulos atualizados. Isso costuma acontecer logo apos um deploy novo.'
+                : 'Tente abrir a area novamente. Se o problema persistir, atualize a pagina para recarregar os modulos internos.'
             }
             action={(
               <button
@@ -63,7 +68,7 @@ export default class ViewErrorBoundary extends Component {
                   this.setState({ hasError: false, error: null })
                 }}
               >
-                {isChunkError ? 'Recarregar página' : 'Tentar novamente'}
+                {isChunkError ? 'Recarregar pagina' : 'Tentar novamente'}
               </button>
             )}
           />

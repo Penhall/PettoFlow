@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Mail, PencilLine, Trash2, X } from 'lucide-react'
 import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
+import { useTenant } from '../../hooks/useTenant.js'
 import { deleteTeamMemberRecord, saveTeamMemberRecord } from '../../lib/workspaceCore'
 import EmptyState from '../shared/EmptyState.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
@@ -92,6 +93,7 @@ export default function TimeView({
   onOpenTutorial = () => {},
   onTrackOnboarding = () => {},
 }) {
+  const { activeTenantId } = useTenant()
   const [editingMember, setEditingMember] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
@@ -131,7 +133,7 @@ export default function TimeView({
     delete payload.completedCount
 
     try {
-      await saveTeamMemberRecord({ ...payload, id })
+      await saveTeamMemberRecord({ ...payload, id }, activeTenantId)
       closeModal()
       onRefresh()
     } catch (error) {
@@ -143,7 +145,7 @@ export default function TimeView({
     if (!confirm('Deseja remover este membro do time?')) return
 
     try {
-      await deleteTeamMemberRecord(id)
+      await deleteTeamMemberRecord(id, activeTenantId)
       onRefresh()
     } catch (error) {
       console.error('Error deleting member:', error)

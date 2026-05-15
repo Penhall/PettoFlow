@@ -6,7 +6,7 @@ import {
 } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useFinCategories() {
+export function useFinCategories({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   const fixtureGroups = useMemo(() => getVisualFixture('finCategoryGroups', []), [])
   const fixtureCategories = useMemo(() => getVisualFixture('finCategories', []), [])
@@ -25,7 +25,7 @@ export function useFinCategories() {
     let cancelled = false
     setLoading(true)
 
-    listFinCategoryRecords()
+    listFinCategoryRecords(tenantId)
       .then((data) => {
         if (cancelled) return
         setGroups(data?.groups || [])
@@ -40,13 +40,13 @@ export function useFinCategories() {
       })
 
     return () => { cancelled = true }
-  }, [visualMode, fixtureGroups, fixtureCategories])
+  }, [visualMode, fixtureGroups, fixtureCategories, tenantId])
 
   const addGroup = async (group) => {
     if (visualMode) return group
 
     try {
-      const created = await createCategoryGroupRecord(group)
+      const created = await createCategoryGroupRecord(group, tenantId)
       setGroups((current) => [...current, created])
       return created
     } catch (error) {
@@ -59,7 +59,7 @@ export function useFinCategories() {
     if (visualMode) return category
 
     try {
-      const created = await saveFinCategoryRecord(category)
+      const created = await saveFinCategoryRecord(category, tenantId)
       setCategories((current) => [...current, created])
       return created
     } catch (error) {
@@ -72,7 +72,7 @@ export function useFinCategories() {
     if (visualMode) return { id, ...updates }
 
     try {
-      const updated = await saveFinCategoryRecord({ id, ...updates })
+      const updated = await saveFinCategoryRecord({ id, ...updates }, tenantId)
       setCategories((current) => current.map((category) => (category.id === id ? updated : category)))
       return updated
     } catch (error) {

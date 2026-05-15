@@ -3,7 +3,7 @@ import { getPrincipalAccount as findPrincipal } from '../lib/financeUtils'
 import { listAccountRecords, saveAccountRecord } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useAccounts() {
+export function useAccounts({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   const fixtureAccounts = useMemo(() => getVisualFixture('accounts', []), [])
   const [accounts, setAccounts] = useState(visualMode ? fixtureAccounts : [])
@@ -19,7 +19,7 @@ export function useAccounts() {
     let cancelled = false
     setLoading(true)
 
-    listAccountRecords()
+    listAccountRecords(tenantId)
       .then((data) => {
         if (cancelled) return
         setAccounts(data || [])
@@ -33,13 +33,13 @@ export function useAccounts() {
       })
 
     return () => { cancelled = true }
-  }, [visualMode, fixtureAccounts])
+  }, [visualMode, fixtureAccounts, tenantId])
 
   const addAccount = async (account) => {
     if (visualMode) return account
 
     try {
-      const created = await saveAccountRecord(account)
+      const created = await saveAccountRecord(account, tenantId)
       setAccounts((current) => [...current, created])
       return created
     } catch (error) {
@@ -52,7 +52,7 @@ export function useAccounts() {
     if (visualMode) return { id, ...updates }
 
     try {
-      const updated = await saveAccountRecord({ id, ...updates })
+      const updated = await saveAccountRecord({ id, ...updates }, tenantId)
       setAccounts((current) => current.map((account) => (account.id === id ? updated : account)))
       return updated
     } catch (error) {
@@ -65,7 +65,7 @@ export function useAccounts() {
     if (visualMode) return true
 
     try {
-      const updated = await saveAccountRecord({ id, is_active: false })
+      const updated = await saveAccountRecord({ id, is_active: false }, tenantId)
       setAccounts((current) => current.map((account) => (account.id === id ? updated : account)))
       return updated
     } catch (error) {

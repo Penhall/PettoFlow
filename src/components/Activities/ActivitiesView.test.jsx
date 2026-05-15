@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import ActivitiesView from './ActivitiesView.jsx'
+import { TenantContext } from '../../context/tenantContext.js'
 
 vi.mock('../../hooks/useActivities', () => ({
   useActivities: () => ({
@@ -68,7 +69,23 @@ vi.mock('../Calendar/CalendarView', () => ({
 
 describe('ActivitiesView', () => {
   it('renders header, segmented tabs, and contextual action bar', () => {
-    render(<ActivitiesView clients={[]} tasks={[]} team={[]} searchQuery="" onSearch={() => {}} />)
+    render(
+      <TenantContext.Provider
+        value={{
+          tenants: [{ id: 'tenant-1', name: 'Atlas Bio' }],
+          activeTenant: { id: 'tenant-1', name: 'Atlas Bio' },
+          activeTenantId: 'tenant-1',
+          loading: false,
+          error: null,
+          hasTenant: true,
+          refreshTenants: async () => [],
+          createWorkspace: async () => ({}),
+          setActiveTenant: () => {},
+        }}
+      >
+        <ActivitiesView clients={[]} tasks={[]} team={[]} searchQuery="" onSearch={() => {}} />
+      </TenantContext.Provider>
+    )
 
     expect(screen.getByRole('heading', { name: 'Atividades' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Timeline' })).toBeInTheDocument()

@@ -8,7 +8,7 @@ import {
   setStoredActiveTenantId,
   setRuntimeActiveTenantId,
 } from '../lib/activeTenant.js'
-import { traceBootstrap, traceTenant } from '../lib/diagnostics.js'
+import { traceAsyncFailure, traceBootstrap, traceTenant } from '../lib/diagnostics.js'
 
 function normalizeTenantRecord(item) {
   return {
@@ -110,6 +110,7 @@ export function TenantProvider({ children }) {
         setActiveTenantIdState(null)
         setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
         traceBootstrap('error', null, loadError?.message)
+        traceAsyncFailure('bootstrap-failure', loadError, { stage: 'tenant-context.load-tenants' })
       } finally {
         if (active) setLoading(false)
       }
@@ -149,6 +150,7 @@ export function TenantProvider({ children }) {
       setTenants([])
       setActiveTenantIdState(null)
       setError(loadError instanceof Error ? loadError.message : 'Erro ao carregar espaços de trabalho.')
+      traceAsyncFailure('bootstrap-failure', loadError, { stage: 'tenant-context.refresh-tenants' })
       throw loadError
     } finally {
       setLoading(false)

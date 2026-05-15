@@ -21,7 +21,7 @@ import { useReceivables } from './hooks/useReceivables'
 import { useTenant } from './hooks/useTenant.js'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
-import { traceBootstrap } from './lib/diagnostics.js'
+import { traceAsyncFailure, traceBootstrap, traceRouteTransition } from './lib/diagnostics.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import {
@@ -114,6 +114,8 @@ function App() {
   const [clients, setClients] = useState([])
   const [columns, setColumns] = useState([])
   const [loading, setLoading] = useState(true)
+  const [bootstrapError, setBootstrapError] = useState(null)
+  const [bootstrapRetryKey, setBootstrapRetryKey] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState(null)
   const [filterTag, setFilterTag] = useState(null)
@@ -144,6 +146,7 @@ function App() {
     results,
   } = useCommandPalette(tasks, clients, activities)
   const { createReceivable, listReceivables } = useReceivables({ tenantId: activeTenantId })
+  const previousTabRef = useRef(activeTab)
 
   const fetchTeam = async () => {
     try {
@@ -170,12 +173,14 @@ function App() {
     // activeTenant.js covers the timing race, but this guard removes the
     // dependency on timing entirely.
     if (!activeTenantId) {
+      setBootstrapError(null)
       setLoading(false)
       return undefined
     }
 
     let cancelled = false
     setLoading(true)
+    setBootstrapError(null)
     traceBootstrap('start', activeTenantId)
 
     fetchWorkspaceBootstrap(activeTenantId)
@@ -185,12 +190,15 @@ function App() {
         setTeam(data.team || [])
         setClients(data.clients || [])
         setColumns(data.columns || [])
+        setBootstrapError(null)
         traceBootstrap('ready', activeTenantId)
       })
       .catch((error) => {
         if (cancelled) return
         console.error('Error fetching workspace data:', error)
+        setBootstrapError(error)
         traceBootstrap('error', activeTenantId, error.message)
+        traceAsyncFailure('bootstrap-failure', error, { stage: 'app-bootstrap', tenantId: activeTenantId })
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -200,7 +208,7 @@ function App() {
       traceBootstrap('cancelled', activeTenantId)
       cancelled = true
     }
-  }, [activeTenantId])
+  }, [activeTenantId, bootstrapRetryKey])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -294,6 +302,13 @@ function App() {
     }
   }, [activeTenantId, activeTab, onboardingLoading, tourStateStatus, tourStateLastStep, tourAutoPrompted])
 
+  useEffect(() => {
+    if (previousTabRef.current !== activeTab) {
+      traceRouteTransition(previousTabRef.current, activeTab, 'complete')
+      previousTabRef.current = activeTab
+    }
+  }, [activeTab])
+
   const handleTabChange = (tab) => {
     // Close the palette synchronously so it disappears immediately rather than
     // staying visible while the deferred tab transition is in-flight.
@@ -301,6 +316,7 @@ function App() {
     if (tab !== 'settings') {
       setPendingSettingsTab(null)
     }
+    traceRouteTransition(activeTab, tab, 'start')
     startTransition(() => {
       setActiveTab(tab)
       setSearchQuery('')
@@ -504,6 +520,11 @@ function App() {
     setShowSortMenu(false)
   }
 
+  const retryBootstrap = () => {
+    traceBootstrap('retry', activeTenantId)
+    setBootstrapRetryKey((current) => current + 1)
+  }
+
   const handleShellMenuToggle = () => {
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
       setMobileSidebarOpen((current) => !current)
@@ -551,6 +572,25 @@ function App() {
         }
 
   const renderContent = () => {
+    if (bootstrapError) {
+      return (
+        <EmptyState
+          title="NÃ£o foi possÃ­vel carregar o espaÃ§o de trabalho"
+          description="A inicializaÃ§Ã£o do workspace falhou antes da Ã¡rea operacional ficar pronta."
+          detail={bootstrapError.message || 'Tente novamente para refazer o bootstrap do tenant ativo.'}
+          action={(
+            <button
+              type="button"
+              className="page-action-bar__button page-action-bar__button--primary"
+              onClick={retryBootstrap}
+            >
+              Tentar novamente
+            </button>
+          )}
+        />
+      )
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return (

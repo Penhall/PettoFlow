@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { traceAsyncFailure } from '../lib/diagnostics.js'
 import { getOnboardingState, recordOnboardingEvent, updateOnboardingState } from '../lib/onboardingApi.js'
 import { CURRENT_ONBOARDING_VERSION } from '../lib/onboardingState.js'
 import { ONBOARDING_CHECKLIST, QUICK_ACTIONS, TUTORIAL_CATALOG } from '../lib/tutorialCatalog.js'
@@ -78,6 +79,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
       .catch((nextError) => {
         if (cancelled) return
         console.error('Error fetching onboarding state:', nextError)
+        traceAsyncFailure('onboarding-failure', nextError, { stage: 'load', tenantId })
         setError(nextError)
         const fallback = buildFallbackState()
         setState(fallback)
@@ -114,6 +116,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
         return nextState
       } catch (nextError) {
         console.error('Error updating onboarding state:', nextError)
+        traceAsyncFailure('onboarding-failure', nextError, { stage: 'patch', tenantId })
         setError(nextError)
         return null
       }
@@ -131,6 +134,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
       return await recordOnboardingEvent(tenantId, eventName, eventPayload)
     } catch (nextError) {
       console.error('Error recording onboarding event:', nextError)
+      traceAsyncFailure('onboarding-failure', nextError, { stage: 'event', tenantId, eventName })
       return null
     }
   }

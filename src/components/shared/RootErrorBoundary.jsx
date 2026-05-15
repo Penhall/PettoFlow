@@ -1,4 +1,5 @@
 import { Component, Fragment } from 'react'
+import { traceAsyncFailure } from '../../lib/diagnostics.js'
 
 const isDev = import.meta.env.DEV
 const MAX_RETRIES = 3
@@ -32,6 +33,7 @@ export default class RootErrorBoundary extends Component {
         msg,
         event.reason,
       )
+      traceAsyncFailure('unhandled-rejection', event.reason, { component: 'RootErrorBoundary' })
     }
     window.addEventListener('unhandledrejection', this._unhandledRejectionHandler)
   }

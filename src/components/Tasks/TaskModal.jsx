@@ -8,13 +8,15 @@ import { usePayees }        from '../../hooks/usePayees'
 import { useFinCategories } from '../../hooks/useFinCategories'
 import { useTransactions }  from '../../hooks/useTransactions'
 import { useReceivables }   from '../../hooks/useReceivables'
+import { useTenant } from '../../hooks/useTenant.js'
 import { centsToReal, realToCents } from '../../lib/finUtils'
 
 const TransactionFormWrapper = ({ task, clients, tasks, team, onClose }) => {
-  const { accounts }           = useAccounts()
-  const { payees, addPayee }   = usePayees()
-  const { groups, categories } = useFinCategories()
-  const { addTransaction }     = useTransactions()
+  const { activeTenantId } = useTenant()
+  const { accounts }           = useAccounts({ tenantId: activeTenantId })
+  const { payees, addPayee }   = usePayees({ tenantId: activeTenantId })
+  const { groups, categories } = useFinCategories({ tenantId: activeTenantId })
+  const { addTransaction }     = useTransactions({ tenantId: activeTenantId })
 
   const handleSave = async (txForm) => {
     await addTransaction(txForm)
@@ -55,8 +57,9 @@ const TaskModal = ({ task, onSave, onClose, onArchive, defaultStatus, team = [],
 
   const [showTransactionForm, setShowTransactionForm] = useState(false)
 
-  const { listReceivables, invoiceReceivable } = useReceivables()
-  const { addTransaction } = useTransactions()
+  const { activeTenantId } = useTenant()
+  const { listReceivables, invoiceReceivable } = useReceivables({ tenantId: activeTenantId })
+  const { addTransaction } = useTransactions({ tenantId: activeTenantId })
 
   // Get the receivable for this specific task (null if none)
   const taskReceivable = task ? (listReceivables({ taskId: Number(task.id) })[0] ?? null) : null

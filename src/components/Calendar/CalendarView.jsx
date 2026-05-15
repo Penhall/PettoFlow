@@ -11,6 +11,7 @@ import { useCalendarEvents } from '../../hooks/useCalendarEvents'
 import { useFinRules } from '../../hooks/useFinRules'
 import { useReceivables } from '../../hooks/useReceivables'
 import { useTransactions } from '../../hooks/useTransactions'
+import { useTenant } from '../../hooks/useTenant.js'
 import { getPrincipalAccount } from '../../lib/financeUtils'
 import ActivityForm from '../Activities/ActivityForm'
 import CalendarFilters from './CalendarFilters'
@@ -33,6 +34,7 @@ export default function CalendarView({
   onActiveTypesChange,
   showFilters,
 }) {
+  const { activeTenantId } = useTenant()
   const [internalActiveTypes, setInternalActiveTypes] = useState(filterTypes ?? ALL_TYPES)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [dateClickDate, setDateClickDate] = useState(null)
@@ -41,16 +43,17 @@ export default function CalendarView({
   const setActiveTypes = onActiveTypesChange ?? setInternalActiveTypes
   const shouldShowFilters = showFilters ?? !filterTypes
 
-  const { addActivity, updateActivity } = useActivities()
-  const { invoiceReceivable, createReceivableFromActivity } = useReceivables()
-  const { rules } = useFinRules()
-  const { addTransaction } = useTransactions(EMPTY_FILTERS, rules)
-  const { accounts } = useAccounts()
+  const { addActivity, updateActivity } = useActivities({ tenantId: activeTenantId })
+  const { invoiceReceivable, createReceivableFromActivity } = useReceivables({ tenantId: activeTenantId })
+  const { rules } = useFinRules({ tenantId: activeTenantId })
+  const { addTransaction } = useTransactions({ filters: EMPTY_FILTERS, rules, tenantId: activeTenantId })
+  const { accounts } = useAccounts({ tenantId: activeTenantId })
   const principalAccount = getPrincipalAccount(accounts)
 
   const { events, loading } = useCalendarEvents({
     tasks,
     types: filterTypes ?? activeTypes,
+    tenantId: activeTenantId,
   })
 
   const fcEvents = events.map((event) => ({

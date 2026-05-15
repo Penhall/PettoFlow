@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listPayeeRecords, savePayeeRecord } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function usePayees() {
+export function usePayees({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   const fixturePayees = useMemo(() => getVisualFixture('payees', []), [])
   const [payees, setPayees] = useState(visualMode ? fixturePayees : [])
@@ -18,7 +18,7 @@ export function usePayees() {
     let cancelled = false
     setLoading(true)
 
-    listPayeeRecords()
+    listPayeeRecords(tenantId)
       .then((data) => {
         if (cancelled) return
         setPayees(data || [])
@@ -32,13 +32,13 @@ export function usePayees() {
       })
 
     return () => { cancelled = true }
-  }, [visualMode, fixturePayees])
+  }, [visualMode, fixturePayees, tenantId])
 
   const addPayee = async (name) => {
     if (visualMode) return { id: `visual-${name}`, name }
 
     try {
-      const created = await savePayeeRecord({ name })
+      const created = await savePayeeRecord({ name }, tenantId)
       setPayees((current) => [...current, created].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR')))
       return created
     } catch (error) {
@@ -51,7 +51,7 @@ export function usePayees() {
     if (visualMode) return { id, ...updates }
 
     try {
-      const updated = await savePayeeRecord({ id, ...updates })
+      const updated = await savePayeeRecord({ id, ...updates }, tenantId)
       setPayees((current) => current.map((payee) => (payee.id === id ? updated : payee)))
       return updated
     } catch (error) {

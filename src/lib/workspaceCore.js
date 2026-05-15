@@ -1,5 +1,6 @@
 import { authenticatedFetch } from './apiFetch.js'
 import { getRequiredActiveTenantId } from './activeTenant.js'
+import { traceOwnership } from './diagnostics.js'
 
 const WORKSPACE_CORE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/workspace-core`
 
@@ -29,8 +30,30 @@ function buildUrl(path, query = null) {
   return url.toString()
 }
 
+function classifyWorkspaceOperation(path) {
+  if (path === '/bootstrap') return 'bootstrap'
+  if (path.startsWith('/tasks')) return 'tasks'
+  if (path.startsWith('/columns')) return 'columns'
+  if (path.startsWith('/team')) return 'team'
+  if (path.startsWith('/clients')) return 'clients'
+  if (path.startsWith('/activities')) return 'activities'
+  if (path.startsWith('/activity-templates')) return 'activity-templates'
+  if (path.startsWith('/receivables')) return 'receivables'
+  if (path.startsWith('/accounts')) return 'accounts'
+  if (path.startsWith('/payees')) return 'payees'
+  if (path.startsWith('/fin-rules')) return 'fin-rules'
+  if (path.startsWith('/fin-categories')) return 'fin-categories'
+  if (path.startsWith('/transactions')) return 'transactions'
+  if (path.startsWith('/interaction-logs')) return 'interaction-logs'
+  return 'unknown'
+}
+
 export async function workspaceCoreRequest(path, { method = 'GET', body, query, fallbackMessage, tenantId } = {}) {
-  const resolvedTenantId = tenantId ?? getRequiredActiveTenantId()
+  const usedExplicitTenant = tenantId !== undefined && tenantId !== null && tenantId !== ''
+  const resolvedTenantId = usedExplicitTenant ? tenantId : getRequiredActiveTenantId()
+  traceOwnership(`workspace-core ${method} ${path}`, resolvedTenantId, usedExplicitTenant ? 'explicit' : 'implicit', {
+    scope: classifyWorkspaceOperation(path),
+  })
   const res = await authenticatedFetch(buildUrl(path, query), {
     method,
     body: body === undefined ? undefined : JSON.stringify(body),

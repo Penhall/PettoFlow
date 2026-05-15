@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Building2, PencilLine, Trash2, X } from 'lucide-react'
 import { MOTION_TRANSITIONS } from '../../lib/motionTokens.js'
+import { useTenant } from '../../hooks/useTenant.js'
 import { deleteClientRecord, saveClientRecord } from '../../lib/workspaceCore'
 import ClientProfileModal from './ClientProfileModal'
 import EmptyState from '../shared/EmptyState.jsx'
@@ -119,6 +120,7 @@ export default function ClientesView({
   onOpenTutorial = () => {},
   onTrackOnboarding = () => {},
 }) {
+  const { activeTenantId } = useTenant()
   const [editingClient, setEditingClient] = useState(null)
   const [viewingClient, setViewingClient] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -150,7 +152,7 @@ export default function ClientesView({
 
   const handleSave = async (form) => {
     try {
-      await saveClientRecord(form)
+      await saveClientRecord(form, activeTenantId)
       closeModal()
       onRefresh()
     } catch (error) {
@@ -162,7 +164,7 @@ export default function ClientesView({
     if (!confirm('Deseja excluir este cliente?')) return
 
     try {
-      await deleteClientRecord(id)
+      await deleteClientRecord(id, activeTenantId)
       onRefresh()
     } catch (error) {
       console.error('Error deleting client:', error)

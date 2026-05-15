@@ -1,4 +1,5 @@
 import { lazy } from 'react'
+import { traceAsyncFailure } from './diagnostics.js'
 
 const STORAGE_PREFIX = 'nexuscrm_lazy_retry:'
 const CHUNK_ERROR_PATTERN =
@@ -29,7 +30,8 @@ export function lazyWithRetry(importer, cacheKey) {
         !hasRetried
 
       if (shouldReload) {
-        console.warn('[lazyWithRetry] Chunk load failed — reloading to recover:', cacheKey, message)
+        console.warn('[lazyWithRetry] Chunk load failed - reloading to recover:', cacheKey, message)
+        traceAsyncFailure('lazy-load-failure', error, { cacheKey, action: 'reload' })
         window.sessionStorage.setItem(storageKey, '1')
         window.location.reload()
         return new Promise(() => {})
@@ -39,7 +41,8 @@ export function lazyWithRetry(importer, cacheKey) {
         window.sessionStorage.removeItem(storageKey)
       }
 
-      console.error('[lazyWithRetry] Chunk load failed after retry — re-throwing:', cacheKey, message)
+      console.error('[lazyWithRetry] Chunk load failed after retry - re-throwing:', cacheKey, message)
+      traceAsyncFailure('lazy-load-failure', error, { cacheKey, action: 'rethrow' })
       throw error
     }
   })

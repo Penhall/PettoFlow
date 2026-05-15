@@ -6,7 +6,7 @@ import {
 } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useActivityTemplates() {
+export function useActivityTemplates({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   const fixtureTemplates = useMemo(() => getVisualFixture('activityTemplates', []), [])
   const [templates, setTemplates] = useState(visualMode ? fixtureTemplates : [])
@@ -21,7 +21,7 @@ export function useActivityTemplates() {
 
     setLoading(true)
     try {
-      const data = await listActivityTemplateRecords()
+      const data = await listActivityTemplateRecords(tenantId)
       setTemplates(data || [])
       return data || []
     } catch (error) {
@@ -30,7 +30,7 @@ export function useActivityTemplates() {
     } finally {
       setLoading(false)
     }
-  }, [visualMode, fixtureTemplates])
+  }, [visualMode, fixtureTemplates, tenantId])
 
   useEffect(() => {
     fetch()
@@ -40,7 +40,7 @@ export function useActivityTemplates() {
     if (visualMode) return data
 
     try {
-      const created = await saveActivityTemplateRecord(data)
+      const created = await saveActivityTemplateRecord(data, tenantId)
       await fetch()
       return created
     } catch (error) {
@@ -53,7 +53,7 @@ export function useActivityTemplates() {
     if (visualMode) return { id, ...data }
 
     try {
-      const updated = await saveActivityTemplateRecord({ id, ...data })
+      const updated = await saveActivityTemplateRecord({ id, ...data }, tenantId)
       setTemplates((current) => current.map((template) => (template.id === id ? updated : template)))
       return updated
     } catch (error) {
@@ -66,7 +66,7 @@ export function useActivityTemplates() {
     if (visualMode) return true
 
     try {
-      await deleteActivityTemplateRecord(id)
+      await deleteActivityTemplateRecord(id, tenantId)
       setTemplates((current) => current.filter((template) => template.id !== id))
       return true
     } catch (error) {

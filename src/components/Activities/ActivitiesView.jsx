@@ -6,6 +6,7 @@ import { useReceivables } from '../../hooks/useReceivables'
 import { useTransactions } from '../../hooks/useTransactions'
 import { useFinRules } from '../../hooks/useFinRules'
 import { useAccounts } from '../../hooks/useAccounts'
+import { useTenant } from '../../hooks/useTenant.js'
 import { getPrincipalAccount } from '../../lib/financeUtils'
 import ActivityTimeline from './ActivityTimeline'
 import ActivityForm from './ActivityForm'
@@ -36,12 +37,13 @@ const ActivitiesView = ({
   showTimelineHint = false,
   onDismissTimelineHint = () => {},
 }) => {
-  const { activities, loading, addActivity, updateActivity, deleteActivity } = useActivities()
-  const { templates, createTemplate, updateTemplate, deleteTemplate, applyTemplate } = useActivityTemplates()
-  const { createReceivableFromActivity } = useReceivables()
-  const { rules } = useFinRules()
-  const { addTransaction } = useTransactions(EMPTY_FILTERS, rules)
-  const { accounts } = useAccounts()
+  const { activeTenantId } = useTenant()
+  const { activities, loading, addActivity, updateActivity, deleteActivity } = useActivities({ tenantId: activeTenantId })
+  const { templates, createTemplate, updateTemplate, deleteTemplate, applyTemplate } = useActivityTemplates({ tenantId: activeTenantId })
+  const { createReceivableFromActivity } = useReceivables({ tenantId: activeTenantId })
+  const { rules } = useFinRules({ tenantId: activeTenantId })
+  const { addTransaction } = useTransactions({ filters: EMPTY_FILTERS, rules, tenantId: activeTenantId })
+  const { accounts } = useAccounts({ tenantId: activeTenantId })
 
   const [activeTab, setActiveTab] = useState('timeline')
   const [showForm, setShowForm] = useState(false)

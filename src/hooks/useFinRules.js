@@ -6,7 +6,7 @@ import {
 } from '../lib/workspaceCore'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
-export function useFinRules() {
+export function useFinRules({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   const fixtureRules = useMemo(() => getVisualFixture('finRules', []), [])
   const [rules, setRules] = useState(visualMode ? fixtureRules : [])
@@ -22,7 +22,7 @@ export function useFinRules() {
     let cancelled = false
     setLoading(true)
 
-    listFinRuleRecords()
+    listFinRuleRecords(tenantId)
       .then((data) => {
         if (cancelled) return
         setRules(data || [])
@@ -36,13 +36,13 @@ export function useFinRules() {
       })
 
     return () => { cancelled = true }
-  }, [visualMode, fixtureRules])
+  }, [visualMode, fixtureRules, tenantId])
 
   const addRule = async (rule) => {
     if (visualMode) return rule
 
     try {
-      const created = await saveFinRuleRecord(rule)
+      const created = await saveFinRuleRecord(rule, tenantId)
       setRules((current) => [...current, created])
       return created
     } catch (error) {
@@ -55,7 +55,7 @@ export function useFinRules() {
     if (visualMode) return { id, ...updates }
 
     try {
-      const updated = await saveFinRuleRecord({ id, ...updates })
+      const updated = await saveFinRuleRecord({ id, ...updates }, tenantId)
       setRules((current) => current.map((rule) => (rule.id === id ? updated : rule)))
       return updated
     } catch (error) {
@@ -68,7 +68,7 @@ export function useFinRules() {
     if (visualMode) return true
 
     try {
-      await deleteFinRuleRecord(id)
+      await deleteFinRuleRecord(id, tenantId)
       setRules((current) => current.filter((rule) => rule.id !== id))
       return true
     } catch (error) {

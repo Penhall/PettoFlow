@@ -7,6 +7,7 @@ import { useFinRules } from '../../hooks/useFinRules'
 import { useTransactions } from '../../hooks/useTransactions'
 import { useReceivables } from '../../hooks/useReceivables'
 import { useActivities } from '../../hooks/useActivities'
+import { useTenant } from '../../hooks/useTenant.js'
 import AccountCard from './AccountCard'
 import AccountForm from './AccountForm'
 import TransactionList from './TransactionList'
@@ -43,6 +44,7 @@ const FinanceView = ({
   showFiltersHint = false,
   onDismissFiltersHint = () => {},
 }) => {
+  const { activeTenantId } = useTenant()
   const [activeTab, setActiveTab] = useState('extrato')
   const [extractoFilters, setExtractoFilters] = useState({})
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -52,12 +54,12 @@ const FinanceView = ({
   const [editingRule, setEditingRule] = useState(null)
   const [calendarClickDate, setCalendarClickDate] = useState(null)
 
-  const { addActivity } = useActivities()
-  const { accounts, addAccount, updateAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts()
-  const { payees, addPayee } = usePayees()
-  const { groups, categories } = useFinCategories()
-  const { rules, addRule, updateRule, deleteRule } = useFinRules()
-  const { listReceivables, invoiceReceivable, refresh: refreshReceivables, receivables } = useReceivables()
+  const { addActivity } = useActivities({ tenantId: activeTenantId })
+  const { accounts, addAccount, updateAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts({ tenantId: activeTenantId })
+  const { payees, addPayee } = usePayees({ tenantId: activeTenantId })
+  const { groups, categories } = useFinCategories({ tenantId: activeTenantId })
+  const { rules, addRule, updateRule, deleteRule } = useFinRules({ tenantId: activeTenantId })
+  const { listReceivables, invoiceReceivable, refresh: refreshReceivables, receivables } = useReceivables({ tenantId: activeTenantId })
 
   const effectiveFilters = activeTab === 'extrato' ? extractoFilters : {}
   const {
@@ -67,9 +69,9 @@ const FinanceView = ({
     updateTransaction,
     deleteTransaction,
     applyRules,
-  } = useTransactions(effectiveFilters, rules)
+  } = useTransactions({ filters: effectiveFilters, rules, tenantId: activeTenantId })
 
-  const { transactions: allTransactions } = useTransactions({}, rules)
+  const { transactions: allTransactions } = useTransactions({ filters: {}, rules, tenantId: activeTenantId })
 
   const balances = useMemo(() => {
     const map = {}

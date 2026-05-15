@@ -18,13 +18,13 @@ const toDateStr = (isoStr) => (isoStr || '').slice(0, 10)
 
 /**
  * Normalizes tasks, activities, receivables, and transactions into CalendarEvent[].
- * @param {{ tasks?: object[], types?: string[], from?: Date, to?: Date }} options
+ * @param {{ tasks?: object[], types?: string[], from?: Date, to?: Date, tenantId?: string | null }} options
  */
-export function useCalendarEvents({ tasks = [], types, from, to } = {}) {
-  const { activities, loading: actLoading } = useActivities()
-  const { receivables, loading: recLoading } = useReceivables()
-  const { rules } = useFinRules()
-  const { transactions, loading: txLoading } = useTransactions({}, rules)
+export function useCalendarEvents({ tasks = [], types, from, to, tenantId } = {}) {
+  const { activities, loading: actLoading } = useActivities({ tenantId })
+  const { receivables, loading: recLoading } = useReceivables({ tenantId })
+  const { rules } = useFinRules({ tenantId })
+  const { transactions, loading: txLoading } = useTransactions({ filters: {}, rules, tenantId })
 
   // Stable string key avoids re-creating the array reference on every render
   const typesKey = types ? types.join(',') : 'all'

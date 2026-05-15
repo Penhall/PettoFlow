@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const authenticatedFetchMock = vi.fn()
 const getRequiredActiveTenantIdMock = vi.fn()
+const traceOwnershipMock = vi.fn()
 
 vi.mock('./apiFetch.js', () => ({
   authenticatedFetch: (...args) => authenticatedFetchMock(...args),
@@ -11,11 +12,16 @@ vi.mock('./activeTenant.js', () => ({
   getRequiredActiveTenantId: () => getRequiredActiveTenantIdMock(),
 }))
 
+vi.mock('./diagnostics.js', () => ({
+  traceOwnership: (...args) => traceOwnershipMock(...args),
+}))
+
 import { createTaskRecord, fetchWorkspaceBootstrap } from './workspaceCore.js'
 
 describe('workspaceCore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    traceOwnershipMock.mockReset()
   })
 
   it('fails fast when there is no active tenant for business calls', async () => {
@@ -50,6 +56,12 @@ describe('workspaceCore', () => {
         requireTenant: true,
       }),
     )
+    expect(traceOwnershipMock).toHaveBeenCalledWith(
+      'workspace-core GET /bootstrap',
+      'tenant-123',
+      'implicit',
+      { scope: 'bootstrap' },
+    )
   })
 
   it('surfaces quota errors returned by workspace-core', async () => {
@@ -72,6 +84,7 @@ describe('workspaceCore', () => {
 describe('workspaceCore — explicit tenantId threading', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    traceOwnershipMock.mockReset()
     authenticatedFetchMock.mockResolvedValue({
       ok: true,
       status: 200,
@@ -90,6 +103,12 @@ describe('workspaceCore — explicit tenantId threading', () => {
       expect.stringContaining('/functions/v1/workspace-core/tasks'),
       expect.objectContaining({ tenantId: 'explicit-tenant-789' }),
     )
+    expect(traceOwnershipMock).toHaveBeenCalledWith(
+      'workspace-core POST /tasks',
+      'explicit-tenant-789',
+      'explicit',
+      { scope: 'tasks' },
+    )
   })
 
   it('createTaskRecord without tenantId falls back to getRequiredActiveTenantId', async () => {
@@ -99,6 +118,12 @@ describe('workspaceCore — explicit tenantId threading', () => {
     expect(authenticatedFetchMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ tenantId: 'fallback-tenant' }),
+    )
+    expect(traceOwnershipMock).toHaveBeenCalledWith(
+      'workspace-core POST /tasks',
+      'fallback-tenant',
+      'implicit',
+      { scope: 'tasks' },
     )
   })
 })
