@@ -42,6 +42,16 @@ export const LOADING_TEXT = {
   },
 }
 
+export const READ_TEXT = {
+  loading: 'Carregando dados...',
+  retrying: 'Tentando novamente...',
+  failed: 'Não foi possível carregar os dados. Tente novamente.',
+  stale: 'Mostrando dados anteriores. A atualização não foi concluída.',
+  interrupted: 'A atualização foi interrompida. Os dados anteriores foram preservados.',
+  unauthorized: 'Sua sessão não tem permissão para carregar estes dados.',
+  empty: 'Nenhum dado encontrado.',
+}
+
 export const SHELL_TEXT = {
   search: {
     member: 'Buscar membro ou função',
@@ -90,6 +100,8 @@ export const ERROR_TEXT = {
   cancelled: 'A ação foi interrompida. Tente novamente.',
   notFound: 'O registro não está mais disponível. Atualize a tela e tente novamente.',
   validationFailed: 'Revise os dados informados e tente novamente.',
+  partialInvoiceFailure: 'Transação registrada, mas o status do recebível não foi atualizado. Verifique o extrato antes de tentar novamente.',
+  partialCategoryFailure: 'A conta anterior foi reclassificada, mas a nova conta principal não pôde ser definida. Verifique as contas antes de tentar novamente.',
   loadWorkspaceList: 'Não foi possível carregar os espaços de trabalho. Tente novamente.',
   createWorkspace: 'Não foi possível criar o espaço de trabalho. Revise os dados e tente novamente.',
   adminPanel: 'Não foi possível carregar o painel administrativo. Tente novamente.',
@@ -135,7 +147,13 @@ export const ADMIN_TEXT = {
 
 export const ERROR_MESSAGE_BY_CODE = {
   missing_tenant: ERROR_TEXT.missingWorkspace,
+  read_failed: READ_TEXT.failed,
+  unauthorized: READ_TEXT.unauthorized,
+  interrupted: READ_TEXT.interrupted,
   persistence_failed: ERROR_TEXT.persistenceFailed,
+  partial_invoice_failure: ERROR_TEXT.partialInvoiceFailure,
+  partial_category_failure: ERROR_TEXT.partialCategoryFailure,
+  already_invoiced: 'Este recebível já foi faturado. Não é possível faturar novamente.',
   stale_response: ERROR_TEXT.staleResponse,
   cancelled: ERROR_TEXT.cancelled,
   not_found: ERROR_TEXT.notFound,

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   listFinRuleRecords,
   saveFinRuleRecord,
   deleteFinRuleRecord,
 } from '../lib/workspaceCore'
 import { fail, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useFinRules({ tenantId } = {}) {
@@ -12,37 +13,43 @@ export function useFinRules({ tenantId } = {}) {
   const fixtureRules = useMemo(() => getVisualFixture('finRules', []), [])
   const [rules, setRules] = useState(visualMode ? fixtureRules : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess(visualMode ? fixtureRules : []))
+  const rulesRef = useRef(rules)
+
+  useEffect(() => {
+    rulesRef.current = rules
+  }, [rules])
 
   useEffect(() => {
     if (visualMode) {
       setRules(fixtureRules)
+      setReadResult(readSuccess(fixtureRules))
       setLoading(false)
       return undefined
     }
 
     if (!tenantId) {
       setRules([])
+      setReadResult(readSuccess([]))
       setLoading(false)
       return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
 
-    listFinRuleRecords(tenantId)
-      .then((data) => {
-        if (cancelled) return
-        setRules(data || [])
-      })
-      .catch((error) => {
-        if (cancelled) return
-        console.error('Error fetching fin_rules:', error)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    runReadWithRetry('finRules.list', () => listFinRuleRecords(tenantId), {
+      previousData: rulesRef.current,
+      signal: controller.signal,
+      tenantId,
+      onState: setReadResult,
+    }).then((result) => {
+      if (controller.signal.aborted) return
+      if (result.ok) setRules(result.data || [])
+      setLoading(false)
+    })
 
-    return () => { cancelled = true }
+    return () => { controller.abort() }
   }, [visualMode, fixtureRules, tenantId])
 
   const addRule = async (rule) => {
@@ -78,5 +85,5 @@ export function useFinRules({ tenantId } = {}) {
     })
   }
 
-  return { rules, loading, addRule, updateRule, deleteRule }
+  return { rules, loading, readResult, readState: readResult.state, error: readResult.error, stale: readResult.stale, addRule, updateRule, deleteRule }
 }

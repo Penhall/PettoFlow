@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Building2, Mail, MessageSquare, Phone, Plus } from 'lucide-react'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useFinCategories } from '../../hooks/useFinCategories'
@@ -12,6 +12,8 @@ import {
 import TransactionList from '../Finance/TransactionList'
 import RecordSidebar from '../shared/RecordSidebar'
 import { getVisualFixture, isVisualRegressionMode } from '../../visual/fixtureRuntime.js'
+import { readSuccess, runReadWithRetry } from '../../lib/readResult.js'
+import { normalizeError } from '../../lib/mutationResult.js'
 
 const LOG_TYPES = ['Ligação', 'Email', 'Reunião', 'WhatsApp', 'Outro']
 
@@ -58,6 +60,13 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState({ type: 'Ligação', notes: '' })
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [logRead, setLogRead] = useState(() => readSuccess([]))
+  const [logError, setLogError] = useState('')
+  const logsRef = useRef(logs)
+
+  useEffect(() => {
+    logsRef.current = logs
+  }, [logs])
 
   const fetchLogs = useCallback(async () => {
     if (!client?.id) return
@@ -65,20 +74,20 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
     if (isVisualRegressionMode()) {
       const fixtureLogs = getVisualFixture('interactionLogs', {})
       setLogs(fixtureLogs[client.id] || [])
+      setLogRead(readSuccess(fixtureLogs[client.id] || []))
       setLoadingLogs(false)
       return
     }
 
     setLoadingLogs(true)
 
-    try {
-      const data = await listInteractionLogRecords(client.id, activeTenantId)
-      setLogs(data || [])
-    } catch (error) {
-      console.error('Error fetching interaction logs:', error)
-    } finally {
-      setLoadingLogs(false)
-    }
+    const result = await runReadWithRetry('clients.interactionLogs', () => listInteractionLogRecords(client.id, activeTenantId), {
+      previousData: logsRef.current,
+      tenantId: activeTenantId,
+      onState: setLogRead,
+    })
+    if (result.ok) setLogs(result.data || [])
+    setLoadingLogs(false)
   }, [client?.id, activeTenantId])
 
   useEffect(() => {
@@ -92,6 +101,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
 
     if (!newLog.notes.trim() || !client?.id) return
 
+    setLogError('')
     try {
       const created = await createInteractionLogRecord({
         client_id: client.id,
@@ -102,7 +112,7 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
       setLogs((current) => [created, ...current])
       setNewLog({ type: 'Ligação', notes: '' })
     } catch (error) {
-      console.error('Error adding interaction log:', error)
+      setLogError(normalizeError(error, { operation: 'clients.addLog' }).message)
     }
   }
 
@@ -206,6 +216,9 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
                 </div>
               </div>
 
+              {logError ? (
+                <p className="client-log-form__error">{logError}</p>
+              ) : null}
               <form onSubmit={handleAddLog} className="client-log-form">
                 <div className="client-log-form__types">
                   {LOG_TYPES.map((type) => (
@@ -236,7 +249,13 @@ export default function ClientProfileModal({ isOpen, client, clientTasks = [], o
 
               <div className="client-log-list">
                 {loadingLogs ? (
-                  <p className="client-log-list__loading">Carregando histórico...</p>
+                  <p className="client-log-list__loading">{logRead.state === 'retrying' ? 'Tentando carregar histórico novamente...' : 'Carregando histórico...'}</p>
+                ) : logRead.error ? (
+                  <div className="client-log-list__empty">
+                    <MessageSquare size={26} />
+                    <strong>Histórico indisponível</strong>
+                    <p>{logRead.stale ? 'Os registros anteriores foram preservados, mas a atualização falhou.' : logRead.error.message}</p>
+                  </div>
                 ) : logs.length === 0 ? (
                   <div className="client-log-list__empty">
                     <MessageSquare size={26} />

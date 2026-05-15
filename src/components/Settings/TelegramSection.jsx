@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { getBotConfig, updateBotConfig, deleteBotConfig } from '../../lib/botConfig.js'
 import { countTelegramIntegrationFailure } from '../../lib/diagnostics.js'
 import { normalizeError } from '../../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../../lib/readResult.js'
 import { useTenant } from '../../hooks/useTenant.js'
 import { ERROR_TEXT, LOADING_TEXT, SETTINGS_TEXT } from '../../content/uxText.js'
 import OnboardingWizard from './OnboardingWizard.jsx'
@@ -201,6 +202,12 @@ export default function TelegramSection() {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [readResult, setReadResult] = useState(() => readSuccess(null))
+  const configRef = useRef(config)
+
+  useEffect(() => {
+    configRef.current = config
+  }, [config])
 
   const loadConfig = useCallback(async () => {
     setLoading(true)
@@ -208,17 +215,24 @@ export default function TelegramSection() {
     try {
       if (!activeTenantId) {
         setConfig(null)
+        setReadResult(readSuccess(null))
         return
       }
-      const data = await getBotConfig(activeTenantId)
+      const result = await runReadWithRetry('telegram.config', () => getBotConfig(activeTenantId), {
+        previousData: configRef.current,
+        tenantId: activeTenantId,
+        onState: setReadResult,
+      })
+      if (!result.ok) {
+        setError(result.error?.message || ERROR_TEXT.telegramConfig)
+        countTelegramIntegrationFailure()
+        return
+      }
+      const data = result.data
       setConfig(data?.config ?? null)
     } catch (err) {
-      if (err.message?.includes('403') || err.message?.includes('401')) {
-        setConfig(null)
-      } else {
-        setError(normalizeError(err, { operation: 'telegram.load' }).message || ERROR_TEXT.telegramConfig)
-        countTelegramIntegrationFailure()
-      }
+      setError(normalizeError(err, { operation: 'telegram.load' }).message || ERROR_TEXT.telegramConfig)
+      countTelegramIntegrationFailure()
     } finally {
       setLoading(false)
     }
@@ -233,11 +247,11 @@ export default function TelegramSection() {
   }
 
   if (loading) {
-    return <div style={{ color: 'var(--text-secondary)' }}>{LOADING_TEXT.telegramConfig}</div>
+    return <div style={{ color: 'var(--text-secondary)' }}>{readResult.state === 'retrying' ? 'Tentando carregar configuração novamente...' : LOADING_TEXT.telegramConfig}</div>
   }
 
   if (error) {
-    return <div style={{ color: '#fecaca' }}>{error}</div>
+    return <div style={{ color: '#fecaca' }}>{readResult.stale ? 'Mostrando configuração anterior. ' : ''}{error}</div>
   }
 
   if (!activeTenantId) {

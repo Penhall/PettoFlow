@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   listReceivableRecords,
   createReceivableRecord,
   updateReceivableRecord,
 } from '../lib/workspaceCore'
 import { fail, getMutationData, isMutationOk, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
+import {
+  countIdempotencyViolation,
+  countOrphanStateRisk,
+  countPartialTransactionFailure,
+} from '../lib/diagnostics.js'
 
 export function useReceivables({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
@@ -14,31 +20,37 @@ export function useReceivables({ tenantId } = {}) {
   const fixtureReceivables = useMemo(() => getVisualFixture('receivables', []), [])
   const [receivables, setReceivables] = useState(visualMode ? fixtureReceivables : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess(visualMode ? fixtureReceivables : []))
+  const receivablesRef = useRef(receivables)
+
+  useEffect(() => {
+    receivablesRef.current = receivables
+  }, [receivables])
 
   const fetch = useCallback(async () => {
     if (visualMode) {
       setReceivables(fixtureReceivables)
+      setReadResult(readSuccess(fixtureReceivables))
       setLoading(false)
       return fixtureReceivables
     }
 
     if (!tenantId) {
       setReceivables([])
+      setReadResult(readSuccess([]))
       setLoading(false)
       return []
     }
 
     setLoading(true)
-    try {
-      const data = await listReceivableRecords(tenantId)
-      setReceivables(data || [])
-      return data || []
-    } catch (error) {
-      console.error('Error fetching receivables:', error)
-      return []
-    } finally {
-      setLoading(false)
-    }
+    const result = await runReadWithRetry('receivables.list', () => listReceivableRecords(tenantId), {
+      previousData: receivablesRef.current,
+      tenantId,
+      onState: setReadResult,
+    })
+    if (result.ok) setReceivables(result.data || [])
+    setLoading(false)
+    return result.data || []
   }, [visualMode, fixtureReceivables, tenantId])
 
   useEffect(() => {
@@ -87,11 +99,18 @@ export function useReceivables({ tenantId } = {}) {
     const receivable = receivables.find((item) => item.id === receivableId)
     if (!receivable) return fail(new Error('receivable not found'), { operation: 'receivables.invoice', code: 'not_found' })
 
+    // Idempotency guard: prevent double-invoicing the same receivable
+    if (receivable.status === 'invoiced') {
+      countIdempotencyViolation('receivables.invoice')
+      return fail(new Error('receivable already invoiced'), { operation: 'receivables.invoice', code: 'already_invoiced' })
+    }
+
     const sourceName = receivable.tasks?.title ?? receivable.activities?.title ?? 'lancamento'
     const sourceLink = receivable.task_id
       ? { type: 'task', id: receivable.task_id }
       : { type: 'activity', id: receivable.activity_id }
 
+    // Step 1: create the transaction record
     const transactionResult = await addTransaction({
       account_id: receivable.target_account_id,
       amount: adjustedAmount,
@@ -102,15 +121,24 @@ export function useReceivables({ tenantId } = {}) {
     if (!isMutationOk(transactionResult)) return transactionResult
     const transaction = getMutationData(transactionResult)
 
-    return runMutation('receivables.invoice', async () => {
+    // Step 2: mark receivable as invoiced — partial-failure risk if this fails
+    // after step 1 already persisted the transaction.
+    try {
       const updated = await updateReceivableRecord(receivableId, {
         status: 'invoiced',
         transaction_id: transaction.id,
         invoiced_at: new Date().toISOString(),
       }, tenantId)
       setReceivables((current) => current.map((item) => (item.id === receivableId ? { ...item, ...updated } : item)))
-      return updated
-    })
+      return ok(updated)
+    } catch (error) {
+      // Transaction created (step 1) but receivable status not updated (step 2).
+      // The receivable remains "pending" — a retry would attempt to create another transaction.
+      // Telemetry surfaces this for operator investigation.
+      countPartialTransactionFailure('receivables.invoice')
+      countOrphanStateRisk('receivables.invoice')
+      return fail(error, { operation: 'receivables.invoice', code: 'partial_invoice_failure' })
+    }
   }
 
   const listReceivables = ({ status, taskId } = {}) =>
@@ -120,5 +148,17 @@ export function useReceivables({ tenantId } = {}) {
       return true
     })
 
-  return { receivables, loading, createReceivable, createReceivableFromActivity, invoiceReceivable, listReceivables, refresh: fetch }
+  return {
+    receivables,
+    loading,
+    readResult,
+    readState: readResult.state,
+    error: readResult.error,
+    stale: readResult.stale,
+    createReceivable,
+    createReceivableFromActivity,
+    invoiceReceivable,
+    listReceivables,
+    refresh: fetch,
+  }
 }

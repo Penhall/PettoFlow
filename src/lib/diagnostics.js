@@ -172,6 +172,17 @@ export function traceRetryLifecycle(scope, phase, detail = null) {
   console.debug(tag('retry'), scope, phase, detail ?? '')
 }
 
+export function traceReadLifecycle(scope, phase, detail = null) {
+  recordEvent('read-path', { scope, phase, detail })
+  if (phase === 'failed') countReadFailure(scope)
+  if (phase === 'retrying') countReadRetry(scope)
+  if (phase === 'stale') countReadStale(scope)
+  if (phase === 'interrupted') countReadInterrupted(scope)
+  if (phase === 'unauthorized') countReadUnauthorized(scope)
+  if (!isEnabled()) return
+  console.debug(tag('read'), scope, phase, detail ?? '')
+}
+
 export function traceTransitionConflict(kind, active, next) {
   recordEvent('orchestration-conflict', { transitionKind: kind, active, next })
   countTransitionConflict()
@@ -258,6 +269,31 @@ export function countPersistenceRejection() {
   incCounter('persistence_rejections')
 }
 
+export function countReadFailure(scope = 'unknown') {
+  incCounter('read_failures')
+  incCounter(`read_failure_${scope}`)
+}
+
+export function countReadRetry(scope = 'unknown') {
+  incCounter('read_retries')
+  incCounter(`read_retry_${scope}`)
+}
+
+export function countReadStale(scope = 'unknown') {
+  incCounter('read_stale')
+  incCounter(`read_stale_${scope}`)
+}
+
+export function countReadInterrupted(scope = 'unknown') {
+  incCounter('read_interrupted')
+  incCounter(`read_interrupted_${scope}`)
+}
+
+export function countReadUnauthorized(scope = 'unknown') {
+  incCounter('read_unauthorized')
+  incCounter(`read_unauthorized_${scope}`)
+}
+
 export function countRetryLoop(scope = 'unknown') {
   incCounter('retry_loops')
   incCounter(`retry_loop_${scope}`)
@@ -274,6 +310,23 @@ export function countRecoveryAttempt(scope = 'unknown') {
 
 export function resetTelemetry() {
   Object.keys(TELEMETRY).forEach((key) => delete TELEMETRY[key])
+}
+
+export function getEventBuffer() {
+  if (typeof window === 'undefined') return []
+  return Array.isArray(window[EVENT_BUFFER_KEY]) ? [...window[EVENT_BUFFER_KEY]] : []
+}
+
+export function clearEventBuffer() {
+  if (typeof window === 'undefined') return
+  window[EVENT_BUFFER_KEY] = []
+}
+
+export function resetAllDiagnostics() {
+  resetTelemetry()
+  clearEventBuffer()
+  resetPerformanceCounters()
+  warnedOwnershipFallbacks.clear()
 }
 
 // ═══════════════════════════════════════════
@@ -390,4 +443,43 @@ export function countSettingsSaveConflict() {
 
 export function countOnboardingRetry() {
   incCounter('onboarding_retries')
+}
+
+// ═══════════════════════════════════════════
+// Transactional Integrity Counters (Phase 36B)
+// ═══════════════════════════════════════════
+
+export function countPartialTransactionFailure(scope = 'unknown') {
+  incCounter('partial_transaction_failures')
+  incCounter(`partial_tx_failure_${scope}`)
+}
+
+export function countOrphanStateRisk(scope = 'unknown') {
+  incCounter('orphan_state_risks')
+  incCounter(`orphan_risk_${scope}`)
+}
+
+export function countRollbackAttempt(scope = 'unknown') {
+  incCounter('rollback_attempts')
+  incCounter(`rollback_${scope}`)
+}
+
+export function countIdempotencyViolation(scope = 'unknown') {
+  incCounter('idempotency_violations')
+  incCounter(`idempotency_${scope}`)
+}
+
+export function countIntegrityViolation(scope = 'unknown') {
+  incCounter('integrity_violations')
+  incCounter(`integrity_${scope}`)
+}
+
+export function countOnboardingInterruption(stage = 'unknown') {
+  incCounter('onboarding_interruptions')
+  incCounter(`onboarding_interruption_${stage}`)
+}
+
+export function countStaleReadDetected(scope = 'unknown') {
+  incCounter('stale_reads_detected')
+  incCounter(`stale_read_${scope}`)
 }

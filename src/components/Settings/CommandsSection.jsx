@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { listCommands, toggleCommand, deleteCommand, seedDefaultCommands } from '../../lib/botCommands.js'
 import { countCommandFailure } from '../../lib/diagnostics.js'
 import { normalizeError } from '../../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../../lib/readResult.js'
 import { useTenant } from '../../hooks/useTenant.js'
 import { EMPTY_STATE_TEXT, ERROR_TEXT, LOADING_TEXT, SETTINGS_TEXT } from '../../content/uxText.js'
 import CommandForm from './CommandForm.jsx'
@@ -22,10 +23,16 @@ export default function CommandsSection() {
   const { activeTenantId } = useTenant()
   const [commands, setCommands] = useState([])
   const [loading, setLoading] = useState(true)
+  const [readResult, setReadResult] = useState(() => readSuccess([]))
   const [error, setError] = useState('')
   const [tab, setTab] = useState('builtin') // 'builtin' | 'custom'
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const commandsRef = useRef(commands)
+
+  useEffect(() => {
+    commandsRef.current = commands
+  }, [commands])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -33,9 +40,20 @@ export default function CommandsSection() {
     try {
       if (!activeTenantId) {
         setCommands([])
+        setReadResult(readSuccess([]))
         return
       }
-      const data = await listCommands(activeTenantId)
+      const result = await runReadWithRetry('commands.list', () => listCommands(activeTenantId), {
+        previousData: commandsRef.current,
+        tenantId: activeTenantId,
+        onState: setReadResult,
+      })
+      if (!result.ok) {
+        setError(result.error?.message || ERROR_TEXT.commands)
+        countCommandFailure()
+        return
+      }
+      const data = result.data
       setCommands(data?.commands ?? [])
     } catch (err) {
       setError(normalizeError(err, { operation: 'commands.load' }).message || ERROR_TEXT.commands)
@@ -154,11 +172,15 @@ export default function CommandsSection() {
   }
 
   if (loading && commands.length === 0) {
-    return <div style={{ color: 'var(--text-secondary)' }}>{LOADING_TEXT.commands}</div>
+    return <div style={{ color: 'var(--text-secondary)' }}>{readResult.state === 'retrying' ? 'Tentando carregar comandos novamente...' : LOADING_TEXT.commands}</div>
   }
 
   if (error) {
-    return <div style={{ color: '#fecaca', marginBottom: 12 }}>{error}</div>
+    return (
+      <div style={{ color: '#fecaca', marginBottom: 12 }}>
+        {readResult.stale ? 'Mostrando comandos anteriores. ' : ''}{error}
+      </div>
+    )
   }
 
   if (commands.length === 0) {

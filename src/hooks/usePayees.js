@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { listPayeeRecords, savePayeeRecord } from '../lib/workspaceCore'
 import { fail, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function usePayees({ tenantId } = {}) {
@@ -8,37 +9,43 @@ export function usePayees({ tenantId } = {}) {
   const fixturePayees = useMemo(() => getVisualFixture('payees', []), [])
   const [payees, setPayees] = useState(visualMode ? fixturePayees : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess(visualMode ? fixturePayees : []))
+  const payeesRef = useRef(payees)
+
+  useEffect(() => {
+    payeesRef.current = payees
+  }, [payees])
 
   useEffect(() => {
     if (visualMode) {
       setPayees(fixturePayees)
+      setReadResult(readSuccess(fixturePayees))
       setLoading(false)
       return undefined
     }
 
     if (!tenantId) {
       setPayees([])
+      setReadResult(readSuccess([]))
       setLoading(false)
       return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
 
-    listPayeeRecords(tenantId)
-      .then((data) => {
-        if (cancelled) return
-        setPayees(data || [])
-      })
-      .catch((error) => {
-        if (cancelled) return
-        console.error('Error fetching payees:', error)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    runReadWithRetry('payees.list', () => listPayeeRecords(tenantId), {
+      previousData: payeesRef.current,
+      signal: controller.signal,
+      tenantId,
+      onState: setReadResult,
+    }).then((result) => {
+      if (controller.signal.aborted) return
+      if (result.ok) setPayees(result.data || [])
+      setLoading(false)
+    })
 
-    return () => { cancelled = true }
+    return () => { controller.abort() }
   }, [visualMode, fixturePayees, tenantId])
 
   const addPayee = async (name) => {
@@ -63,5 +70,5 @@ export function usePayees({ tenantId } = {}) {
     })
   }
 
-  return { payees, loading, addPayee, updatePayee }
+  return { payees, loading, readResult, readState: readResult.state, error: readResult.error, stale: readResult.stale, addPayee, updatePayee }
 }

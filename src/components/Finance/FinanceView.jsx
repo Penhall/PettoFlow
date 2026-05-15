@@ -57,11 +57,11 @@ const FinanceView = ({
   const [formError, setFormError] = useState('')
 
   const { addActivity } = useActivities({ tenantId: activeTenantId })
-  const { accounts, addAccount, updateAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory } = useAccounts({ tenantId: activeTenantId })
-  const { payees, addPayee } = usePayees({ tenantId: activeTenantId })
-  const { groups, categories } = useFinCategories({ tenantId: activeTenantId })
-  const { rules, addRule, updateRule, deleteRule } = useFinRules({ tenantId: activeTenantId })
-  const { listReceivables, invoiceReceivable, refresh: refreshReceivables, receivables } = useReceivables({ tenantId: activeTenantId })
+  const { accounts, addAccount, updateAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory, readResult: accountsRead } = useAccounts({ tenantId: activeTenantId })
+  const { payees, addPayee, readResult: payeesRead } = usePayees({ tenantId: activeTenantId })
+  const { groups, categories, readResult: categoriesRead } = useFinCategories({ tenantId: activeTenantId })
+  const { rules, addRule, updateRule, deleteRule, readResult: rulesRead } = useFinRules({ tenantId: activeTenantId })
+  const { listReceivables, invoiceReceivable, refresh: refreshReceivables, receivables, readResult: receivablesRead } = useReceivables({ tenantId: activeTenantId })
 
   const effectiveFilters = activeTab === 'extrato' ? extractoFilters : {}
   const {
@@ -71,9 +71,12 @@ const FinanceView = ({
     updateTransaction,
     deleteTransaction,
     applyRules,
+    readResult: transactionsRead,
   } = useTransactions({ filters: effectiveFilters, rules, tenantId: activeTenantId })
 
-  const { transactions: allTransactions } = useTransactions({ filters: {}, rules, tenantId: activeTenantId })
+  const { transactions: allTransactions, readResult: allTransactionsRead } = useTransactions({ filters: {}, rules, tenantId: activeTenantId })
+  const degradedReads = [accountsRead, payeesRead, categoriesRead, rulesRead, receivablesRead, transactionsRead, allTransactionsRead]
+    .filter((result) => result?.error || result?.stale)
 
   const balances = useMemo(() => {
     const map = {}
@@ -190,6 +193,7 @@ const FinanceView = ({
           onDelete={deleteTransaction}
           onApplyRules={applyRules}
           loading={txLoading}
+          readResult={transactionsRead}
         />
       )
     }
@@ -448,6 +452,13 @@ const FinanceView = ({
       <SurfaceCard className="finance-page__surface" padded={activeTab !== 'extrato'}>
         {formError ? (
           <p style={{ color: 'var(--error, #ef4444)', fontSize: 13, margin: '0 0 12px' }}>{formError}</p>
+        ) : null}
+        {degradedReads.length > 0 ? (
+          <p style={{ color: 'var(--warning, #f59e0b)', fontSize: 13, margin: '0 0 12px' }}>
+            {degradedReads.some((result) => result.stale)
+              ? 'Alguns dados financeiros estão anteriores à última tentativa de atualização.'
+              : degradedReads[0].error?.message}
+          </p>
         ) : null}
         {renderFinanceContent()}
       </SurfaceCard>

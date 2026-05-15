@@ -1,45 +1,53 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getPrincipalAccount as findPrincipal } from '../lib/financeUtils'
 import { listAccountRecords, saveAccountRecord } from '../lib/workspaceCore'
 import { fail, getMutationData, isMutationOk, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
+import { countOrphanStateRisk, countPartialTransactionFailure } from '../lib/diagnostics.js'
 
 export function useAccounts({ tenantId } = {}) {
   const visualMode = isVisualRegressionMode()
   const fixtureAccounts = useMemo(() => getVisualFixture('accounts', []), [])
   const [accounts, setAccounts] = useState(visualMode ? fixtureAccounts : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess(visualMode ? fixtureAccounts : []))
+  const accountsRef = useRef(accounts)
+
+  useEffect(() => {
+    accountsRef.current = accounts
+  }, [accounts])
 
   useEffect(() => {
     if (visualMode) {
       setAccounts(fixtureAccounts)
+      setReadResult(readSuccess(fixtureAccounts))
       setLoading(false)
       return undefined
     }
 
     if (!tenantId) {
       setAccounts([])
+      setReadResult(readSuccess([]))
       setLoading(false)
       return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
 
-    listAccountRecords(tenantId)
-      .then((data) => {
-        if (cancelled) return
-        setAccounts(data || [])
-      })
-      .catch((error) => {
-        if (cancelled) return
-        console.error('Error fetching accounts:', error)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    runReadWithRetry('accounts.list', () => listAccountRecords(tenantId), {
+      previousData: accountsRef.current,
+      signal: controller.signal,
+      tenantId,
+      onState: setReadResult,
+    }).then((result) => {
+      if (controller.signal.aborted) return
+      if (result.ok) setAccounts(result.data || [])
+      setLoading(false)
+    })
 
-    return () => { cancelled = true }
+    return () => { controller.abort() }
   }, [visualMode, fixtureAccounts, tenantId])
 
   const addAccount = async (account) => {
@@ -90,8 +98,22 @@ export function useAccounts({ tenantId } = {}) {
     if (category === 'principal') {
       const current = getPrincipalAccount()
       if (current && current.id !== accountId) {
+        // Step 1: demote the existing principal account
         const demoteResult = await updateAccount(current.id, { category: demotedCategory })
         if (!isMutationOk(demoteResult)) return demoteResult
+
+        // Step 2: promote the target account — partial-failure risk after step 1 succeeded.
+        // If this fails, no account holds the "principal" category.
+        const promoteResult = await updateAccount(accountId, { category })
+        if (!isMutationOk(promoteResult)) {
+          countPartialTransactionFailure('accounts.setCategory')
+          countOrphanStateRisk('accounts.setCategory')
+          return fail(
+            new Error('promote failed after demote'),
+            { operation: 'accounts.setCategory', code: 'partial_category_failure' }
+          )
+        }
+        return ok(getMutationData(promoteResult))
       }
     }
 
@@ -99,5 +121,5 @@ export function useAccounts({ tenantId } = {}) {
     return isMutationOk(result) ? ok(getMutationData(result)) : result
   }
 
-  return { accounts, loading, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory }
+  return { accounts, loading, readResult, readState: readResult.state, error: readResult.error, stale: readResult.stale, addAccount, updateAccount, closeAccount, getPrincipalAccount, getUniqueCategories, setAccountCategory }
 }

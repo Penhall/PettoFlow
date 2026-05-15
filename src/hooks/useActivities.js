@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   listActivityRecords,
   saveActivityRecord,
   deleteActivityRecord,
 } from '../lib/workspaceCore'
 import { fail, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useActivities({ tenantId } = {}) {
@@ -15,37 +16,43 @@ export function useActivities({ tenantId } = {}) {
   const fixtureActivities = useMemo(() => getVisualFixture('activities', []), [])
   const [activities, setActivities] = useState(visualMode ? fixtureActivities : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess(visualMode ? fixtureActivities : []))
+  const activitiesRef = useRef(activities)
+
+  useEffect(() => {
+    activitiesRef.current = activities
+  }, [activities])
 
   useEffect(() => {
     if (visualMode) {
       setActivities(fixtureActivities)
+      setReadResult(readSuccess(fixtureActivities))
       setLoading(false)
       return undefined
     }
 
     if (!tenantId) {
       setActivities([])
+      setReadResult(readSuccess([]))
       setLoading(false)
       return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
 
-    listActivityRecords(tenantId)
-      .then((data) => {
-        if (cancelled) return
-        setActivities(data || [])
-      })
-      .catch((error) => {
-        if (cancelled) return
-        console.error('Error fetching activities:', error)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    runReadWithRetry('activities.list', () => listActivityRecords(tenantId), {
+      previousData: activitiesRef.current,
+      signal: controller.signal,
+      tenantId,
+      onState: setReadResult,
+    }).then((result) => {
+      if (controller.signal.aborted) return
+      if (result.ok) setActivities(result.data || [])
+      setLoading(false)
+    })
 
-    return () => { cancelled = true }
+    return () => { controller.abort() }
   }, [visualMode, fixtureActivities, tenantId])
 
   const addActivity = async (activity) => {
@@ -90,5 +97,17 @@ export function useActivities({ tenantId } = {}) {
       activity.related_to.some((relation) => relation.type === type && String(relation.id) === String(id))
     )
 
-  return { activities, loading, addActivity, updateActivity, deleteActivity, getActivitiesFor }
+  return {
+    activities,
+    loading,
+    readResult,
+    readState: readResult.state,
+    error: readResult.error,
+    stale: readResult.stale,
+    retrying: readResult.state === 'retrying',
+    addActivity,
+    updateActivity,
+    deleteActivity,
+    getActivitiesFor,
+  }
 }

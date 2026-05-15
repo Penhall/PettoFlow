@@ -10,6 +10,7 @@ import { useRuntimeOrchestration } from './useRuntimeOrchestration.js'
 import { getOnboardingState, recordOnboardingEvent, updateOnboardingState } from '../lib/onboardingApi.js'
 import { CURRENT_ONBOARDING_VERSION } from '../lib/onboardingState.js'
 import { ONBOARDING_CHECKLIST, QUICK_ACTIONS, TUTORIAL_CATALOG } from '../lib/tutorialCatalog.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 
 function buildFallbackState() {
   return {
@@ -39,6 +40,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
   const [state, setState] = useState(buildFallbackState())
   const [loading, setLoading] = useState(Boolean(enabled && tenantId))
   const [error, setError] = useState(null)
+  const [readResult, setReadResult] = useState(() => readSuccess(buildFallbackState()))
   const [initializationMode, setInitializationMode] = useState('guided_seeded')
   const [seedProfile, setSeedProfile] = useState(null)
 
@@ -70,41 +72,46 @@ export function useOnboarding({ tenantId, enabled = true }) {
       setInitializationMode('guided_seeded')
       setSeedProfile(null)
       setError(null)
+      setReadResult(readSuccess(fallback))
       setLoading(false)
       return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
 
-    getOnboardingState(tenantId)
-      .then((data) => {
-        if (cancelled) return
+    runReadWithRetry('onboarding.load', () => getOnboardingState(tenantId), {
+      previousData: committedStateRef.current,
+      signal: controller.signal,
+      tenantId,
+      retries: 0,
+      onState: setReadResult,
+    })
+      .then((result) => {
+        if (controller.signal.aborted) return
+        if (!result.ok) {
+          const loadError = new Error(result.error?.message || 'Não foi possível carregar o onboarding.')
+          loadError.code = result.error?.code
+          loadError.diagnostics = result.error?.diagnostics
+          setError(loadError)
+          traceAsyncFailure('onboarding-failure', new Error(result.error?.diagnostics?.rawMessage || result.error?.message), { stage: 'load', tenantId })
+          countOnboardingRetry()
+          return
+        }
+        const data = result.data
         const nextState = normalizeResponseState(data?.state)
         setState(nextState)
         committedStateRef.current = nextState
         setInitializationMode(data?.initializationMode || 'guided_seeded')
         setSeedProfile(data?.seedProfile || null)
       })
-      .catch((nextError) => {
-        if (cancelled) return
-        console.error('Error fetching onboarding state:', nextError)
-        traceAsyncFailure('onboarding-failure', nextError, { stage: 'load', tenantId })
-        countOnboardingRetry()
-        setError(nextError)
-        const fallback = buildFallbackState()
-        setState(fallback)
-        committedStateRef.current = fallback
-        setInitializationMode('guided_seeded')
-        setSeedProfile(null)
-      })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       })
 
     return () => {
-      cancelled = true
+      controller.abort()
     }
   }, [tenantId, enabled])
 
@@ -284,6 +291,9 @@ export function useOnboarding({ tenantId, enabled = true }) {
   return {
     loading,
     error,
+    readResult,
+    readState: readResult.state,
+    stale: readResult.stale,
     state,
     initializationMode,
     seedProfile,

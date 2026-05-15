@@ -12,13 +12,24 @@ const TransactionList = ({
   onDelete,
   onApplyRules,
   loading,
+  readResult = null,
 }) => {
   const needsReviewCount = transactions.filter(t => t.needs_review).length
   const getAccountName  = (id) => accounts.find(a => a.id === id)?.name || '—'
   const getPayeeName    = (id) => payees.find(p => p.id === id)?.name   || '—'
   const getCategoryName = (id) => categories.find(c => c.id === id)?.name || '—'
 
-  if (loading) return <p className="loading-text">Carregando transações...</p>
+  if (loading) return <p className="loading-text">{readResult?.state === 'retrying' ? 'Tentando carregar transações novamente...' : 'Carregando transações...'}</p>
+
+  if (readResult?.error) {
+    return (
+      <EmptyState
+        title="Transações indisponíveis"
+        description={readResult.stale ? 'Mostrando dados anteriores em outras áreas financeiras.' : 'A leitura do extrato falhou.'}
+        detail={readResult.error.message}
+      />
+    )
+  }
 
   return (
     <div className="transaction-list">

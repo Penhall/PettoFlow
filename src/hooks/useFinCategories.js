@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   listFinCategoryRecords,
   createCategoryGroupRecord,
   saveFinCategoryRecord,
 } from '../lib/workspaceCore'
 import { fail, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useFinCategories({ tenantId } = {}) {
@@ -14,11 +15,18 @@ export function useFinCategories({ tenantId } = {}) {
   const [groups, setGroups] = useState(visualMode ? fixtureGroups : [])
   const [categories, setCategories] = useState(visualMode ? fixtureCategories : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess({ groups: visualMode ? fixtureGroups : [], categories: visualMode ? fixtureCategories : [] }, { empty: false }))
+  const dataRef = useRef({ groups, categories })
+
+  useEffect(() => {
+    dataRef.current = { groups, categories }
+  }, [groups, categories])
 
   useEffect(() => {
     if (visualMode) {
       setGroups(fixtureGroups)
       setCategories(fixtureCategories)
+      setReadResult(readSuccess({ groups: fixtureGroups, categories: fixtureCategories }, { empty: fixtureGroups.length === 0 && fixtureCategories.length === 0 }))
       setLoading(false)
       return undefined
     }
@@ -26,28 +34,29 @@ export function useFinCategories({ tenantId } = {}) {
     if (!tenantId) {
       setGroups([])
       setCategories([])
+      setReadResult(readSuccess({ groups: [], categories: [] }, { empty: true }))
       setLoading(false)
       return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
 
-    listFinCategoryRecords(tenantId)
-      .then((data) => {
-        if (cancelled) return
-        setGroups(data?.groups || [])
-        setCategories(data?.categories || [])
-      })
-      .catch((error) => {
-        if (cancelled) return
-        console.error('Error fetching fin categories:', error)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    runReadWithRetry('finCategories.list', () => listFinCategoryRecords(tenantId), {
+      previousData: dataRef.current,
+      signal: controller.signal,
+      tenantId,
+      onState: setReadResult,
+    }).then((result) => {
+      if (controller.signal.aborted) return
+      if (result.ok) {
+        setGroups(result.data?.groups || [])
+        setCategories(result.data?.categories || [])
+      }
+      setLoading(false)
+    })
 
-    return () => { cancelled = true }
+    return () => { controller.abort() }
   }, [visualMode, fixtureGroups, fixtureCategories, tenantId])
 
   const addGroup = async (group) => {
@@ -83,5 +92,5 @@ export function useFinCategories({ tenantId } = {}) {
     })
   }
 
-  return { groups, categories, loading, addGroup, addCategory, updateCategory }
+  return { groups, categories, loading, readResult, readState: readResult.state, error: readResult.error, stale: readResult.stale, addGroup, addCategory, updateCategory }
 }

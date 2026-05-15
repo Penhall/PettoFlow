@@ -24,6 +24,7 @@ import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
 import { fail, getMutationData, isMutationOk, normalizeError, ok, runMutation } from './lib/mutationResult.js'
 import { traceAsync, traceAsyncFailure, traceBootstrap, traceRouteTransition, traceTransitionConflict } from './lib/diagnostics.js'
+import { readFailure, readSuccess, runReadWithRetry } from './lib/readResult.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import { ACTION_TEXT, EMPTY_STATE_TEXT, ERROR_TEXT, LOADING_TEXT, SHELL_TEXT } from './content/uxText.js'
@@ -87,6 +88,7 @@ function App() {
   const [columns, setColumns] = useState([])
   const [loading, setLoading] = useState(true)
   const [bootstrapError, setBootstrapError] = useState(null)
+  const [bootstrapRead, setBootstrapRead] = useState(() => readSuccess({ tasks: [], team: [], clients: [], columns: [] }, { empty: true }))
   const [bootstrapRetryKey, setBootstrapRetryKey] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState(null)
@@ -132,10 +134,12 @@ function App() {
   const previousTabRef = useRef(activeTab)
   const pendingRouteTransitionRef = useRef(null)
   const activeTenantIdRef = useRef(activeTenantId)
+  const workspaceDataRef = useRef({ tasks, team, clients, columns })
   const refreshRequestRef = useRef({ team: 0, clients: 0 })
   const previousTenantIdRef = useRef(activeTenantId)
 
   activeTenantIdRef.current = activeTenantId
+  workspaceDataRef.current = { tasks, team, clients, columns }
 
   useEffect(() => {
     const previousTenantId = previousTenantIdRef.current
@@ -182,7 +186,12 @@ function App() {
     traceAsync(`app.${scope}-refresh`, 'start', { tenantId, requestId })
 
     try {
-      const data = await fetchWorkspaceBootstrap(tenantId)
+      const result = await runReadWithRetry(`app.${scope}-refresh`, () => fetchWorkspaceBootstrap(tenantId), {
+        previousData: { team, clients },
+        tenantId,
+      })
+      if (!result.ok) return null
+      const data = result.data
       const stale =
         refreshRequestRef.current[scope] !== requestId ||
         activeTenantIdRef.current !== tenantId
@@ -220,7 +229,6 @@ function App() {
         return null
       }
 
-      console.error(`Error fetching ${scope}:`, error)
       traceAsyncFailure('bootstrap-failure', error, {
         stage: `app-${scope}-refresh`,
         tenantId,
@@ -254,6 +262,7 @@ function App() {
     // dependency on timing entirely.
     if (!activeTenantId) {
       setBootstrapError(null)
+      setBootstrapRead(readSuccess({ tasks: [], team: [], clients: [], columns: [] }, { empty: true }))
       setLoading(false)
       completeTransition('tenant', {
         reason: 'no-active-tenant',
@@ -272,9 +281,30 @@ function App() {
     setBootstrapError(null)
     traceBootstrap('start', activeTenantId)
 
-    fetchWorkspaceBootstrap(activeTenantId)
-      .then((data) => {
+    runReadWithRetry('workspace.bootstrap', () => fetchWorkspaceBootstrap(activeTenantId), {
+      previousData: workspaceDataRef.current,
+      tenantId: activeTenantId,
+      onState: setBootstrapRead,
+    })
+      .then((result) => {
         if (cancelled) return
+        if (!result.ok) {
+          const error = new Error(result.error?.diagnostics?.rawMessage || result.error?.message)
+          error.code = result.error?.code
+          setBootstrapError(result.error)
+          failWorkspaceLoad(workspaceRequestId, activeTenantId, error, {
+            stage: 'app-bootstrap',
+          })
+          settled = true
+          interruptTransition('tenant', {
+            tenantId: activeTenantId,
+            reason: 'workspace-error',
+          })
+          traceBootstrap('error', activeTenantId, result.error?.code)
+          traceAsyncFailure('bootstrap-failure', error, { stage: 'app-bootstrap', tenantId: activeTenantId })
+          return
+        }
+        const data = result.data
         setTasks(data.tasks || [])
         setTeam(data.team || [])
         setClients(data.clients || [])
@@ -294,8 +324,9 @@ function App() {
       })
       .catch((error) => {
         if (cancelled) return
-        console.error('Error fetching workspace data:', error)
-        setBootstrapError(error)
+        const result = readFailure(error, { operation: 'workspace.bootstrap', previousData: workspaceDataRef.current })
+        setBootstrapRead(result)
+        setBootstrapError(result.error)
         failWorkspaceLoad(workspaceRequestId, activeTenantId, error, {
           stage: 'app-bootstrap',
         })
@@ -304,7 +335,7 @@ function App() {
           tenantId: activeTenantId,
           reason: 'workspace-error',
         })
-        traceBootstrap('error', activeTenantId, error.message)
+        traceBootstrap('error', activeTenantId, result.error?.code)
         traceAsyncFailure('bootstrap-failure', error, { stage: 'app-bootstrap', tenantId: activeTenantId })
       })
       .finally(() => {
@@ -723,11 +754,16 @@ function App() {
 
   const renderContent = () => {
     if (bootstrapError) {
-      const safeBootstrapError = normalizeError(bootstrapError, { operation: 'workspace.bootstrap' })
+      const safeBootstrapError = bootstrapError?.diagnostics
+        ? bootstrapError
+        : normalizeError(bootstrapError, { operation: 'workspace.bootstrap' })
+      const staleDetail = bootstrapRead.stale
+        ? 'Os dados anteriores foram preservados, mas a atualização do espaço de trabalho falhou.'
+        : EMPTY_STATE_TEXT.workspaceBootstrap.description
       return (
         <EmptyState
           title={EMPTY_STATE_TEXT.workspaceBootstrap.title}
-          description={EMPTY_STATE_TEXT.workspaceBootstrap.description}
+          description={staleDetail}
           detail={safeBootstrapError.message || EMPTY_STATE_TEXT.workspaceBootstrap.detail}
           action={(
             <button

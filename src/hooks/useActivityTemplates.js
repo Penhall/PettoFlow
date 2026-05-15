@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   listActivityTemplateRecords,
   saveActivityTemplateRecord,
   deleteActivityTemplateRecord,
 } from '../lib/workspaceCore'
 import { fail, ok, runMutation } from '../lib/mutationResult.js'
+import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 import { getVisualFixture, isVisualRegressionMode } from '../visual/fixtureRuntime.js'
 
 export function useActivityTemplates({ tenantId } = {}) {
@@ -12,31 +13,37 @@ export function useActivityTemplates({ tenantId } = {}) {
   const fixtureTemplates = useMemo(() => getVisualFixture('activityTemplates', []), [])
   const [templates, setTemplates] = useState(visualMode ? fixtureTemplates : [])
   const [loading, setLoading] = useState(!visualMode)
+  const [readResult, setReadResult] = useState(() => readSuccess(visualMode ? fixtureTemplates : []))
+  const templatesRef = useRef(templates)
+
+  useEffect(() => {
+    templatesRef.current = templates
+  }, [templates])
 
   const fetch = useCallback(async () => {
     if (visualMode) {
       setTemplates(fixtureTemplates)
+      setReadResult(readSuccess(fixtureTemplates))
       setLoading(false)
       return fixtureTemplates
     }
 
     if (!tenantId) {
       setTemplates([])
+      setReadResult(readSuccess([]))
       setLoading(false)
       return []
     }
 
     setLoading(true)
-    try {
-      const data = await listActivityTemplateRecords(tenantId)
-      setTemplates(data || [])
-      return data || []
-    } catch (error) {
-      console.error('Error fetching activity templates:', error)
-      return []
-    } finally {
-      setLoading(false)
-    }
+    const result = await runReadWithRetry('activityTemplates.list', () => listActivityTemplateRecords(tenantId), {
+      previousData: templatesRef.current,
+      tenantId,
+      onState: setReadResult,
+    })
+    if (result.ok) setTemplates(result.data || [])
+    setLoading(false)
+    return result.data || []
   }, [visualMode, fixtureTemplates, tenantId])
 
   useEffect(() => {
@@ -87,5 +94,5 @@ export function useActivityTemplates({ tenantId } = {}) {
     }
   }
 
-  return { templates, loading, createTemplate, updateTemplate, deleteTemplate, applyTemplate }
+  return { templates, loading, readResult, readState: readResult.state, error: readResult.error, stale: readResult.stale, createTemplate, updateTemplate, deleteTemplate, applyTemplate }
 }
