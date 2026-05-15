@@ -22,6 +22,13 @@ export function useFinCategories({ tenantId } = {}) {
       return undefined
     }
 
+    if (!tenantId) {
+      setGroups([])
+      setCategories([])
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -44,6 +51,7 @@ export function useFinCategories({ tenantId } = {}) {
 
   const addGroup = async (group) => {
     if (visualMode) return group
+    if (!tenantId) return null
 
     try {
       const created = await createCategoryGroupRecord(group, tenantId)
@@ -57,6 +65,7 @@ export function useFinCategories({ tenantId } = {}) {
 
   const addCategory = async (category) => {
     if (visualMode) return category
+    if (!tenantId) return null
 
     try {
       const created = await saveFinCategoryRecord(category, tenantId)
@@ -70,6 +79,7 @@ export function useFinCategories({ tenantId } = {}) {
 
   const updateCategory = async (id, updates) => {
     if (visualMode) return { id, ...updates }
+    if (!tenantId) return null
 
     try {
       const updated = await saveFinCategoryRecord({ id, ...updates }, tenantId)

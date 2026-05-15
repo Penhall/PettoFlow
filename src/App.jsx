@@ -21,7 +21,7 @@ import { useReceivables } from './hooks/useReceivables'
 import { useTenant } from './hooks/useTenant.js'
 import { shouldCreateReceivable, getPrincipalAccount as findPrincipal } from './lib/financeUtils'
 import { lazyWithRetry } from './lib/lazyWithRetry.js'
-import { traceAsyncFailure, traceBootstrap, traceRouteTransition } from './lib/diagnostics.js'
+import { traceAsync, traceAsyncFailure, traceBootstrap, traceRouteTransition } from './lib/diagnostics.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import {
@@ -147,23 +147,114 @@ function App() {
   } = useCommandPalette(tasks, clients, activities)
   const { createReceivable, listReceivables } = useReceivables({ tenantId: activeTenantId })
   const previousTabRef = useRef(activeTab)
+  const pendingRouteTransitionRef = useRef(null)
+  const activeTenantIdRef = useRef(activeTenantId)
+  const refreshRequestRef = useRef({ team: 0, clients: 0 })
+  const previousTenantIdRef = useRef(activeTenantId)
 
-  const fetchTeam = async () => {
+  activeTenantIdRef.current = activeTenantId
+
+  useEffect(() => {
+    const previousTenantId = previousTenantIdRef.current
+    previousTenantIdRef.current = activeTenantId
+
+    if (!previousTenantId || previousTenantId === activeTenantId) {
+      return
+    }
+
+    const pendingTransition = pendingRouteTransitionRef.current
+    if (pendingTransition) {
+      traceRouteTransition(pendingTransition.from, pendingTransition.to, 'interrupted')
+      pendingRouteTransitionRef.current = null
+    }
+
+    closePalette()
+    setPendingSettingsTab(null)
+    setSearchQuery('')
+    setTutorialSearchQuery('')
+    setSelectedTask(null)
+    setShowAddModal(false)
+    setShowEditModal(false)
+    setShowFilterMenu(false)
+    setShowSortMenu(false)
+    setMobileSidebarOpen(false)
+    setTourOpen(false)
+    setTourAutoPrompted(false)
+  }, [activeTenantId, closePalette])
+
+  const runScopedWorkspaceRefresh = async (scope, tenantId, commit) => {
+    if (!tenantId) {
+      commit([])
+      return []
+    }
+
+    const requestId = (refreshRequestRef.current[scope] || 0) + 1
+    refreshRequestRef.current[scope] = requestId
+    traceAsync(`app.${scope}-refresh`, 'start', { tenantId, requestId })
+
     try {
-      const data = await fetchWorkspaceBootstrap(activeTenantId)
-      setTeam(data.team || [])
+      const data = await fetchWorkspaceBootstrap(tenantId)
+      const stale =
+        refreshRequestRef.current[scope] !== requestId ||
+        activeTenantIdRef.current !== tenantId
+
+      if (stale) {
+        traceAsync(`app.${scope}-refresh`, 'cancel', {
+          tenantId,
+          requestId,
+          activeTenantId: activeTenantIdRef.current,
+          reason: 'stale-response',
+        })
+        return null
+      }
+
+      const nextItems = commit(data)
+      traceAsync(`app.${scope}-refresh`, 'resolve', {
+        tenantId,
+        requestId,
+        size: nextItems.length,
+      })
+      return nextItems
     } catch (error) {
-      console.error('Error fetching team:', error)
+      const stale =
+        refreshRequestRef.current[scope] !== requestId ||
+        activeTenantIdRef.current !== tenantId
+
+      if (stale) {
+        traceAsync(`app.${scope}-refresh`, 'cancel', {
+          tenantId,
+          requestId,
+          activeTenantId: activeTenantIdRef.current,
+          reason: 'stale-error',
+          message: error?.message ?? String(error),
+        })
+        return null
+      }
+
+      console.error(`Error fetching ${scope}:`, error)
+      traceAsyncFailure('bootstrap-failure', error, {
+        stage: `app-${scope}-refresh`,
+        tenantId,
+        requestId,
+      })
+      return null
     }
   }
 
+  const fetchTeam = async () => {
+    return runScopedWorkspaceRefresh('team', activeTenantId, (data) => {
+      const nextTeam = data.team || []
+      setTeam(nextTeam)
+      return nextTeam
+    })
+  }
+
   const fetchClients = async () => {
-    try {
-      const data = await fetchWorkspaceBootstrap(activeTenantId)
-      setClients(data.clients || [])
-    } catch (error) {
-      console.error('Error fetching clients:', error)
-    }
+    return runScopedWorkspaceRefresh('clients', activeTenantId, (data) => {
+      const nextClients = data.clients || []
+      setClients(nextClients)
+      return nextClients
+    })
   }
 
   useEffect(() => {
@@ -304,7 +395,13 @@ function App() {
 
   useEffect(() => {
     if (previousTabRef.current !== activeTab) {
-      traceRouteTransition(previousTabRef.current, activeTab, 'complete')
+      const pendingTransition = pendingRouteTransitionRef.current
+      if (pendingTransition && pendingTransition.to === activeTab) {
+        traceRouteTransition(pendingTransition.from, pendingTransition.to, 'complete')
+        pendingRouteTransitionRef.current = null
+      } else {
+        traceRouteTransition(previousTabRef.current, activeTab, 'complete')
+      }
       previousTabRef.current = activeTab
     }
   }, [activeTab])
@@ -316,6 +413,11 @@ function App() {
     if (tab !== 'settings') {
       setPendingSettingsTab(null)
     }
+    const pendingTransition = pendingRouteTransitionRef.current
+    if (pendingTransition && pendingTransition.to !== activeTab) {
+      traceRouteTransition(pendingTransition.from, pendingTransition.to, 'interrupted')
+    }
+    pendingRouteTransitionRef.current = { from: activeTab, to: tab }
     traceRouteTransition(activeTab, tab, 'start')
     startTransition(() => {
       setActiveTab(tab)

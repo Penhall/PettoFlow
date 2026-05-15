@@ -1,6 +1,6 @@
 import { authenticatedFetch } from './apiFetch.js'
 import { getRequiredActiveTenantId } from './activeTenant.js'
-import { traceOwnership } from './diagnostics.js'
+import { isStrictOwnershipMode, traceOwnership } from './diagnostics.js'
 
 const WORKSPACE_CORE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/workspace-core`
 
@@ -48,12 +48,65 @@ function classifyWorkspaceOperation(path) {
   return 'unknown'
 }
 
+function captureCallerFrame() {
+  const stack = new Error().stack?.split('\n').map((line) => line.trim()) || []
+  return stack.find((line) =>
+    line &&
+    !line.includes('workspaceCoreRequest') &&
+    !line.includes('request (') &&
+    !line.includes('workspaceCore.js')
+  ) ?? null
+}
+
+function createStrictOwnershipError(method, path, scope) {
+  const error = new Error(`Strict ownership violation: tenantId is required for workspace-core ${method} ${path}.`)
+  error.code = 'STRICT_TENANT_OWNERSHIP_REQUIRED'
+  error.scope = scope
+  return error
+}
+
 export async function workspaceCoreRequest(path, { method = 'GET', body, query, fallbackMessage, tenantId } = {}) {
+  const scope = classifyWorkspaceOperation(path)
   const usedExplicitTenant = tenantId !== undefined && tenantId !== null && tenantId !== ''
-  const resolvedTenantId = usedExplicitTenant ? tenantId : getRequiredActiveTenantId()
-  traceOwnership(`workspace-core ${method} ${path}`, resolvedTenantId, usedExplicitTenant ? 'explicit' : 'implicit', {
-    scope: classifyWorkspaceOperation(path),
-  })
+  const caller = !usedExplicitTenant && (isStrictOwnershipMode() || import.meta.env.DEV) ? captureCallerFrame() : null
+
+  let resolvedTenantId = tenantId
+  if (!usedExplicitTenant) {
+    if (isStrictOwnershipMode()) {
+      traceOwnership(`workspace-core ${method} ${path}`, null, 'implicit', {
+        scope,
+        enforcement: 'throw',
+        strictMode: true,
+        caller,
+      })
+      throw createStrictOwnershipError(method, path, scope)
+    }
+
+    try {
+      resolvedTenantId = getRequiredActiveTenantId()
+    } catch (error) {
+      traceOwnership(`workspace-core ${method} ${path}`, null, 'implicit', {
+        scope,
+        enforcement: 'tenant-missing',
+        strictMode: false,
+        caller,
+        errorCode: error?.code ?? null,
+      })
+      throw error
+    }
+
+    traceOwnership(`workspace-core ${method} ${path}`, resolvedTenantId, 'implicit', {
+      scope,
+      enforcement: 'fallback',
+      strictMode: false,
+      caller,
+    })
+  } else {
+    traceOwnership(`workspace-core ${method} ${path}`, resolvedTenantId, 'explicit', {
+      scope,
+    })
+  }
+
   const res = await authenticatedFetch(buildUrl(path, query), {
     method,
     body: body === undefined ? undefined : JSON.stringify(body),

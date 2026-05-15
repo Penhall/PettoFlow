@@ -15,6 +15,12 @@ export function usePayees({ tenantId } = {}) {
       return undefined
     }
 
+    if (!tenantId) {
+      setPayees([])
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -36,6 +42,7 @@ export function usePayees({ tenantId } = {}) {
 
   const addPayee = async (name) => {
     if (visualMode) return { id: `visual-${name}`, name }
+    if (!tenantId) return null
 
     try {
       const created = await savePayeeRecord({ name }, tenantId)
@@ -49,6 +56,7 @@ export function usePayees({ tenantId } = {}) {
 
   const updatePayee = async (id, updates) => {
     if (visualMode) return { id, ...updates }
+    if (!tenantId) return null
 
     try {
       const updated = await savePayeeRecord({ id, ...updates }, tenantId)

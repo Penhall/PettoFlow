@@ -19,6 +19,12 @@ export function useActivityTemplates({ tenantId } = {}) {
       return fixtureTemplates
     }
 
+    if (!tenantId) {
+      setTemplates([])
+      setLoading(false)
+      return []
+    }
+
     setLoading(true)
     try {
       const data = await listActivityTemplateRecords(tenantId)
@@ -38,6 +44,7 @@ export function useActivityTemplates({ tenantId } = {}) {
 
   const createTemplate = async (data) => {
     if (visualMode) return data
+    if (!tenantId) return null
 
     try {
       const created = await saveActivityTemplateRecord(data, tenantId)
@@ -51,6 +58,7 @@ export function useActivityTemplates({ tenantId } = {}) {
 
   const updateTemplate = async (id, data) => {
     if (visualMode) return { id, ...data }
+    if (!tenantId) return null
 
     try {
       const updated = await saveActivityTemplateRecord({ id, ...data }, tenantId)
@@ -64,6 +72,7 @@ export function useActivityTemplates({ tenantId } = {}) {
 
   const deleteTemplate = async (id) => {
     if (visualMode) return true
+    if (!tenantId) return false
 
     try {
       await deleteActivityTemplateRecord(id, tenantId)

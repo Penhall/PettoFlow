@@ -141,3 +141,58 @@ test('mounted stress: concurrent startup interruptions do not leave stale shell 
   await expect(page.locator('.sidebar-rail__workspace')).toContainText('Boreal Ops', { timeout: 5000 })
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
 })
+
+test('mounted stress: stale team refresh does not commit across tenant switching', async ({ page }) => {
+  await navigateTo(page, /time/i)
+  await setWorkspace(page, 'fixture-tenant-1', { delayMs: 350 })
+
+  await page.getByRole('button', { name: /novo membro/i }).click()
+  await page.locator('.modal-form input').nth(0).fill('Atlas Stale Member')
+  await page.locator('.modal-form input').nth(1).fill('Operacoes')
+  await page.locator('.modal-form').evaluate((form) => form.requestSubmit())
+
+  await page.locator('#tenant-switcher-select').selectOption('fixture-tenant-2')
+  await expect(page.locator('.sidebar-rail__workspace')).toContainText('Boreal Ops')
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          (window.__NEXUS_DIAG_EVENTS__ || []).filter(
+            (event) => event.kind === 'async' && event.label === 'app.team-refresh' && event.phase === 'cancel',
+          ).length,
+        ),
+      { timeout: 3000 },
+    )
+    .toBeGreaterThan(0)
+  await expect(page.locator('body')).toContainText('Bruna Melo')
+  await expect(page.locator('body')).not.toContainText('Atlas Stale Member')
+  await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+})
+
+test('mounted stress: stale client refresh does not commit across tenant switching', async ({ page }) => {
+  await navigateTo(page, /clientes/i)
+  await setWorkspace(page, 'fixture-tenant-1', { delayMs: 350 })
+
+  await page.getByRole('button', { name: /novo cliente/i }).click()
+  await page.locator('.modal-form input').nth(0).fill('Atlas Stale Client')
+  await page.locator('.modal-form').evaluate((form) => form.requestSubmit())
+
+  await page.locator('#tenant-switcher-select').selectOption('fixture-tenant-2')
+  await expect(page.locator('.sidebar-rail__workspace')).toContainText('Boreal Ops')
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          (window.__NEXUS_DIAG_EVENTS__ || []).filter(
+            (event) => event.kind === 'async' && event.label === 'app.clients-refresh' && event.phase === 'cancel',
+          ).length,
+        ),
+      { timeout: 3000 },
+    )
+    .toBeGreaterThan(0)
+  await expect(page.locator('body')).toContainText('Boreal Holdings')
+  await expect(page.locator('body')).not.toContainText('Atlas Stale Client')
+  await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+})

@@ -3,8 +3,16 @@
  * All output is gated behind the __NEXUS_DIAG__ flag.
  */
 
+const EVENT_BUFFER_KEY = '__NEXUS_DIAG_EVENTS__'
+const MAX_EVENT_BUFFER = 250
+const warnedOwnershipFallbacks = new Set()
+
 function isEnabled() {
   return typeof window !== 'undefined' && Boolean(window.__NEXUS_DIAG__)
+}
+
+export function isStrictOwnershipMode() {
+  return typeof window !== 'undefined' && Boolean(window.__NEXUS_STRICT_OWNERSHIP__)
 }
 
 function stamp() {
@@ -15,12 +23,27 @@ function tag(area) {
   return `[NexusDiag][${stamp()}][${area}]`
 }
 
+function recordEvent(kind, payload = {}) {
+  if (typeof window === 'undefined') return
+  const buffer = Array.isArray(window[EVENT_BUFFER_KEY]) ? window[EVENT_BUFFER_KEY] : []
+  buffer.push({
+    kind,
+    at: new Date().toISOString(),
+    ...payload,
+  })
+  if (buffer.length > MAX_EVENT_BUFFER) {
+    buffer.splice(0, buffer.length - MAX_EVENT_BUFFER)
+  }
+  window[EVENT_BUFFER_KEY] = buffer
+}
+
 export function traceRender(componentName, props = {}) {
   if (!isEnabled()) return
   console.debug(tag('render'), componentName, props)
 }
 
 export function traceAsync(label, phase, detail = null) {
+  recordEvent('async', { label, phase, detail })
   if (!isEnabled()) return
   const phases = { start: 'START', resolve: 'RESOLVE', reject: 'REJECT', cancel: 'CANCEL' }
   console.debug(tag('async'), phases[phase] || phase, label, detail ?? '')
@@ -67,11 +90,13 @@ export function traceSnapshot(label, data) {
 }
 
 export function diagWarn(area, message, detail = null) {
+  recordEvent('warning', { area, message, detail })
   if (!isEnabled()) return
   console.warn(tag(area), 'WARN', message, detail ?? '')
 }
 
 export function traceBootstrap(phase, tenantId = null, detail = null) {
+  recordEvent('bootstrap', { phase, tenantId, detail })
   if (!isEnabled()) return
   const phases = {
     start: 'START',
@@ -86,12 +111,25 @@ export function traceBootstrap(phase, tenantId = null, detail = null) {
 }
 
 export function traceOwnership(operation, tenantId, source, meta = null) {
-  if (!isEnabled()) return
+  recordEvent('ownership', { operation, tenantId, source, meta })
+
+  if (source === 'implicit') {
+    const warningKey = `${operation}:${meta?.scope ?? 'unknown'}`
+    if (!warnedOwnershipFallbacks.has(warningKey)) {
+      warnedOwnershipFallbacks.add(warningKey)
+      console.warn(tag('ownership'), 'IMPLICIT_FALLBACK', operation, `tenant=${tenantId ?? 'none'}`, meta ?? '')
+    }
+    if (!isEnabled()) return
+  } else if (!isEnabled()) {
+    return
+  }
+
   const label = source === 'explicit' ? 'EXPLICIT' : 'IMPLICIT_FALLBACK'
   console.debug(tag('ownership'), label, operation, `tenant=${tenantId ?? 'none'}`, meta ?? '')
 }
 
 export function traceAsyncFailure(type, error, context = null) {
+  recordEvent('async-fault', { type, message: error?.message ?? String(error), context })
   if (!isEnabled()) return
   const classes = {
     'unhandled-rejection': 'UNHANDLED_REJECTION',
@@ -107,7 +145,8 @@ export function traceAsyncFailure(type, error, context = null) {
 }
 
 export function traceRouteTransition(from, to, phase) {
+  recordEvent('route-transition', { from, to, phase })
   if (!isEnabled()) return
-  const phases = { start: 'START', complete: 'COMPLETE', suspended: 'SUSPENDED', error: 'ERROR' }
+  const phases = { start: 'START', complete: 'COMPLETE', suspended: 'SUSPENDED', interrupted: 'INTERRUPTED', error: 'ERROR' }
   console.debug(tag('route-transition'), phases[phase] ?? phase, `${from} -> ${to}`)
 }

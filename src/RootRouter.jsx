@@ -3,28 +3,17 @@ import App from './App.jsx'
 import AdminRoute from './admin/AdminRoute.jsx'
 import TenantGate from './components/tenant/TenantGate.jsx'
 import { TenantProvider } from './context/TenantContext.jsx'
-import { useTenant } from './hooks/useTenant.js'
 
 function getCurrentRoute() {
   if (typeof window === 'undefined') return 'app'
   return window.location.hash.startsWith('#/admin') ? 'admin' : 'app'
 }
 
-function TenantScopedApp() {
-  const { activeTenantId } = useTenant()
-
-  return (
-    <div key={activeTenantId ?? 'tenant-pending'}>
-      <App />
-    </div>
-  )
-}
-
 function TenantAppRoute() {
   return (
     <TenantProvider>
       <TenantGate>
-        <TenantScopedApp />
+        <App />
       </TenantGate>
     </TenantProvider>
   )

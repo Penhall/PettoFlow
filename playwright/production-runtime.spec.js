@@ -21,6 +21,16 @@ async function emitAuth(page, event, nextSession = undefined) {
   }, [event, nextSession])
 }
 
+async function navigateTo(page, labelMatcher) {
+  const target = page.getByRole('button', { name: labelMatcher }).first()
+  const isMobileViewport = await page.evaluate(() => window.matchMedia('(max-width: 768px)').matches)
+  if (isMobileViewport) {
+    await page.getByRole('button', { name: /abrir naveg/i }).click()
+    await expect(page.locator('.sidebar-rail--mobile-open')).toBeVisible()
+  }
+  await target.click()
+}
+
 test('production runtime: successful auth hydration mounts the real app shell', async ({ page }) => {
   await page.goto(RT())
   await page.waitForLoadState('networkidle')
@@ -84,5 +94,33 @@ test('production runtime: startup can target a lazy tab and keep the shell stabl
   await expect(page.locator('body')).toContainText('Carregando NexusCRM')
   await expect(page.locator('.sidebar-rail')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('.topbar-shell')).toBeVisible()
+  await expect(page.locator('.root-error-boundary')).not.toBeVisible()
+})
+
+test('production runtime: strict ownership mode navigates without implicit workspace-core fallback', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__NEXUS_STRICT_OWNERSHIP__ = true
+  })
+
+  await page.goto(RT())
+  await page.waitForLoadState('networkidle')
+
+  await navigateTo(page, /dashboard/i)
+  await navigateTo(page, /finan/i)
+  await navigateTo(page, /atividades/i)
+  await navigateTo(page, /clientes/i)
+  await navigateTo(page, /time/i)
+  await navigateTo(page, /calend/i)
+
+  await page.locator('#tenant-switcher-select').selectOption('fixture-tenant-2')
+  await expect(page.locator('.sidebar-rail__workspace')).toContainText('Boreal Ops')
+
+  const implicitOwnershipEvents = await page.evaluate(() =>
+    (window.__NEXUS_DIAG_EVENTS__ || []).filter(
+      (event) => event.kind === 'ownership' && event.source === 'implicit',
+    ),
+  )
+
+  expect(implicitOwnershipEvents).toEqual([])
   await expect(page.locator('.root-error-boundary')).not.toBeVisible()
 })

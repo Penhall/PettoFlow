@@ -16,6 +16,12 @@ export function useAccounts({ tenantId } = {}) {
       return undefined
     }
 
+    if (!tenantId) {
+      setAccounts([])
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -37,6 +43,7 @@ export function useAccounts({ tenantId } = {}) {
 
   const addAccount = async (account) => {
     if (visualMode) return account
+    if (!tenantId) return null
 
     try {
       const created = await saveAccountRecord(account, tenantId)
@@ -50,6 +57,7 @@ export function useAccounts({ tenantId } = {}) {
 
   const updateAccount = async (id, updates) => {
     if (visualMode) return { id, ...updates }
+    if (!tenantId) return null
 
     try {
       const updated = await saveAccountRecord({ id, ...updates }, tenantId)
@@ -63,6 +71,7 @@ export function useAccounts({ tenantId } = {}) {
 
   const closeAccount = async (id) => {
     if (visualMode) return true
+    if (!tenantId) return null
 
     try {
       const updated = await saveAccountRecord({ id, is_active: false }, tenantId)
@@ -84,6 +93,7 @@ export function useAccounts({ tenantId } = {}) {
 
   const setAccountCategory = async (accountId, category, demotedCategory = 'extras') => {
     if (visualMode) return { accountId, category, demotedCategory }
+    if (!tenantId) return null
 
     if (category === 'principal') {
       const current = getPrincipalAccount()

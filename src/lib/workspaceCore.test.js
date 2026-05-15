@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const authenticatedFetchMock = vi.fn()
 const getRequiredActiveTenantIdMock = vi.fn()
 const traceOwnershipMock = vi.fn()
+const isStrictOwnershipModeMock = vi.fn(() => false)
 
 vi.mock('./apiFetch.js', () => ({
   authenticatedFetch: (...args) => authenticatedFetchMock(...args),
@@ -14,6 +15,7 @@ vi.mock('./activeTenant.js', () => ({
 
 vi.mock('./diagnostics.js', () => ({
   traceOwnership: (...args) => traceOwnershipMock(...args),
+  isStrictOwnershipMode: () => isStrictOwnershipModeMock(),
 }))
 
 import { createTaskRecord, fetchWorkspaceBootstrap } from './workspaceCore.js'
@@ -22,6 +24,7 @@ describe('workspaceCore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     traceOwnershipMock.mockReset()
+    isStrictOwnershipModeMock.mockReturnValue(false)
   })
 
   it('fails fast when there is no active tenant for business calls', async () => {
@@ -60,7 +63,11 @@ describe('workspaceCore', () => {
       'workspace-core GET /bootstrap',
       'tenant-123',
       'implicit',
-      { scope: 'bootstrap' },
+      expect.objectContaining({
+        scope: 'bootstrap',
+        enforcement: 'fallback',
+        strictMode: false,
+      }),
     )
   })
 
@@ -85,6 +92,7 @@ describe('workspaceCore — explicit tenantId threading', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     traceOwnershipMock.mockReset()
+    isStrictOwnershipModeMock.mockReturnValue(false)
     authenticatedFetchMock.mockResolvedValue({
       ok: true,
       status: 200,
@@ -123,7 +131,33 @@ describe('workspaceCore — explicit tenantId threading', () => {
       'workspace-core POST /tasks',
       'fallback-tenant',
       'implicit',
-      { scope: 'tasks' },
+      expect.objectContaining({
+        scope: 'tasks',
+        enforcement: 'fallback',
+        strictMode: false,
+      }),
+    )
+  })
+
+  it('throws before fallback when strict ownership mode is enabled', async () => {
+    isStrictOwnershipModeMock.mockReturnValue(true)
+
+    await expect(createTaskRecord({ title: 'Strict test' })).rejects.toMatchObject({
+      code: 'STRICT_TENANT_OWNERSHIP_REQUIRED',
+      scope: 'tasks',
+    })
+
+    expect(getRequiredActiveTenantIdMock).not.toHaveBeenCalled()
+    expect(authenticatedFetchMock).not.toHaveBeenCalled()
+    expect(traceOwnershipMock).toHaveBeenCalledWith(
+      'workspace-core POST /tasks',
+      null,
+      'implicit',
+      expect.objectContaining({
+        scope: 'tasks',
+        enforcement: 'throw',
+        strictMode: true,
+      }),
     )
   })
 })

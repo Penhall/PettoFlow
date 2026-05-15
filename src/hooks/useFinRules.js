@@ -19,6 +19,12 @@ export function useFinRules({ tenantId } = {}) {
       return undefined
     }
 
+    if (!tenantId) {
+      setRules([])
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -40,6 +46,7 @@ export function useFinRules({ tenantId } = {}) {
 
   const addRule = async (rule) => {
     if (visualMode) return rule
+    if (!tenantId) return null
 
     try {
       const created = await saveFinRuleRecord(rule, tenantId)
@@ -53,6 +60,7 @@ export function useFinRules({ tenantId } = {}) {
 
   const updateRule = async (id, updates) => {
     if (visualMode) return { id, ...updates }
+    if (!tenantId) return null
 
     try {
       const updated = await saveFinRuleRecord({ id, ...updates }, tenantId)
@@ -66,6 +74,7 @@ export function useFinRules({ tenantId } = {}) {
 
   const deleteRule = async (id) => {
     if (visualMode) return true
+    if (!tenantId) return false
 
     try {
       await deleteFinRuleRecord(id, tenantId)

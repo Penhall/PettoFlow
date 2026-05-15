@@ -22,6 +22,7 @@ export default class RootErrorBoundary extends Component {
     this.state = { hasError: false, error: null, retryCount: 0 }
     this.handleReset = this.handleReset.bind(this)
     this._unhandledRejectionHandler = null
+    this._errorHandler = null
   }
 
   componentDidMount() {
@@ -35,12 +36,27 @@ export default class RootErrorBoundary extends Component {
       )
       traceAsyncFailure('unhandled-rejection', event.reason, { component: 'RootErrorBoundary' })
     }
+    this._errorHandler = (event) => {
+      const error = event.error instanceof Error
+        ? event.error
+        : new Error(event.message || 'Erro assíncrono não tratado.')
+      traceAsyncFailure('async-event', error, {
+        component: 'RootErrorBoundary',
+        filename: event.filename || null,
+        lineno: event.lineno || null,
+        colno: event.colno || null,
+      })
+    }
     window.addEventListener('unhandledrejection', this._unhandledRejectionHandler)
+    window.addEventListener('error', this._errorHandler)
   }
 
   componentWillUnmount() {
     if (this._unhandledRejectionHandler) {
       window.removeEventListener('unhandledrejection', this._unhandledRejectionHandler)
+    }
+    if (this._errorHandler) {
+      window.removeEventListener('error', this._errorHandler)
     }
   }
 

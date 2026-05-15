@@ -22,6 +22,12 @@ export function useActivities({ tenantId } = {}) {
       return undefined
     }
 
+    if (!tenantId) {
+      setActivities([])
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -43,6 +49,7 @@ export function useActivities({ tenantId } = {}) {
 
   const addActivity = async (activity) => {
     if (visualMode) return activity
+    if (!tenantId) return null
 
     try {
       const created = await saveActivityRecord(activity, tenantId)
@@ -56,6 +63,7 @@ export function useActivities({ tenantId } = {}) {
 
   const updateActivity = async (id, updates) => {
     if (visualMode) return { id, ...updates }
+    if (!tenantId) return null
 
     try {
       const updated = await saveActivityRecord({ id, ...updates }, tenantId)
@@ -69,6 +77,7 @@ export function useActivities({ tenantId } = {}) {
 
   const deleteActivity = async (id) => {
     if (visualMode) return true
+    if (!tenantId) return false
 
     try {
       await deleteActivityRecord(id, tenantId)

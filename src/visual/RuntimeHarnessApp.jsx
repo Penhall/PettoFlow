@@ -1,8 +1,10 @@
+import { Suspense, useEffect, useState } from 'react'
 import ProtectedRoute from '../components/auth/ProtectedRoute.jsx'
 import TenantGate from '../components/tenant/TenantGate.jsx'
 import App from '../App.jsx'
 import { AuthContext } from '../context/authContext.js'
 import { TenantContext } from '../context/tenantContext.js'
+import { lazyWithRetry } from '../lib/lazyWithRetry.js'
 import { FIXTURE_AUTH_VALUE, FIXTURE_TENANT_VALUE } from './harnessFixtures.js'
 
 function readHarnessMode() {
@@ -33,12 +35,56 @@ const TENANT_ERROR_FIXTURE = {
   activeTenant: null,
   hasTenant: false,
   tenants: [],
-  error: 'Erro simulado ao carregar espaços de trabalho.',
+  error: 'Erro simulado ao carregar espacos de trabalho.',
 }
+
+const LazyRejectSurface = lazyWithRetry(
+  async () => {
+    throw new Error('Harness lazy import rejection')
+  },
+  'runtime-harness-lazy-reject',
+)
 
 // Intentionally crashes on every render to test RootErrorBoundary behavior.
 function CrashTestSurface() {
   throw new Error('Crash test: intentional render failure for boundary validation')
+}
+
+function AsyncRejectionSurface() {
+  useEffect(() => {
+    void Promise.reject(new Error('Harness async rejection'))
+  }, [])
+
+  return <div data-testid="async-rejection-surface">Async rejection harness armed.</div>
+}
+
+function AsyncEventSurface() {
+  const [triggered, setTriggered] = useState(false)
+
+  return (
+    <div data-testid="async-event-surface">
+      <button
+        type="button"
+        onClick={() => {
+          setTriggered(true)
+          window.setTimeout(() => {
+            throw new Error('Harness async event failure')
+          }, 0)
+        }}
+      >
+        Trigger async event failure
+      </button>
+      {triggered ? <span>Triggered.</span> : null}
+    </div>
+  )
+}
+
+function LazyRejectHarness() {
+  return (
+    <Suspense fallback={<div data-testid="lazy-reject-fallback">Loading lazy reject harness...</div>}>
+      <LazyRejectSurface />
+    </Suspense>
+  )
 }
 
 function AppTopologyShell({ authValue, tenantValue }) {
@@ -66,7 +112,18 @@ export default function RuntimeHarnessApp() {
     return <CrashTestSurface />
   }
 
-  // ── Legacy fixture modes (ProtectedRoute only, no full app) ──────────────────
+  if (mode === 'async-rejection') {
+    return <AsyncRejectionSurface />
+  }
+
+  if (mode === 'async-event') {
+    return <AsyncEventSurface />
+  }
+
+  if (mode === 'lazy-reject') {
+    return <LazyRejectHarness />
+  }
+
   if (mode === 'unauthenticated') {
     return (
       <AuthContext.Provider value={UNAUTHENTICATED_FIXTURE}>
@@ -95,7 +152,6 @@ export default function RuntimeHarnessApp() {
     )
   }
 
-  // ── Phase 28: real app-topology modes ────────────────────────────────────────
   if (mode === 'app-topology') {
     return (
       <AppTopologyShell
@@ -132,7 +188,6 @@ export default function RuntimeHarnessApp() {
     )
   }
 
-  // fallback: default authenticated fixture (legacy behaviour)
   return (
     <AuthContext.Provider value={FIXTURE_AUTH_VALUE}>
       <TenantContext.Provider value={FIXTURE_TENANT_VALUE}>

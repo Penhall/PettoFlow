@@ -21,6 +21,12 @@ export function useReceivables({ tenantId } = {}) {
       return fixtureReceivables
     }
 
+    if (!tenantId) {
+      setReceivables([])
+      setLoading(false)
+      return []
+    }
+
     setLoading(true)
     try {
       const data = await listReceivableRecords(tenantId)
@@ -40,6 +46,7 @@ export function useReceivables({ tenantId } = {}) {
 
   const createReceivable = async (taskId, amount, targetAccountId) => {
     if (visualMode) return { task_id: taskId, amount, target_account_id: targetAccountId }
+    if (!tenantId) return null
 
     try {
       const created = await createReceivableRecord({
@@ -58,6 +65,7 @@ export function useReceivables({ tenantId } = {}) {
 
   const createReceivableFromActivity = async (activityId, amount, targetAccountId, dueDate = null) => {
     if (visualMode) return { activity_id: activityId, amount, target_account_id: targetAccountId, due_date: dueDate }
+    if (!tenantId) return null
 
     try {
       const created = await createReceivableRecord({
@@ -79,6 +87,7 @@ export function useReceivables({ tenantId } = {}) {
     if (visualMode) {
       return receivables.find((receivable) => receivable.id === receivableId) ?? { amount: adjustedAmount, date }
     }
+    if (!tenantId) return null
 
     const receivable = receivables.find((item) => item.id === receivableId)
     if (!receivable) return null

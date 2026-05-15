@@ -52,6 +52,12 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
       return undefined
     }
 
+    if (!tenantId) {
+      setTransactions([])
+      setLoading(false)
+      return undefined
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -78,6 +84,7 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
 
   const addTransaction = async (form) => {
     if (visualMode) return form
+    if (!tenantId) return null
 
     const { enriched, ruleMatched } = runRulesEngine(form, getSortedRules())
     const dbPayload = { ...enriched }
@@ -96,6 +103,7 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
 
   const updateTransaction = async (id, updates) => {
     if (visualMode) return { id, ...updates }
+    if (!tenantId) return null
 
     const dbUpdates = { ...updates }
     delete dbUpdates.payee_name
@@ -112,6 +120,7 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
 
   const deleteTransaction = async (id) => {
     if (visualMode) return true
+    if (!tenantId) return false
 
     try {
       await deleteTransactionRecord(id, tenantId)
@@ -125,6 +134,7 @@ export function useTransactions(optionsOrFilters = {}, maybeRules = []) {
 
   const applyRules = async () => {
     if (visualMode) return true
+    if (!tenantId) return false
 
     const sortedRules = getSortedRules()
     const pendingTransactions = transactions.filter((transaction) => transaction.needs_review)
