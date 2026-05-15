@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { traceAsyncFailure } from './diagnostics.js'
+import { traceAsyncFailure, countChunkLoadError } from './diagnostics.js'
 
 const STORAGE_PREFIX = 'nexuscrm_lazy_retry:'
 const CHUNK_ERROR_PATTERN =
@@ -22,6 +22,7 @@ export function lazyWithRetry(importer, cacheKey) {
 
       return module
     } catch (error) {
+      countChunkLoadError()
       const message = error instanceof Error ? error.message : String(error)
       const shouldReload =
         typeof window !== 'undefined' &&

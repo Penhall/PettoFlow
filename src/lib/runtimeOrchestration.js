@@ -1,3 +1,5 @@
+import { countStaleRequestInterruption } from './diagnostics.js'
+
 export const RUNTIME_PHASES = {
   BOOTSTRAP_IDLE: 'BOOTSTRAP_IDLE',
   AUTH_HYDRATING: 'AUTH_HYDRATING',
@@ -67,6 +69,11 @@ export function createInitialRuntimeOrchestrationState() {
 
 export function deriveRuntimePhase(state) {
   if (state.recovering) {
+    // Se recovering scope não bate com o erro ativo, o BOOTSTRAP_ERROR
+    // deve prevalecer para evitar deadlock visual.
+    if (state.lastError && state.lastError.scope !== state.recovering.scope) {
+      return RUNTIME_PHASES.BOOTSTRAP_ERROR
+    }
     return RUNTIME_PHASES.RECOVERING
   }
 
@@ -176,6 +183,7 @@ export function reduceRuntimeOrchestrationState(state, action) {
 
     case 'TENANT_LOAD_RESOLVE': {
       if (action.payload.requestId < state.tenant.requestId) {
+        countStaleRequestInterruption()
         return state
       }
 
@@ -201,6 +209,7 @@ export function reduceRuntimeOrchestrationState(state, action) {
 
     case 'TENANT_LOAD_ERROR': {
       if (action.payload.requestId < state.tenant.requestId) {
+        countStaleRequestInterruption()
         return state
       }
 
@@ -267,6 +276,7 @@ export function reduceRuntimeOrchestrationState(state, action) {
 
     case 'WORKSPACE_LOAD_RESOLVE': {
       if (action.payload.requestId < state.workspace.requestId) {
+        countStaleRequestInterruption()
         return state
       }
 
@@ -287,6 +297,7 @@ export function reduceRuntimeOrchestrationState(state, action) {
 
     case 'WORKSPACE_LOAD_ERROR': {
       if (action.payload.requestId < state.workspace.requestId) {
+        countStaleRequestInterruption()
         return state
       }
 
