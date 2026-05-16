@@ -202,7 +202,10 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) throw error
     setMfaChallenge(null)
-    localStorage.clear()
+    // Surgical cleanup: only remove app-specific keys, preserve user preferences
+    for (const key of ['nexuscrm_active_tenant_id', 'nexus_flags', 'pettoflow_initial_tab']) {
+      localStorage.removeItem(key)
+    }
     sessionStorage.clear()
     window.location.href = '/'
   }

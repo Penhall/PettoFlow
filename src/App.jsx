@@ -537,7 +537,6 @@ function App() {
       }
     }
     window.addEventListener('hashchange', handler)
-    handler()
     return () => window.removeEventListener('hashchange', handler)
   }, [handleTabChange])
 
