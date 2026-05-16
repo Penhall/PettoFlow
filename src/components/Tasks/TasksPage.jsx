@@ -1,17 +1,12 @@
+import { useMemo } from 'react'
 import { ArrowUpDown, Filter } from 'lucide-react'
+import { isEnabled } from '../../lib/featureFlags.js'
+import BatchActionBar from './BatchActionBar.jsx'
 import ContextualHint from '../onboarding/ContextualHint.jsx'
 import EmptyState from '../shared/EmptyState.jsx'
 import PageActionBar from '../shared/PageActionBar.jsx'
 import PageHeader from '../shared/PageHeader.jsx'
 import PageTabs from '../shared/PageTabs.jsx'
-
-const TASK_VIEW_ITEMS = [
-  { id: 'kanban', label: 'Kanban' },
-  { id: 'list', label: 'Lista' },
-  { id: 'overview', label: 'Visão geral' },
-  { id: 'files', label: 'Arquivos' },
-  { id: 'calendar', label: 'Calendário' },
-]
 
 function DropdownAction({
   label,
@@ -55,10 +50,34 @@ export default function TasksPage({
   onCreateTask,
   taskCount,
   content,
+  selectedTaskIds = new Set(),
+  onSelectionChange,
+  onBatchMoveToColumn,
+  onBatchAssign,
+  onBatchDelete,
+  columns = [],
+  teamMembers = [],
+  batchMode = false,
   emptyState = null,
   contextualHint = null,
 }) {
   const shouldRenderEmptyState = Boolean(emptyState && taskCount === 0 && viewType !== 'calendar')
+  const selectedCount = typeof selectedTaskIds?.size === 'number'
+    ? selectedTaskIds.size
+    : selectedTaskIds?.length || 0
+  const taskViewItems = useMemo(() => {
+    const items = [
+      { id: 'kanban', label: 'Kanban' },
+      { id: 'list', label: 'Lista' },
+      { id: 'overview', label: 'Visão geral' },
+      { id: 'files', label: 'Arquivos' },
+      { id: 'calendar', label: 'Calendário' },
+    ]
+    if (!isEnabled('calendar_view')) {
+      return items.filter(item => item.id !== 'calendar')
+    }
+    return items
+  }, [])
 
   return (
     <div className="tasks-page">
@@ -69,11 +88,23 @@ export default function TasksPage({
       />
 
       <PageTabs
-        items={TASK_VIEW_ITEMS}
+        items={taskViewItems}
         activeId={viewType}
         onChange={setViewType}
         ariaLabel="Views de tarefas"
       />
+
+      {selectedCount > 0 && batchMode && isEnabled('batch_operations') ? (
+        <BatchActionBar
+          selectedCount={selectedCount}
+          columns={columns}
+          teamMembers={teamMembers}
+          onMoveToColumn={onBatchMoveToColumn}
+          onAssign={onBatchAssign}
+          onDelete={onBatchDelete}
+          onClearSelection={() => onSelectionChange?.(new Set())}
+        />
+      ) : null}
 
       <PageActionBar
         searchValue={searchQuery}

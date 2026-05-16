@@ -76,4 +76,33 @@ describe('ListView', () => {
     expect(screen.getByRole('columnheader', { name: 'Tarefa' })).toBeInTheDocument()
     expect(screen.queryByText('Nenhuma tarefa encontrada')).not.toBeInTheDocument()
   })
+
+  it('toggles task selection when batch mode is enabled', () => {
+    const onSelectionChange = vi.fn()
+
+    render(
+      <ListView
+        tasks={[
+          {
+            id: 3,
+            title: 'Enviar proposta',
+            status: 'Backlog',
+            priority: 'Alta',
+            owner: 'Ana',
+            progress: 0,
+          },
+        ]}
+        columns={[{ id: 1, name: 'Backlog', order_index: 1 }]}
+        onUpdateTask={() => {}}
+        onDeleteTask={() => {}}
+        selectedTaskIds={new Set()}
+        onSelectionChange={onSelectionChange}
+        batchMode
+      />
+    )
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /selecionar enviar proposta/i }))
+
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set([3]))
+  })
 })

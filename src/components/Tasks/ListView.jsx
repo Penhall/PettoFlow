@@ -3,8 +3,17 @@ import { Trash2, ArrowRight } from 'lucide-react'
 const STATUS_CLASS = { 'A Fazer': 'todo', 'Em Progresso': 'progress', 'Concluído': 'done' }
 const PRIORITY_CLASS = { 'Alta': 'alta', 'Média': 'media', 'Baixa': 'baixa' }
 
-const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
+const ListView = ({
+  tasks,
+  columns = [],
+  onUpdateTask,
+  onDeleteTask,
+  selectedTaskIds = new Set(),
+  onSelectionChange,
+  batchMode = false,
+}) => {
   const orderedColumns = [...columns].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+  const selectedIds = selectedTaskIds instanceof Set ? selectedTaskIds : new Set(selectedTaskIds)
 
   const getNextStatus = (current) => {
     if (!orderedColumns.length) return current
@@ -25,11 +34,22 @@ const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
     return 'progress'
   }
 
+  const toggleTaskSelection = (taskId) => {
+    const next = new Set(selectedIds)
+    if (next.has(taskId)) {
+      next.delete(taskId)
+    } else {
+      next.add(taskId)
+    }
+    onSelectionChange?.(next)
+  }
+
   return (
     <div className="list-view">
       <table className="task-table">
         <thead>
           <tr>
+            {batchMode ? <th className="task-table__selection">Selecionar</th> : null}
             <th>Tarefa</th>
             <th>Status</th>
             <th>Prioridade</th>
@@ -41,6 +61,16 @@ const ListView = ({ tasks, columns = [], onUpdateTask, onDeleteTask }) => {
         <tbody>
           {tasks.map(task => (
             <tr key={task.id}>
+              {batchMode ? (
+                <td className="task-table__selection">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(task.id)}
+                    onChange={() => toggleTaskSelection(task.id)}
+                    aria-label={`Selecionar ${task.title || 'tarefa'}`}
+                  />
+                </td>
+              ) : null}
               <td>{task.title || 'Sem título'}</td>
               <td>
                 <span className={`status-badge ${getStatusClass(task.status)}`}>

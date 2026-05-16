@@ -118,6 +118,7 @@ function App() {
   const [tourOpen, setTourOpen] = useState(false)
   const [tourStepIndex, setTourStepIndex] = useState(0)
   const [tourAutoPrompted, setTourAutoPrompted] = useState(false)
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set())
   const [shellError, setShellError] = useState('')
 
   const { user, signOut, isPlatformAdmin } = useAuth()
@@ -444,6 +445,7 @@ function App() {
   const tourStateLastStep = onboarding.state.tourState?.last_step
 
   useEffect(() => {
+    if (!isEnabled('guided_tour_enabled')) return
     if (!activeTenantId || onboardingLoading || tourAutoPrompted) return
     if (activeTab !== 'dashboard') return
 
@@ -682,6 +684,33 @@ function App() {
     })
   }
 
+  const clearSelectedTasks = () => setSelectedTaskIds(new Set())
+
+  const batchMoveTasksToColumn = (columnId) => {
+    const column = columns.find((item) => String(item.id) === String(columnId))
+    if (!column) return
+    selectedTaskIds.forEach((id) => {
+      void updateTask(id, { status: column.name })
+    })
+    clearSelectedTasks()
+  }
+
+  const batchAssignTasks = (memberId) => {
+    const member = team.find((item) => String(item.id) === String(memberId))
+    if (!member) return
+    selectedTaskIds.forEach((id) => {
+      void updateTask(id, { owner: member.name })
+    })
+    clearSelectedTasks()
+  }
+
+  const batchDeleteTasks = () => {
+    selectedTaskIds.forEach((id) => {
+      void deleteTask(id)
+    })
+    clearSelectedTasks()
+  }
+
   const archiveTask = async (id) => {
     if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.archive', code: 'missing_tenant' })
     return runMutation('tasks.archive', async () => {
@@ -864,6 +893,14 @@ function App() {
             setShowFilterMenu={setShowFilterMenu}
             onCreateTask={() => openAddModal()}
             taskCount={filteredTasks.length}
+            selectedTaskIds={selectedTaskIds}
+            onSelectionChange={setSelectedTaskIds}
+            onBatchMoveToColumn={batchMoveTasksToColumn}
+            onBatchAssign={batchAssignTasks}
+            onBatchDelete={batchDeleteTasks}
+            columns={columns}
+            teamMembers={team}
+            batchMode={isEnabled('batch_operations')}
             emptyState={{
               title: 'O board começa com a primeira tarefa real da operação',
               description: 'Use tarefas para concentrar execução, prioridade e responsabilidade no mesmo fluxo.',
@@ -918,6 +955,9 @@ function App() {
                     columns={columns}
                     onUpdateTask={updateTask}
                     onDeleteTask={deleteTask}
+                    selectedTaskIds={selectedTaskIds}
+                    onSelectionChange={setSelectedTaskIds}
+                    batchMode={isEnabled('batch_operations')}
                   />
                 )}
                 {viewType === 'overview' && <OverviewView tasks={filteredTasks} />}

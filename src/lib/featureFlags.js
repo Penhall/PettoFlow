@@ -34,6 +34,11 @@ const DEFAULT_FLAGS = {
   // Rollout controls
   telegram_integration: true,          // allow Telegram integration in settings
   finance_rules_engine: true,          // allow finance rules engine
+
+  // Feature visibility (Fase B)
+  guided_tour_enabled: true,           // auto-prompt onboarding tour on dashboard
+  batch_operations: true,              // batch select/update/delete tasks
+  calendar_view: true,                 // calendar tab in tasks view
 }
 
 function readLocalStorageFlags() {

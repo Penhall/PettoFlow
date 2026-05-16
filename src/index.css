@@ -1954,6 +1954,72 @@ label {
   color: #f7f6f1;
 }
 
+.batch-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--border-subtle) 36%, var(--card-bg));
+}
+
+.batch-action-bar__summary {
+  flex-shrink: 0;
+  color: var(--text-main);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.batch-action-bar__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.batch-action-bar__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.batch-action-bar__select,
+.batch-action-bar__button {
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 76%, transparent);
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.batch-action-bar__select {
+  padding: 0 10px;
+}
+
+.batch-action-bar__button {
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.batch-action-bar__button--danger {
+  border-color: color-mix(in srgb, #dc2626 44%, var(--border-subtle));
+  background: color-mix(in srgb, #dc2626 12%, var(--card-bg));
+  color: #b91c1c;
+}
+
+.task-table__selection {
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .empty-state {
   display: grid;
   justify-items: start;
