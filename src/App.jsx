@@ -1,4 +1,4 @@
-import { Suspense, startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import OnboardingPanel from './components/onboarding/OnboardingPanel.jsx'
 import OnboardingTour from './components/onboarding/OnboardingTour.jsx'
@@ -61,17 +61,27 @@ const PlansPage = lazyWithRetry(() => import('./components/admin/PlansPage.jsx')
 const DiagnosticsPanel = lazyWithRetry(() => import('./components/admin/DiagnosticsPanel.jsx'), 'admin-diagnostics')
 
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
-const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit', 'admin-plans', 'admin-diagnostics'])
+const VALID_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit', 'admin-plans', 'admin-diagnostics'])
 const CONTENT_SEARCH_TABS = new Set(['time', 'clientes', 'tutoriais'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
 const TAB_LOADING_LABELS = LOADING_TEXT.tabs
 const TAB_ERROR_LABELS = SHELL_TEXT.tabErrorLabels
 
+function isAdminRoute(tab) {
+  return typeof tab === 'string' && tab.startsWith('admin-')
+}
+
+function isValidTab(tab) {
+  return VALID_TABS.has(tab) || isAdminRoute(tab)
+}
+
 function readInitialAppTab() {
   if (typeof window === 'undefined') return 'tarefas'
   const url = new URL(window.location.href)
+  const hashTab = window.location.hash.slice(1).trim()
+  if (isValidTab(hashTab)) return hashTab
   const nextTab = url.searchParams.get('tab')?.trim() || ''
-  return APP_TABS.has(nextTab) ? nextTab : 'tarefas'
+  return isValidTab(nextTab) ? nextTab : 'tarefas'
 }
 
 function readInitialSettingsTab() {
@@ -475,38 +485,61 @@ function App() {
     }
   }, [activeTab, completeTransition])
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = useCallback((tab) => {
+    const nextTab = typeof tab === 'string' ? tab.trim() : ''
+    if (!isValidTab(nextTab)) return
+
+    if (typeof window !== 'undefined' && window.location.hash.slice(1) !== nextTab) {
+      window.location.hash = nextTab
+    }
+
     // Close the palette synchronously so it disappears immediately rather than
     // staying visible while the deferred tab transition is in-flight.
     closePalette()
-    if (tab !== 'settings') {
+    if (nextTab !== 'settings') {
       setPendingSettingsTab(null)
     }
+    if (nextTab === activeTab) return
+
     const pendingTransition = pendingRouteTransitionRef.current
+    if (pendingTransition?.to === nextTab) return
+
     if (pendingTransition && pendingTransition.to !== activeTab) {
       traceTransitionConflict('route', pendingTransition, {
         from: activeTab,
-        to: tab,
+        to: nextTab,
         source: 'tab-change',
       })
       traceRouteTransition(pendingTransition.from, pendingTransition.to, 'interrupted')
       interruptTransition('route', pendingTransition)
     }
-    pendingRouteTransitionRef.current = { from: activeTab, to: tab }
-    traceRouteTransition(activeTab, tab, 'start')
+    pendingRouteTransitionRef.current = { from: activeTab, to: nextTab }
+    traceRouteTransition(activeTab, nextTab, 'start')
     startRuntimeTransition('route', {
       from: activeTab,
-      to: tab,
+      to: nextTab,
       detail: { source: 'tab-change' },
     })
     startTransition(() => {
-      setActiveTab(tab)
+      setActiveTab(nextTab)
       setSearchQuery('')
       setTutorialSearchQuery('')
       setShowFilterMenu(false)
       setShowSortMenu(false)
     })
-  }
+  }, [activeTab, closePalette, interruptTransition, startRuntimeTransition])
+
+  useEffect(() => {
+    const handler = () => {
+      const hash = window.location.hash.slice(1) || 'dashboard'
+      if (isValidTab(hash)) {
+        handleTabChange(hash)
+      }
+    }
+    window.addEventListener('hashchange', handler)
+    handler()
+    return () => window.removeEventListener('hashchange', handler)
+  }, [handleTabChange])
 
   const handleOpenTour = () => {
     const lastStep = Number(onboarding.state.tourState?.last_step || 0)
@@ -758,7 +791,7 @@ function App() {
         }
 
   const renderContent = () => {
-    if (bootstrapError) {
+    if (bootstrapError && !isAdminRoute(activeTab)) {
       const safeBootstrapError = bootstrapError?.diagnostics
         ? bootstrapError
         : normalizeError(bootstrapError, { operation: 'workspace.bootstrap' })
@@ -1076,6 +1109,7 @@ function App() {
             showSearch
             onMenuToggle={handleShellMenuToggle}
             isPlatformAdmin={isPlatformAdmin}
+            onOpenAdmin={() => handleTabChange('admin-dashboard')}
             profileMenu={(
               <ProfileMenu
                 user={user}

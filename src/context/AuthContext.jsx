@@ -199,9 +199,12 @@ export function AuthProvider({ children }) {
       throw getMissingConfigError()
     }
 
-    const { error } = await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) throw error
     setMfaChallenge(null)
+    localStorage.clear()
+    sessionStorage.clear()
+    window.location.href = '/'
   }
 
   return (
