@@ -10,6 +10,7 @@ import { useRuntimeOrchestration } from './useRuntimeOrchestration.js'
 import { getOnboardingState, recordOnboardingEvent, updateOnboardingState } from '../lib/onboardingApi.js'
 import { CURRENT_ONBOARDING_VERSION } from '../lib/onboardingState.js'
 import { ONBOARDING_CHECKLIST, QUICK_ACTIONS, TUTORIAL_CATALOG } from '../lib/tutorialCatalog.js'
+import { isEnabled } from '../lib/featureFlags.js'
 import { readSuccess, runReadWithRetry } from '../lib/readResult.js'
 
 function buildFallbackState() {
@@ -94,6 +95,7 @@ export function useOnboarding({ tenantId, enabled = true }) {
           const loadError = new Error(result.error?.message || 'Não foi possível carregar o onboarding.')
           loadError.code = result.error?.code
           loadError.diagnostics = result.error?.diagnostics
+          loadError.showRecovery = isEnabled('onboarding_recovery_prompt')
           setError(loadError)
           traceAsyncFailure('onboarding-failure', new Error(result.error?.diagnostics?.rawMessage || result.error?.message), { stage: 'load', tenantId })
           countOnboardingRetry()

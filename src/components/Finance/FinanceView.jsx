@@ -24,7 +24,8 @@ import SurfaceCard from '../shared/SurfaceCard.jsx'
 import EmptyState from '../shared/EmptyState.jsx'
 import { calculateFinanceTotals } from '../../lib/financeUtils'
 import { centsToReal } from '../../lib/finUtils'
-import { getMutationData, getMutationMessage, isMutationOk } from '../../lib/mutationResult.js'
+import { isEnabled } from '../../lib/featureFlags.js'
+import { isMutationOk, getMutationMessage, getMutationData } from '../../lib/mutationResult.js'
 
 const FINANCE_TABS = [
   { id: 'extrato', label: 'Extrato' },
@@ -323,6 +324,9 @@ const FinanceView = ({
             const result = await invoiceReceivable(id, amount, date, addTransaction)
             if (!isMutationOk(result)) {
               setFormError(getMutationMessage(result))
+              if (result.code?.startsWith('partial_') && isEnabled('partial_failure_warning')) {
+                setFormError('Faturamento foi criado parcialmente. Verifique se a transação foi registrada corretamente e tente novamente.')
+              }
               return result
             }
             refreshReceivables()

@@ -25,6 +25,7 @@ import { lazyWithRetry } from './lib/lazyWithRetry.js'
 import { fail, getMutationData, isMutationOk, normalizeError, ok, runMutation } from './lib/mutationResult.js'
 import { traceAsync, traceAsyncFailure, traceBootstrap, traceRouteTransition, traceTransitionConflict } from './lib/diagnostics.js'
 import { readFailure, readSuccess, runReadWithRetry } from './lib/readResult.js'
+import { isEnabled } from './lib/featureFlags.js'
 import { MOTION_TRANSITIONS } from './lib/motionTokens.js'
 import { TUTORIAL_CATEGORIES } from './lib/tutorialCatalog.js'
 import { ACTION_TEXT, EMPTY_STATE_TEXT, ERROR_TEXT, LOADING_TEXT, SHELL_TEXT } from './content/uxText.js'
@@ -57,9 +58,10 @@ const AdminDashboard = lazyWithRetry(() => import('./components/admin/AdminDashb
 const TenantsPage = lazyWithRetry(() => import('./components/admin/TenantsPage.jsx'), 'admin-tenants')
 const AuditPage = lazyWithRetry(() => import('./components/admin/AuditPage.jsx'), 'admin-audit')
 const PlansPage = lazyWithRetry(() => import('./components/admin/PlansPage.jsx'), 'admin-plans')
+const DiagnosticsPanel = lazyWithRetry(() => import('./components/admin/DiagnosticsPanel.jsx'), 'admin-diagnostics')
 
 const PRIORITY_ORDER = { Alta: 3, Media: 2, Baixa: 1, 'Média': 2 }
-const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit', 'admin-plans'])
+const APP_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'time', 'clientes', 'arquivo', 'calendario', 'tutoriais', 'settings', 'admin-dashboard', 'admin-tenants', 'admin-audit', 'admin-plans', 'admin-diagnostics'])
 const CONTENT_SEARCH_TABS = new Set(['time', 'clientes', 'tutoriais'])
 const COMMAND_PALETTE_SEARCH_TABS = new Set(['dashboard', 'tarefas', 'atividades', 'financas', 'arquivo', 'calendario', 'settings'])
 const TAB_LOADING_LABELS = LOADING_TEXT.tabs
@@ -638,6 +640,9 @@ function App() {
 
   const deleteTask = async (id) => {
     if (!activeTenantId) return fail(new Error('tenant required'), { operation: 'tasks.delete', code: 'missing_tenant' })
+    if (isEnabled('destructive_action_confirm') && !window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
+      return fail(new Error('cancelled'), { operation: 'tasks.delete', code: 'cancelled' })
+    }
     return runMutation('tasks.delete', async () => {
       await deleteTaskRecord(id, activeTenantId)
       setTasks((prev) => prev.filter((task) => task.id !== id))
@@ -1039,6 +1044,7 @@ function App() {
       case 'admin-tenants': return <TenantsPage />
       case 'admin-audit': return <AuditPage />
       case 'admin-plans': return <PlansPage />
+      case 'admin-diagnostics': return <DiagnosticsPanel />
       default:
         return null
     }
