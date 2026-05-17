@@ -84,3 +84,12 @@ export async function removeMember(tenantId, membershipId) {
   })
   return parseResponse(res, 'Erro ao remover membro')
 }
+
+export async function deleteInvitation(tenantId, invitationId) {
+  const res = await authenticatedFetch(`${INVITE_MEMBER_URL}/tenants/${tenantId}/invitations/${invitationId}`, {
+    method: 'DELETE',
+    tenantId,
+    requireTenant: true,
+  })
+  return parseResponse(res, 'Erro ao excluir convite')
+}

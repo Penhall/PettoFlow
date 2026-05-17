@@ -229,6 +229,38 @@ Deno.serve(async (req: Request) => {
       return ctx.ok({ item: invitation, delivery }, 201)
     }
 
+    if (request.method === 'DELETE' && subresource === 'invitations' && memberId && !action) {
+      const { data, error } = await sb.rpc('delete_invitation', {
+        p_actor_user_id: auth.user.id,
+        p_tenant_id: tenantAccess.tenantId,
+        p_invitation_id: memberId,
+      })
+
+      if (error) {
+        const normalized = normalizeRpcError(error, 'Erro ao excluir convite.')
+        return ctx.fail(normalized.status, 'invitation_delete_failed', normalized.error)
+      }
+
+      await writeAuditLog({
+        tenantId: tenantAccess.tenantId,
+        userId: auth.user.id,
+        action: 'membership.invite_deleted',
+        resourceType: 'invitation',
+        resourceId: memberId,
+        metadata: {
+          deleted_invitation_id: data ?? memberId,
+        },
+      })
+
+      ctx.log('info', 'invitation_deleted', {
+        user_id: auth.user.id,
+        tenant_id: tenantAccess.tenantId,
+        invitation_id: memberId,
+      })
+
+      return ctx.ok({ invitationId: data }, 200)
+    }
+
     if (request.method === 'PATCH' && subresource === 'members' && memberId && action === 'role') {
       const body = toRecord(await request.json())
       const role = parseRole(body.role)

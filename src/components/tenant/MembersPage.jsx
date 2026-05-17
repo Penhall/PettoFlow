@@ -37,6 +37,7 @@ export default function MembersPage() {
     invitations,
     loading,
     error,
+    deleteInvitation,
     inviteMember,
     updateMemberRole,
     setMemberStatus,
@@ -271,6 +272,21 @@ export default function MembersPage() {
                               title="Reenviar convite"
                             >
                               Reenviar
+                            </button>
+                            <button
+                              type="button"
+                              className="delete-task-btn"
+                              onClick={async () => {
+                                try {
+                                  await deleteInvitation(invitation.id)
+                                  setInviteSuccess(`Convite para ${invitation.email} excluído.`)
+                                } catch (err) {
+                                  setInviteError(err instanceof Error ? err.message : 'Erro ao excluir convite.')
+                                }
+                              }}
+                              title="Excluir convite"
+                            >
+                              Excluir
                             </button>
                           </div>
                         </td>

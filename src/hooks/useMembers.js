@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTenant } from './useTenant.js'
 import {
+  deleteInvitation as deleteInvitationRequest,
   inviteMember as inviteMemberRequest,
   listInvitations,
   listMembers,
@@ -123,6 +124,16 @@ export function useMembers() {
     return result
   }
 
+  async function deleteInvitation(invitationId) {
+    if (!activeTenantId) {
+      throw new Error('Espaço de trabalho ativo obrigatório para excluir convite.')
+    }
+
+    const result = await deleteInvitationRequest(activeTenantId, invitationId)
+    await refresh()
+    return result
+  }
+
   return {
     members,
     invitations,
@@ -133,5 +144,6 @@ export function useMembers() {
     updateMemberRole,
     setMemberStatus,
     removeMember,
+    deleteInvitation,
   }
 }
