@@ -32,6 +32,94 @@ PRs should explain user-visible impact, list validation steps, link the relevant
 ## Security & Configuration Tips
 Never hardcode secrets in source. Keep frontend variables in `.env` with `VITE_` prefixes, and keep server-only secrets in Supabase function environment settings. Review SQL migrations and function auth checks together when changing workspace or Telegram access.
 
+---
+
+## Seções por Módulo
+
+### Autenticação e Tenancy (AuthContext + workspaceCore)
+- `src/context/AuthContext.jsx` — auth state, login/signup/logout, onAuthStateChange listener
+- `src/context/TenantContext.jsx` — tenancy resolution (owned-tenancy: user dono do tenant)
+- `src/lib/workspaceCore.js` — workspace resolution, OPTIONS preflight antes de createRequestContext
+- `src/lib/supabaseClient.js` — Supabase client singleton
+- Migration: `public.tenants`, `public.tenant_members`, `public.platform_admins`
+- RPCs: `is_current_user_platform_admin()`, `is_active_member()`, `get_user_role_in_tenant()`
+- Edge Function: `admin-core` com middleware `requirePlatformAdmin` em `_shared/admin.ts`
+
+### Telegram (Bot + Webhook)
+- `supabase/functions/telegram-webhook/` — Edge Function que recebe updates do Telegram
+- `src/components/settings/TelegramSection.jsx` — UI de configuração do bot no workspace
+- `src/components/settings/CommandsSection.jsx` — Gerenciamento de comandos slash do bot
+- Tabela: `bot_configs` (tenant_id, telegram_bot_token, webhook_secret, is_active, etc.)
+- Bot: @pettoflow_bot — webhook registrado na Edge Function
+- Testes: `npm run test:deno` para `supabase/functions/telegram-webhook`
+
+### Onboarding
+- `src/components/onboarding/OnboardingPanel.jsx` — Painel de onboarding interativo
+- `src/components/onboarding/TutorialsHub.jsx` — Central de tutoriais
+- `src/components/onboarding/ContextualHint.jsx` — Dicas contextuais
+- `src/hooks/useOnboarding.js` — Estado do onboarding, etapas, progresso
+- Flag: `guided_tour_enabled` (feature flag)
+- Testes: `useOnboarding.test.jsx`
+
+### Finanças
+- `src/components/finance/FinanceView.jsx` — View principal de finanças
+- `src/components/finance/TransactionList.jsx` — Lista de transações
+- `src/components/finance/TransactionForm.jsx` — Formulário de transações
+- `src/hooks/useFinances.js` — Hook de finanças
+- Tests: `financeRules.test.js`, `transactionalIntegrity.test.js`
+- Regras de negócio em `src/lib/financeCore.js`
+
+### Tasks (Kanban)
+- `src/components/tasks/` — Kanban, Lista, Visão geral, views
+- `src/components/tasks/TaskModal.jsx` — Modal de criação/edição
+- 15 tarefas de seed no tenant Central (5 A Fazer, 6 Em Progresso, 4 Concluídas)
+
+### Administração SaaS
+- `src/components/admin/AdminDashboard.jsx` — Dashboard admin
+- `src/components/admin/DiagnosticsPanel.jsx` — Painel de telemetria (8 grupos de contadores)
+- `src/components/admin/TenantsPage.jsx` (Espaços) — Gestão de tenants
+- `src/components/admin/PlansPage.jsx` — Gestão de planos
+- `src/components/admin/AuditPage.jsx` — Auditoria de eventos
+- `src/lib/featureFlags.js` — Sistema de feature flags (12 flags, 3-tier resolution)
+- Feature flags: window override > localStorage > defaults
+
+### Banco de Dados (Supabase)
+- Migrações em `supabase/migrations/` — aplicar com `npx supabase db push --linked`
+- Extensões: pgcrypto está no schema `extensions` — wrappers públicos em `public.gen_random_bytes()`
+- RLS habilitado em todas as tabelas de dados do usuário
+- RPC `get_user_role_in_tenant` para controle de acesso
+
+---
+
+## Skills Hermes Agent Globais (perfil Penhall)
+
+Skills disponíveis via `skill_view()` que se aplicam a este projeto:
+
+| Skill | Uso |
+|-------|-----|
+| `audit-gate` | Auditoria pós-implementação com /goal do Claude Code |
+| `post-phase-learning` | Extração de aprendizados ao final de cada fase |
+| `safe-delegate` | Delegação segura com toolset restrito por tipo de tarefa |
+| `claude-code-goal` | Referência completa do comando /goal |
+
+---
+
+## Post-Phase Learnings
+
+<!-- Adicionar aprendizados no formato abaixo ao final de cada fase -->
+
+<!--
+## Fase: {NOME}
+### Descobertas
+- ...
+### Decisões
+- ...
+### Comandos
+- ...
+### Estado
+- ...
+-->
+
 <!-- VERCEL BEST PRACTICES START -->
 ## Best practices for developing on Vercel
 
