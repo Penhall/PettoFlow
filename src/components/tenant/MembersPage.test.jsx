@@ -13,9 +13,16 @@ vi.mock('../../hooks/useMembers.js', () => ({
   useMembers: () => useMembersMock(),
 }))
 
+const usePlanFeatureMock = vi.fn()
+
+vi.mock('../../hooks/usePlanFeature.js', () => ({
+  usePlanFeature: () => usePlanFeatureMock(),
+}))
+
 describe('MembersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    usePlanFeatureMock.mockReturnValue({ isEnabled: true, loading: false })
   })
 
   it('bloqueia a gestao para usuarios sem permissao administrativa', () => {
@@ -67,6 +74,24 @@ describe('MembersPage', () => {
         role: 'member',
       })
     })
+  })
+
+  it('mostra upsell para plano sem multi_user', () => {
+    usePlanFeatureMock.mockReturnValue({ isEnabled: false, loading: false })
+    useTenantMock.mockReturnValue({
+      activeTenant: { id: 'tenant-1', role: 'owner', name: 'Workspace A' },
+    })
+    useMembersMock.mockReturnValue({
+      members: [],
+      invitations: [],
+      loading: false,
+      error: null,
+    })
+
+    render(<MembersPage />)
+
+    expect(screen.getByText('Colaboração em equipe')).toBeTruthy()
+    expect(screen.getByText(/Faça upgrade para o/)).toBeTruthy()
   })
 
   it('permite owner alterar role de membro elegivel', async () => {

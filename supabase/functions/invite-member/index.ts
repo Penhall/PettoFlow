@@ -33,7 +33,7 @@ function parseStatus(value: unknown) {
 
 function mapErrorStatus(message: string) {
   if (message.includes('limit')) return 409
-  if (message.includes('forbidden') || message.includes('mismatch')) return 403
+  if (message.includes('forbidden') || message.includes('mismatch') || message.includes('plan_does_not_support')) return 403
   if (
     message.includes('required') ||
     message.includes('invalid') ||
