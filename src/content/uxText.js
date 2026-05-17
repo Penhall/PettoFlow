@@ -141,8 +141,8 @@ export const ADMIN_TEXT = {
   eyebrow: `Painel administrativo ${PRODUCT.name}`,
   deniedTitle: 'Acesso administrativo negado',
   deniedDescription: `Esta área interna do ${PRODUCT.name} exige permissão administrativa global.`,
-  workspaceUsageTitle: 'Espaços de trabalho e uso',
-  workspaceMetric: 'Espaços',
+  workspaceUsageTitle: 'Clientes e uso',
+  workspaceMetric: 'Clientes',
 }
 
 export const ERROR_MESSAGE_BY_CODE = {

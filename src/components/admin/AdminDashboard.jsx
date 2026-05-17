@@ -65,10 +65,10 @@ export default function AdminDashboard() {
       <PageHeader
         eyebrow="Administração"
         title="Dashboard"
-        subtitle="Visão consolidada de espaços de trabalho, receita e distribuição de planos na plataforma."
+        subtitle="Visão consolidada de clientes, receita e distribuição de planos na plataforma."
         metrics={[
-          { label: 'Total de espaços', value: String(total_tenants), icon: Building2 },
-          { label: 'Espaços ativos', value: String(active_tenants), icon: Users },
+          { label: 'Total de clientes', value: String(total_tenants), icon: Building2 },
+          { label: 'Clientes ativos', value: String(active_tenants), icon: Users },
           { label: 'MRR', value: formatBRL(mrr_total), icon: DollarSign },
         ]}
       />

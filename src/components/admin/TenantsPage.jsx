@@ -47,8 +47,8 @@ export default function TenantsPage() {
     <div className="admin-tenants">
       <PageHeader
         eyebrow="Administração"
-        title="Espaços de trabalho"
-        subtitle="Gerencie espaços, planos e acesso à plataforma."
+        title="Clientes"
+        subtitle="Gerencie clientes, planos e acesso à plataforma."
       />
 
       <div className="admin-tenants__toolbar">

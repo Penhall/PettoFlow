@@ -38,7 +38,7 @@ describe('AdminPanel', () => {
     })
 
     expect(screen.getAllByText(/root@nexuscrm.test/i).length).toBeGreaterThan(0)
-    expect(screen.getByText('Espaços')).toBeInTheDocument()
+    expect(screen.getByText('Clientes')).toBeInTheDocument()
     expect(screen.getByText('Workspace A')).toBeInTheDocument()
   })
 })

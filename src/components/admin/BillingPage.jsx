@@ -103,7 +103,7 @@ export default function BillingPage() {
                   <th>Plano</th>
                   <th>Assinaturas Ativas</th>
                   <th>MRR</th>
-                  <th>Total de espaços</th>
+                  <th>Total de clientes</th>
                 </tr>
               </thead>
               <tbody>
