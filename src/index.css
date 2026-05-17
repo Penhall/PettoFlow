@@ -3236,3 +3236,203 @@ label {
   line-height: 1.5;
   color: var(--text-main, #374151);
 }
+
+/* ── MembersPage / Invite UI ── */
+
+.section-card {
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.section-card__title {
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--accent, #111827);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.invite-form__row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.invite-form__field {
+  flex: 1;
+  min-width: 180px;
+  display: grid;
+  gap: 4px;
+}
+
+.invite-form__field label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.invite-form__field input,
+.invite-form__field select {
+  width: 100%;
+}
+
+.invite-form__action {
+  min-width: 140px;
+}
+
+.invite-form__action label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  visibility: hidden;
+}
+
+.invite-form__success {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .invite-form__success {
+  background: #064e3b;
+  border-color: #065f46;
+  color: #a7f3d0;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.role-badge--owner {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.role-badge--admin {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.role-badge--member {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.role-badge--viewer {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+[data-theme="dark"] .role-badge--owner {
+  background: #78350f;
+  color: #fde68a;
+}
+
+[data-theme="dark"] .role-badge--admin {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .role-badge--member {
+  background: #312e81;
+  color: #c7d2fe;
+}
+
+[data-theme="dark"] .role-badge--viewer {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.delivery-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.delivery-badge--sent {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.delivery-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.delivery-badge--error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+[data-theme="dark"] .delivery-badge--sent {
+  background: #064e3b;
+  color: #a7f3d0;
+}
+
+[data-theme="dark"] .delivery-badge--pending {
+  background: #78350f;
+  color: #fde68a;
+}
+
+[data-theme="dark"] .delivery-badge--error {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.role-select {
+  max-width: 140px;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-main);
+}
+
+.action-btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-main);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

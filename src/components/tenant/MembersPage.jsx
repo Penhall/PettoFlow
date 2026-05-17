@@ -25,6 +25,11 @@ function formatRole(role) {
   return ROLE_LABELS[role] || role
 }
 
+function formatDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('pt-BR')
+}
+
 export default function MembersPage() {
   const { activeTenant } = useTenant()
   const {
@@ -40,6 +45,7 @@ export default function MembersPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
   const [inviteError, setInviteError] = useState('')
+  const [inviteSuccess, setInviteSuccess] = useState(null)
   const [actionError, setActionError] = useState('')
   const [submitLoading, setSubmitLoading] = useState(false)
 
@@ -57,13 +63,26 @@ export default function MembersPage() {
 
     setSubmitLoading(true)
     setInviteError('')
+    setInviteSuccess(null)
     setActionError('')
 
     try {
-      await inviteMember({
+      const result = await inviteMember({
         email: inviteEmail.trim(),
         role: inviteRole,
       })
+      const delivery = result?.delivery
+
+      if (delivery?.sent) {
+        setInviteSuccess(`Convite enviado com sucesso para ${inviteEmail.trim()}.`)
+      } else if (delivery?.skipped) {
+        setInviteSuccess(
+          `Convite registrado para ${inviteEmail.trim()}. O email não foi entregue automaticamente — compartilhe o link manualmente.`
+        )
+      } else {
+        setInviteSuccess(`Convite registrado para ${inviteEmail.trim()}.`)
+      }
+
       setInviteEmail('')
       setInviteRole('member')
     } catch (submitError) {
@@ -73,13 +92,22 @@ export default function MembersPage() {
     }
   }
 
+  async function copyInviteLink(token) {
+    const link = inviteLinkFor(token)
+    try {
+      await navigator.clipboard.writeText(link)
+      setInviteSuccess('Link do convite copiado!')
+    } catch {
+      setInviteSuccess(`Link: ${link}`)
+    }
+  }
+
   if (!activeTenant) {
     return null
   }
 
   async function handleRoleChange(memberId, nextRole) {
     setActionError('')
-
     try {
       await updateMemberRole(memberId, nextRole)
     } catch (memberError) {
@@ -89,7 +117,6 @@ export default function MembersPage() {
 
   async function handleStatusChange(memberId, nextStatus) {
     setActionError('')
-
     try {
       await setMemberStatus(memberId, nextStatus)
     } catch (memberError) {
@@ -99,7 +126,6 @@ export default function MembersPage() {
 
   async function handleRemoveMember(memberId) {
     setActionError('')
-
     try {
       await removeMember(memberId)
     } catch (memberError) {
@@ -125,95 +151,191 @@ export default function MembersPage() {
 
       {manageable && (
         <>
-          <section style={{ padding: 20, border: '1px solid var(--border-color)', borderRadius: 16, background: 'var(--surface)' }}>
-            <h3 style={{ marginTop: 0 }}>Convidar novo membro</h3>
-            <form onSubmit={handleInviteSubmit} style={{ display: 'grid', gap: 12 }}>
-              <label htmlFor="invite-email">Email do convidado</label>
-              <input
-                id="invite-email"
-                type="email"
-                value={inviteEmail}
-                onChange={(event) => setInviteEmail(event.target.value)}
-                placeholder="colaborador@empresa.com"
-              />
+          {/* Card de convite */}
+          <section className="section-card">
+            <h3 className="section-card__title">Convidar novo membro</h3>
+            <form onSubmit={handleInviteSubmit} className="invite-form">
+              <div className="invite-form__row">
+                <div className="invite-form__field">
+                  <label htmlFor="invite-email">Email do convidado</label>
+                  <input
+                    id="invite-email"
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(event) => setInviteEmail(event.target.value)}
+                    placeholder="colaborador@empresa.com"
+                  />
+                </div>
+                <div className="invite-form__field">
+                  <label htmlFor="invite-role">Perfil de acesso</label>
+                  <select
+                    id="invite-role"
+                    aria-label="Perfil do convite"
+                    value={inviteRole}
+                    onChange={(event) => setInviteRole(event.target.value)}
+                  >
+                    {assignableRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {formatRole(role)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="invite-form__action">
+                  <label>&nbsp;</label>
+                  <button type="submit" className="add-member-btn" disabled={submitLoading}>
+                    {submitLoading ? 'Enviando...' : 'Enviar convite'}
+                  </button>
+                </div>
+              </div>
 
-              <label htmlFor="invite-role">Perfil do convite</label>
-              <select
-                id="invite-role"
-                aria-label="Perfil do convite"
-                value={inviteRole}
-                onChange={(event) => setInviteRole(event.target.value)}
-              >
-                {assignableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {formatRole(role)}
-                  </option>
-                ))}
-              </select>
-
-              {inviteError && <div className="auth-error">{inviteError}</div>}
-
-              <button type="submit" className="add-member-btn" disabled={submitLoading}>
-                {submitLoading ? 'Enviando convite...' : 'Enviar convite'}
-              </button>
+              {inviteError && <div className="auth-error" style={{ marginTop: 8 }}>{inviteError}</div>}
+              {inviteSuccess && (
+                <div className="invite-form__success" style={{ marginTop: 8 }}>
+                  {inviteSuccess}
+                </div>
+              )}
             </form>
           </section>
 
-          <section style={{ padding: 20, border: '1px solid var(--border-color)', borderRadius: 16, background: 'var(--surface)' }}>
-            <h3 style={{ marginTop: 0 }}>Convites pendentes</h3>
-            {invitations.length === 0 && <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Nenhum convite pendente.</p>}
+          {/* Tabela de convites pendentes */}
+          <section className="section-card">
+            <h3 className="section-card__title">
+              Convites enviados
+              {invitations.length > 0 && (
+                <span className="section-card__badge">{invitations.length}</span>
+              )}
+            </h3>
+
+            {invitations.length === 0 && (
+              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+                Nenhum convite pendente. Convide alguém pelo formulário acima.
+              </p>
+            )}
+
             {invitations.length > 0 && (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {invitations.map((invitation) => (
-                  <article key={invitation.id} style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}>
-                    <strong>{invitation.email}</strong>
-                    <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
-                      Perfil: {formatRole(invitation.role)} · Status: {invitation.status}
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)', marginTop: 8, wordBreak: 'break-all' }}>
-                      Link do convite: {inviteLinkFor(invitation.token)}
-                    </div>
-                  </article>
-                ))}
+              <div className="admin-table-wrapper" style={{ marginTop: 12 }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Perfil</th>
+                      <th>Status</th>
+                      <th>Convidado em</th>
+                      <th style={{ textAlign: 'right' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invitations.map((invitation) => (
+                      <tr key={invitation.id}>
+                        <td>
+                          <strong>{invitation.email}</strong>
+                        </td>
+                        <td>
+                          <span className={`role-badge role-badge--${invitation.role}`}>
+                            {formatRole(invitation.role)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`delivery-badge delivery-badge--pending`}>
+                            {invitation.status === 'pending' ? 'Aguardando aceite' : invitation.status}
+                          </span>
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)' }}>
+                          {formatDate(invitation.created_at)}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="action-btn"
+                              onClick={() => copyInviteLink(invitation.token)}
+                              title="Copiar link do convite"
+                            >
+                              Copiar link
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn"
+                              onClick={async () => {
+                                try {
+                                  await inviteMember({
+                                    email: invitation.email,
+                                    role: invitation.role,
+                                  })
+                                  setInviteSuccess(`Convite reenviado para ${invitation.email}.`)
+                                } catch (err) {
+                                  setInviteError(err instanceof Error ? err.message : 'Erro ao reenviar convite.')
+                                }
+                              }}
+                              title="Reenviar convite"
+                            >
+                              Reenviar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </section>
         </>
       )}
 
-      <section style={{ padding: 20, border: '1px solid var(--border-color)', borderRadius: 16, background: 'var(--surface)' }}>
-        <h3 style={{ marginTop: 0 }}>Membros atuais</h3>
+      {/* Membros atuais */}
+      <section className="section-card">
+        <h3 className="section-card__title">
+          Membros atuais
+          {members.length > 0 && (
+            <span className="section-card__badge">{members.length}</span>
+          )}
+        </h3>
+
         {loading && <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Carregando membros...</p>}
         {error && <div className="auth-error">{error}</div>}
         {actionError && <div className="auth-error">{actionError}</div>}
-        {!loading && members.length === 0 && <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Nenhum membro listado.</p>}
+
+        {!loading && members.length === 0 && (
+          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Nenhum membro listado.</p>
+        )}
+
         {!loading && members.length > 0 && (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {members.map((member) => {
-              const canEdit = canEditMembership(actorRole, member.role, member.isCurrentUser)
-              const canSuspend = canSuspendMembership(actorRole, member.role, member.isCurrentUser)
-              const canRemove = canRemoveMembership(actorRole, member.role, member.isCurrentUser)
+          <div className="admin-table-wrapper" style={{ marginTop: 12 }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Membro</th>
+                  <th>Perfil</th>
+                  <th>Status</th>
+                  {manageable && <th style={{ textAlign: 'right' }}>Ações</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((member) => {
+                  const canEdit = canEditMembership(actorRole, member.role, member.isCurrentUser)
+                  const canSuspend = canSuspendMembership(actorRole, member.role, member.isCurrentUser)
+                  const canRemove = canRemoveMembership(actorRole, member.role, member.isCurrentUser)
 
-              return (
-                <article key={member.id} style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-                    <div>
-                      <strong>{member.email}</strong>
-                      <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
-                        Perfil: {formatRole(member.role)} · Status: {member.status}
-                        {member.isCurrentUser ? ' · Você' : ''}
-                      </div>
-                    </div>
-
-                    {manageable && (
-                      <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
-                        <label style={{ display: 'grid', gap: 4 }}>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Perfil de {member.email}</span>
+                  return (
+                    <tr key={member.id}>
+                      <td>
+                        <strong>{member.email}</strong>
+                        {member.isCurrentUser && (
+                          <span className="role-badge role-badge--owner" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
+                            Você
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {manageable ? (
                           <select
                             aria-label={`Perfil de ${member.email}`}
                             value={member.role}
                             disabled={!canEdit}
                             onChange={(event) => handleRoleChange(member.id, event.target.value)}
+                            className="role-select"
                           >
                             {assignableRoles.map((role) => (
                               <option key={role} value={role}>
@@ -221,32 +343,46 @@ export default function MembersPage() {
                               </option>
                             ))}
                           </select>
-                        </label>
-
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className="action-btn"
-                            disabled={!canSuspend}
-                            onClick={() => handleStatusChange(member.id, member.status === 'suspended' ? 'active' : 'suspended')}
-                          >
-                            {member.status === 'suspended' ? 'Reativar' : 'Suspender'}
-                          </button>
-                          <button
-                            type="button"
-                            className="delete-task-btn"
-                            disabled={!canRemove}
-                            onClick={() => handleRemoveMember(member.id)}
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              )
-            })}
+                        ) : (
+                          <span className={`role-badge role-badge--${member.role}`}>
+                            {formatRole(member.role)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`delivery-badge delivery-badge--${member.status === 'active' ? 'sent' : 'pending'}`}>
+                          {member.status === 'active' ? 'Ativo' : member.status === 'suspended' ? 'Suspenso' : member.status}
+                        </span>
+                      </td>
+                      {manageable && (
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="action-btn"
+                              disabled={!canSuspend}
+                              onClick={() => handleStatusChange(member.id, member.status === 'suspended' ? 'active' : 'suspended')}
+                            >
+                              {member.status === 'suspended' ? 'Reativar' : 'Suspender'}
+                            </button>
+                            {canRemove && (
+                              <button
+                                type="button"
+                                className="delete-task-btn"
+                                disabled={!canRemove}
+                                onClick={() => handleRemoveMember(member.id)}
+                              >
+                                Remover
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
