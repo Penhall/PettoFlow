@@ -120,6 +120,25 @@ Skills disponíveis via `skill_view()` que se aplicam a este projeto:
 - ...
 -->
 
+## Fase: Rename Tenants → Clientes (Admin)
+### Descobertas
+- Labels do admin estavam espalhadas em 5+ arquivos: SidebarRail, TenantsPage, AdminDashboard, BillingPage, uxText
+- Sidebar label vem de `SidebarRail.jsx`, não de App.jsx direto
+- Página de listagem de tenants é o mesmo que "Clientes" do ponto de vista do admin SaaS
+
+### Decisões
+- Mantido nome interno `tenants` no código (variáveis, CSS classes) — só labels de UI foram alterados
+- Refactor localizado: 7 arquivos, 11 insertions/11 deletions, sem quebra de testes
+
+### Comandos
+```bash
+npm run lint && npm test && npm run build  # validar antes de commit
+```
+### Estado
+- Commit: `58c7de8`
+- Deploy: https://petto-flow.vercel.app ✅
+- Pendente: Cadalora e Felipe criarem contas
+
 <!-- VERCEL BEST PRACTICES START -->
 ## Best practices for developing on Vercel
 
