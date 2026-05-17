@@ -30,10 +30,15 @@ const extractText = (body) => {
   } catch { return null }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 const ActivityCard = ({ activity, onToggleStatus, onDelete, onEdit }) => {
   const isDone = activity.status === 'completed'
   const color = TYPE_COLORS[activity.type] || '#94A3B8'
   const preview = extractText(activity.body)
+  const authorName = activity.created_by && !UUID_RE.test(activity.created_by)
+    ? activity.created_by
+    : null
 
   return (
     <motion.div
@@ -58,8 +63,8 @@ const ActivityCard = ({ activity, onToggleStatus, onDelete, onEdit }) => {
               : '—'
           }
         </span>
-        {activity.created_by && (
-          <span className="activity-author">· {activity.created_by}</span>
+        {authorName && (
+          <span className="activity-author">· {authorName}</span>
         )}
       </div>
 

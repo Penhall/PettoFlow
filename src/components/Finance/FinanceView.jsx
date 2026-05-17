@@ -363,11 +363,6 @@ const FinanceView = ({
         eyebrow="Operação"
         title="Finanças"
         subtitle="Acompanhe extrato, contas, regras e previsões com leitura operacional compacta."
-        metrics={[
-          { label: 'Saldo consolidado', value: centsToReal(totals.totalBalance) },
-          { label: 'A receber', value: centsToReal(totals.totalReceivable) },
-          { label: 'Saldo previsto', value: centsToReal(totals.projectedBalance) },
-        ]}
       />
 
       <FinanceSummary
